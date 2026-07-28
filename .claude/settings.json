@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm -v)",
+      "Bash(git --version)",
+      "Bash(gh --version)",
+      "Bash(gh auth *)",
+      "Bash(pnpm create *)",
+      "Bash(mkdir -p \"app/\\(auth\\)/login\" app/admin app/api components/ui components/admin lib server types prisma)",
+      "Bash(touch app/api/.gitkeep components/ui/.gitkeep components/admin/.gitkeep lib/.gitkeep server/.gitkeep types/.gitkeep prisma/.gitkeep)",
+      "Bash(rm -f public/file.svg public/globe.svg public/next.svg public/vercel.svg public/window.svg)",
+      "Bash(pnpm add *)",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm lint *)",
+      "Bash(pnpm build *)",
+      "Bash(rm -rf .git .next)",
+      "Bash(git init *)",
+      "Bash(git branch *)",
+      "Bash(git add *)"
+    ]
+  }
+}
