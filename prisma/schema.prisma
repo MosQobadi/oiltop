@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../lib/generated/prisma"
@@ -10,4 +8,399 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  ADMIN
+  CUSTOMER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PartType {
+  ENGINE_OIL
+  FILTER
+  ACCESSORY
+  OTHER
+}
+
+enum FilterKind {
+  OIL_FILTER
+  AIR_FILTER
+  CABIN_FILTER
+  FUEL_FILTER
+}
+
+enum CategoryStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum BrandStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CarBrandStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CarModelStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CarEngineStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum FuelType {
+  PETROL
+  DIESEL
+  HYBRID
+  ELECTRIC
+  LPG_CNG
+}
+
+enum FitmentClimate {
+  STANDARD
+  HOT
+  COLD
+}
+
+enum FitmentInquiryStatus {
+  NEW
+  CONTACTED
+  RESOLVED
+}
+
+enum OrderStatus {
+  PENDING
+  SENDING
+  SENT
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+}
+
+// ---------------------------------------------------------------------------
+// Users
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  phone        String?    @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         UserRole
+  status       UserStatus
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  orders Order[]
+}
+
+// ---------------------------------------------------------------------------
+// Catalog
+// ---------------------------------------------------------------------------
+
+model Category {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  nameEn String
+  nameFa String
+
+  tags String[]
+
+  shortDescriptionEn String
+  shortDescriptionFa String
+  longDescriptionEn  String
+  longDescriptionFa  String
+
+  metaTitleEn       String?
+  metaTitleFa       String?
+  metaDescriptionEn String?
+  metaDescriptionFa String?
+
+  image  String?
+  status CategoryStatus
+
+  partType   PartType
+  filterKind FilterKind?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products                Product[]
+  fitmentRecommendations  FitmentRecommendation[]
+  fitmentInquiries        FitmentInquiry[]
+}
+
+model Brand {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  nameEn String
+  nameFa String
+
+  logo   String?
+  status BrandStatus
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+}
+
+model Product {
+  id  String @id @default(cuid())
+  sku String @unique
+
+  nameEn String
+  nameFa String
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id])
+
+  // finalPrice is NOT stored — compute price * (1 - discountPercent / 100) at read time.
+  price           Decimal
+  discountPercent Int     @default(0)
+
+  tags           String[]
+  oemPartNumbers String[]
+
+  shortDescriptionEn String
+  shortDescriptionFa String
+  longDescriptionEn  String
+  longDescriptionFa  String
+
+  metaTitleEn       String?
+  metaTitleFa       String?
+  metaDescriptionEn String?
+  metaDescriptionFa String?
+
+  image  String?
+  status ProductStatus
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventory               Inventory?
+  orderItems              OrderItem[]
+  fitmentRecommendations  FitmentRecommendation[]
+}
+
+// stock thresholds (derived, not stored): 0 = out of stock, <10 = low stock, otherwise in stock
+model Inventory {
+  id            String   @id @default(cuid())
+  productId     String   @unique
+  product       Product  @relation(fields: [productId], references: [id])
+  stock         Int      @default(0)
+  lastUpdatedAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Cars & Fitment
+// ---------------------------------------------------------------------------
+
+model CarBrand {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  nameEn String
+  nameFa String
+
+  logo   String?
+  status CarBrandStatus
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  models CarModel[]
+}
+
+model CarModel {
+  id String @id @default(cuid())
+
+  carBrandId String
+  carBrand   CarBrand @relation(fields: [carBrandId], references: [id])
+
+  nameEn String
+  nameFa String
+  slug   String
+
+  metaTitleEn       String?
+  metaTitleFa       String?
+  metaDescriptionEn String?
+  metaDescriptionFa String?
+
+  image  String?
+  status CarModelStatus
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  engines CarEngine[]
+
+  @@unique([carBrandId, slug])
+}
+
+model CarEngine {
+  id String @id @default(cuid())
+
+  carModelId String
+  carModel   CarModel @relation(fields: [carModelId], references: [id])
+
+  labelEn String
+  labelFa String
+
+  yearStart Int
+  yearEnd   Int? // nullable means still in production
+
+  fuelType       FuelType
+  displacementCc Int?
+  engineCode     String?
+  status         CarEngineStatus
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fitmentRecommendations FitmentRecommendation[]
+  fitmentInquiries       FitmentInquiry[]
+}
+
+// climate must be STANDARD unless the related category's partType is ENGINE_OIL —
+// enforced as a Zod cross-field rule (lib/validation/), not a DB constraint.
+model FitmentRecommendation {
+  id String @id @default(cuid())
+
+  carEngineId String
+  carEngine   CarEngine @relation(fields: [carEngineId], references: [id])
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  climate FitmentClimate @default(STANDARD)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  specNote       String?
+  specAttributes Json?
+
+  priority  Int     @default(0)
+  adminNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FitmentInquiry {
+  id String @id @default(cuid())
+
+  carEngineId String?
+  carEngine   CarEngine? @relation(fields: [carEngineId], references: [id])
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  customerName String
+  phone        String
+  email        String?
+  message      String?
+
+  status    FitmentInquiryStatus
+  adminNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Orders
+// ---------------------------------------------------------------------------
+
+model Order {
+  id String @id @default(cuid())
+
+  customerId String
+  customer   User   @relation(fields: [customerId], references: [id])
+
+  status        OrderStatus
+  paymentStatus PaymentStatus
+
+  subtotal     Decimal
+  discount     Decimal
+  shippingCost Decimal
+  tax          Decimal
+  total        Decimal
+
+  shippingAddress String
+  postalCode      String
+  adminNote       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items OrderItem[]
+}
+
+// snapshot fields exist so historical orders don't change if the product is edited later.
+model OrderItem {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  productNameSnapshot String
+  priceSnapshot       Decimal
+  quantity            Int
+  lineTotal           Decimal
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Settings
+// ---------------------------------------------------------------------------
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
