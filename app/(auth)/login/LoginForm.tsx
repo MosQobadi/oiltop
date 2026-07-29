@@ -1,0 +1,97 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  FieldError,
+  Input,
+  Label,
+  Link,
+  TextFieldRoot as TextField,
+} from "@heroui/react";
+import { loginSchema, type LoginInput } from "@/lib/validation";
+
+export default function LoginForm() {
+  const router = useRouter();
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (data: LoginInput) => {
+    setFormError(null);
+
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+
+    if (!result.success) {
+      setFormError(result.error ?? "Login failed");
+      return;
+    }
+
+    router.push("/admin/dashboard");
+  };
+
+  return (
+    <Card className="w-full max-w-sm">
+      <CardHeader>
+        <CardTitle>Top Oil Admin</CardTitle>
+        <CardDescription>Sign in to manage your store.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form
+          className="flex flex-col gap-4"
+          noValidate
+          onSubmit={handleSubmit(onSubmit)}
+        >
+          <TextField isInvalid={!!errors.email} fullWidth>
+            <Label>Email</Label>
+            <Input type="email" autoComplete="email" {...register("email")} />
+            <FieldError>{errors.email?.message}</FieldError>
+          </TextField>
+
+          <TextField isInvalid={!!errors.password} fullWidth>
+            <Label>Password</Label>
+            <Input
+              type="password"
+              autoComplete="current-password"
+              {...register("password")}
+            />
+            <FieldError>{errors.password?.message}</FieldError>
+          </TextField>
+
+          {formError && (
+            <p role="alert" className="text-sm text-danger">
+              {formError}
+            </p>
+          )}
+
+          <Link href="/forgot-password" className="self-end text-sm">
+            Forgot password?
+          </Link>
+
+          <Button type="submit" fullWidth isDisabled={isSubmitting}>
+            {isSubmitting ? "Signing in..." : "Login"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}

@@ -1,7 +1,9 @@
+import LoginForm from "./LoginForm";
+
 export default function LoginPage() {
   return (
-    <main className="flex flex-1 items-center justify-center">
-      <p className="text-sm text-neutral-500">Login</p>
+    <main className="flex flex-1 items-center justify-center p-4">
+      <LoginForm />
     </main>
   );
 }
