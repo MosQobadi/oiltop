@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { slugSchema } from "./common";
+import { pageSchema, pageSizeSchema, slugSchema } from "./common";
 import { brandStatusSchema } from "./enums";
 
 const brandShape = {
-  slug: slugSchema,
+  // Optional on create — auto-generated from nameEn via slugify() when omitted.
+  slug: slugSchema.optional(),
   nameEn: z.string().min(1).max(200),
   nameFa: z.string().min(1).max(200),
   logo: z.string().min(1).optional(),
@@ -15,3 +16,12 @@ export const brandUpdateSchema = z.object(brandShape).partial();
 
 export type BrandCreateInput = z.infer<typeof brandCreateSchema>;
 export type BrandUpdateInput = z.infer<typeof brandUpdateSchema>;
+
+export const brandListQuerySchema = z.object({
+  search: z.string().trim().min(1).optional(),
+  status: brandStatusSchema.optional(),
+  page: pageSchema,
+  pageSize: pageSizeSchema,
+});
+
+export type BrandListQuery = z.infer<typeof brandListQuerySchema>;
