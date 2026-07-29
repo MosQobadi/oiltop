@@ -1,0 +1,69 @@
+import "dotenv/config";
+import { SignJWT } from "jose";
+import { NextRequest } from "next/server";
+import { describe, expect, it } from "vitest";
+import proxy from "./proxy";
+
+function adminRequest(cookieValue?: string) {
+  const headers = new Headers();
+  if (cookieValue) {
+    headers.set("cookie", `${process.env.COOKIE_NAME}=${cookieValue}`);
+  }
+  return new NextRequest("http://localhost/admin/products", { headers });
+}
+
+async function signToken(role: "ADMIN" | "CUSTOMER", userId = "user-1") {
+  return new SignJWT({ userId, role })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("7d")
+    .sign(new TextEncoder().encode(process.env.JWT_SECRET!));
+}
+
+async function signExpiredToken(role: "ADMIN" | "CUSTOMER", userId = "user-1") {
+  const nowInSeconds = Math.floor(Date.now() / 1000);
+  return new SignJWT({ userId, role })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt(nowInSeconds - 60 * 60 * 24 * 8)
+    .setExpirationTime(nowInSeconds - 60 * 60 * 24)
+    .sign(new TextEncoder().encode(process.env.JWT_SECRET!));
+}
+
+describe("proxy (route protection for /admin/*)", () => {
+  it("redirects to /login with a from param when there is no auth cookie", async () => {
+    const res = await proxy(adminRequest());
+
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location")!);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("from")).toBe("/admin/products");
+  });
+
+  it("redirects to /login when the token is invalid", async () => {
+    const res = await proxy(adminRequest("not-a-real-token"));
+
+    expect(res.status).toBe(307);
+    expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+  });
+
+  it("redirects to /login when the token is expired", async () => {
+    const res = await proxy(adminRequest(await signExpiredToken("ADMIN")));
+
+    expect(res.status).toBe(307);
+    expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+  });
+
+  it("redirects to /login when the role is not ADMIN", async () => {
+    const res = await proxy(adminRequest(await signToken("CUSTOMER")));
+
+    expect(res.status).toBe(307);
+    expect(new URL(res.headers.get("location")!).pathname).toBe("/login");
+  });
+
+  it("allows the request through for a valid admin token", async () => {
+    const res = await proxy(adminRequest(await signToken("ADMIN")));
+
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.status).toBe(200);
+  });
+});
