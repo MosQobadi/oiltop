@@ -18,9 +18,11 @@ import {
   TextFieldRoot as TextField,
 } from "@heroui/react";
 import { loginSchema, type LoginInput } from "@/lib/validation";
+import { useAuthStore } from "@/lib/store/auth";
 
 export default function LoginForm() {
   const router = useRouter();
+  const setUser = useAuthStore((state) => state.setUser);
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -46,6 +48,7 @@ export default function LoginForm() {
       return;
     }
 
+    setUser(result.data.user);
     router.push("/admin/dashboard");
   };
 
