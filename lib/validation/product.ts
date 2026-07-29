@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { pageSchema, pageSizeSchema } from "./common";
 import { productStatusSchema } from "./enums";
 
 const productShape = {
@@ -28,3 +29,14 @@ export const productUpdateSchema = z.object(productShape).partial();
 
 export type ProductCreateInput = z.infer<typeof productCreateSchema>;
 export type ProductUpdateInput = z.infer<typeof productUpdateSchema>;
+
+export const productListQuerySchema = z.object({
+  search: z.string().trim().min(1).optional(),
+  category: z.string().trim().min(1).optional(),
+  brand: z.string().trim().min(1).optional(),
+  status: productStatusSchema.optional(),
+  page: pageSchema,
+  pageSize: pageSizeSchema,
+});
+
+export type ProductListQuery = z.infer<typeof productListQuerySchema>;

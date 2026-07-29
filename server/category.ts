@@ -46,6 +46,14 @@ export async function listCategories(query: CategoryListQuery) {
   return { categories: categories.map(withProductCount), total };
 }
 
+export async function listCategoryOptions() {
+  return prisma.category.findMany({
+    where: { status: "ACTIVE" },
+    select: { id: true, nameEn: true },
+    orderBy: { nameEn: "asc" },
+  });
+}
+
 export async function getCategoryById(id: string) {
   const category = await prisma.category.findUnique({
     where: { id },

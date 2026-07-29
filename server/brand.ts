@@ -45,6 +45,14 @@ export async function listBrands(query: BrandListQuery) {
   return { brands: brands.map(withProductCount), total };
 }
 
+export async function listBrandOptions() {
+  return prisma.brand.findMany({
+    where: { status: "ACTIVE" },
+    select: { id: true, nameEn: true },
+    orderBy: { nameEn: "asc" },
+  });
+}
+
 export async function getBrandById(id: string) {
   const brand = await prisma.brand.findUnique({
     where: { id },
