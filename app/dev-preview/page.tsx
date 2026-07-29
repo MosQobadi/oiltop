@@ -1,4 +1,5 @@
 import { DataTableDemo } from "./DataTableDemo";
+import { FormFieldsDemo } from "./FormFieldsDemo";
 
 export default function DevPreviewPage() {
   return (
@@ -13,6 +14,11 @@ export default function DevPreviewPage() {
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-neutral-700">DataTable</h2>
         <DataTableDemo />
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-sm font-medium text-neutral-700">Form Fields</h2>
+        <FormFieldsDemo />
       </section>
     </div>
   );

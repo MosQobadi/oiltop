@@ -146,3 +146,11 @@ export function ChevronDownIcon(props: SVGProps<SVGSVGElement>) {
     </Svg>
   );
 }
+
+export function CloseIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="m6 6 12 12M18 6 6 18" />
+    </Svg>
+  );
+}
