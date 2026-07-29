@@ -20,6 +20,13 @@ describe("categoryCreateSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts a missing slug (auto-generated at the service layer)", () => {
+    const withoutSlug: Partial<typeof validCategory> = { ...validCategory };
+    delete withoutSlug.slug;
+    const result = categoryCreateSchema.safeParse(withoutSlug);
+    expect(result.success).toBe(true);
+  });
+
   it("rejects a missing required field", () => {
     const invalid: Partial<typeof validCategory> = { ...validCategory };
     delete invalid.nameEn;

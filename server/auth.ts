@@ -50,3 +50,14 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     return null;
   }
 }
+
+// Re-verifies the JWT and role inside the route handler itself — proxy.ts
+// only guards page navigation (`/admin/:path*`), not the `/api/admin/*`
+// route handlers, so every one of those must call this directly.
+export async function requireAdmin(): Promise<AuthUser> {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") {
+    throw new AuthError("Not authenticated");
+  }
+  return user;
+}

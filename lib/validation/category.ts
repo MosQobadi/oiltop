@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { slugSchema } from "./common";
+import { pageSchema, pageSizeSchema, slugSchema } from "./common";
 import {
   categoryStatusSchema,
   filterKindSchema,
@@ -7,7 +7,8 @@ import {
 } from "./enums";
 
 const categoryShape = {
-  slug: slugSchema,
+  // Optional on create — auto-generated from nameEn via slugify() when omitted.
+  slug: slugSchema.optional(),
   nameEn: z.string().min(1).max(200),
   nameFa: z.string().min(1).max(200),
   tags: z.array(z.string().min(1).max(50)).default([]),
@@ -58,3 +59,13 @@ export const categoryUpdateSchema = z
 
 export type CategoryCreateInput = z.infer<typeof categoryCreateSchema>;
 export type CategoryUpdateInput = z.infer<typeof categoryUpdateSchema>;
+
+export const categoryListQuerySchema = z.object({
+  search: z.string().trim().min(1).optional(),
+  status: categoryStatusSchema.optional(),
+  partType: partTypeSchema.optional(),
+  page: pageSchema,
+  pageSize: pageSizeSchema,
+});
+
+export type CategoryListQuery = z.infer<typeof categoryListQuerySchema>;
