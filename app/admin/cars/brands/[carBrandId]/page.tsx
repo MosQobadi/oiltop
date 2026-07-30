@@ -48,9 +48,9 @@ async function uploadImage(file: File): Promise<string> {
 
 export default function CarBrandFormPage() {
   const router = useRouter();
-  const params = useParams<{ id?: string[] }>();
-  const segment = params.id?.[0];
-  const isEdit = !!segment && segment !== "add";
+  const params = useParams<{ carBrandId: string }>();
+  const segment = params.carBrandId;
+  const isEdit = segment !== "add";
   const carBrandId = isEdit ? segment : null;
 
   const [isLoading, setIsLoading] = useState(isEdit);

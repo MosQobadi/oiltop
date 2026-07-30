@@ -1,17 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { AlertDialog, Button } from "@heroui/react";
 import { DataTable, StatusPill, type DataTableColumn } from "@/components/admin/DataTable";
+
+interface CarModel {
+  id: string;
+  nameEn: string;
+  slug: string;
+  image: string | null;
+  status: "ACTIVE" | "INACTIVE";
+  engineCount: number;
+}
 
 interface CarBrand {
   id: string;
   nameEn: string;
-  slug: string;
-  logo: string | null;
-  status: "ACTIVE" | "INACTIVE";
-  modelCount: number;
 }
 
 const STATUS_OPTIONS = [
@@ -21,16 +27,20 @@ const STATUS_OPTIONS = [
 
 const PAGE_SIZE = 20;
 
-export default function CarBrandsPage() {
+export default function CarModelsPage() {
   const router = useRouter();
-  const [carBrands, setCarBrands] = useState<CarBrand[]>([]);
+  const params = useParams<{ carBrandId: string }>();
+  const carBrandId = params.carBrandId;
+
+  const [carBrand, setCarBrand] = useState<CarBrand | null>(null);
+  const [carModels, setCarModels] = useState<CarModel[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<CarBrand | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CarModel | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -38,51 +48,68 @@ export default function CarBrandsPage() {
   useEffect(() => {
     let ignore = false;
 
-    async function loadCarBrands() {
+    async function loadCarBrand() {
+      const response = await fetch(`/api/admin/car-brands/${carBrandId}`);
+      const result = await response.json();
+      if (ignore) return;
+      if (result.success) setCarBrand(result.data.carBrand);
+    }
+
+    void loadCarBrand();
+    return () => {
+      ignore = true;
+    };
+  }, [carBrandId]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadCarModels() {
       setIsLoading(true);
       setLoadError(null);
 
-      const params = new URLSearchParams({
+      const queryParams = new URLSearchParams({
+        carBrandId,
         page: String(page),
         pageSize: String(PAGE_SIZE),
       });
-      if (search) params.set("search", search);
-      if (status) params.set("status", status);
+      if (search) queryParams.set("search", search);
+      if (status) queryParams.set("status", status);
 
-      const response = await fetch(`/api/admin/car-brands?${params.toString()}`);
+      const response = await fetch(`/api/admin/car-models?${queryParams.toString()}`);
       const result = await response.json();
       if (ignore) return;
 
       if (!result.success) {
-        setLoadError(result.error ?? "Failed to load car brands");
+        setLoadError(result.error ?? "Failed to load car models");
         setIsLoading(false);
         return;
       }
 
-      setCarBrands(result.data.carBrands);
+      setCarModels(result.data.carModels);
       setTotal(result.data.total);
       setIsLoading(false);
     }
 
-    void loadCarBrands();
+    void loadCarModels();
     return () => {
       ignore = true;
     };
-  }, [page, search, status, reloadKey]);
+  }, [carBrandId, page, search, status, reloadKey]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
     setDeleteError(null);
 
-    const response = await fetch(`/api/admin/car-brands/${deleteTarget.id}`, {
+    const response = await fetch(`/api/admin/car-models/${deleteTarget.id}`, {
       method: "DELETE",
     });
     const result = await response.json();
     setIsDeleting(false);
 
     if (!result.success) {
-      setDeleteError(result.error ?? "Failed to delete car brand");
+      setDeleteError(result.error ?? "Failed to delete car model");
       return;
     }
 
@@ -90,24 +117,24 @@ export default function CarBrandsPage() {
     setReloadKey((key) => key + 1);
   };
 
-  const columns: DataTableColumn<CarBrand>[] = [
+  const columns: DataTableColumn<CarModel>[] = [
     {
-      key: "logo",
-      label: "Logo",
+      key: "image",
+      label: "Image",
       render: (row) => (
         <div className="flex size-10 items-center justify-center overflow-hidden rounded-field bg-field">
-          {row.logo ? (
-            // eslint-disable-next-line @next/next/no-img-element -- car brand logo URL isn't a known static/remote-configured asset
-            <img src={row.logo} alt="" className="size-full object-cover" />
+          {row.image ? (
+            // eslint-disable-next-line @next/next/no-img-element -- car model image URL isn't a known static/remote-configured asset
+            <img src={row.image} alt="" className="size-full object-cover" />
           ) : (
             <span className="text-xs text-neutral-400">—</span>
           )}
         </div>
       ),
     },
-    { key: "nameEn", label: "Brand" },
+    { key: "nameEn", label: "Model" },
     { key: "slug", label: "Slug" },
-    { key: "modelCount", label: "Models" },
+    { key: "engineCount", label: "Engines" },
     {
       key: "status",
       label: "Status",
@@ -121,14 +148,9 @@ export default function CarBrandsPage() {
           <Button
             variant="ghost"
             size="sm"
-            onPress={() => router.push(`/admin/cars/brands/${row.id}/models`)}
-          >
-            Models
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onPress={() => router.push(`/admin/cars/brands/${row.id}`)}
+            onPress={() =>
+              router.push(`/admin/cars/brands/${carBrandId}/models/${row.id}`)
+            }
           >
             Edit
           </Button>
@@ -149,10 +171,29 @@ export default function CarBrandsPage() {
 
   return (
     <div className="flex flex-col gap-6 p-8">
+      <nav className="flex items-center gap-2 text-sm text-neutral-500">
+        <Link href="/admin/cars/brands" className="hover:text-neutral-700">
+          Car Brands
+        </Link>
+        <span>/</span>
+        <Link
+          href={`/admin/cars/brands/${carBrandId}`}
+          className="hover:text-neutral-700"
+        >
+          {carBrand?.nameEn ?? "…"}
+        </Link>
+        <span>/</span>
+        <span className="text-neutral-700">Models</span>
+      </nav>
+
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-neutral-900">Car Brands</h1>
-        <Button onPress={() => router.push("/admin/cars/brands/add")}>
-          + Add Car Brand
+        <h1 className="text-lg font-semibold text-neutral-900">
+          {carBrand ? `${carBrand.nameEn} — Models` : "Models"}
+        </h1>
+        <Button
+          onPress={() => router.push(`/admin/cars/brands/${carBrandId}/models/add`)}
+        >
+          + Add Model
         </Button>
       </div>
 
@@ -164,8 +205,8 @@ export default function CarBrandsPage() {
 
       <DataTable
         columns={columns}
-        rows={carBrands}
-        searchPlaceholder="Search car brands..."
+        rows={carModels}
+        searchPlaceholder="Search car models..."
         onSearch={(value) => {
           setPage(1);
           setSearch(value);
@@ -185,8 +226,8 @@ export default function CarBrandsPage() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
-        emptyMessage={isLoading ? "Loading..." : "No car brands found."}
-        aria-label="Car Brands"
+        emptyMessage={isLoading ? "Loading..." : "No car models found."}
+        aria-label="Car Models"
       />
 
       <AlertDialog
@@ -200,7 +241,7 @@ export default function CarBrandsPage() {
             <AlertDialog.Dialog>
               <AlertDialog.Header>
                 <AlertDialog.Icon status="danger" />
-                <AlertDialog.Heading>Delete car brand</AlertDialog.Heading>
+                <AlertDialog.Heading>Delete car model</AlertDialog.Heading>
               </AlertDialog.Header>
               <AlertDialog.Body>
                 <p>
