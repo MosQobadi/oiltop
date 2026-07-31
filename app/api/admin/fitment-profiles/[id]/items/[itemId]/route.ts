@@ -1,15 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { fitmentRecommendationUpdateSchema } from "@/lib/validation";
+import { fitmentProfileItemUpdateSchema } from "@/lib/validation";
 import { AuthError, requireAdmin } from "@/server/auth";
 import {
-  FitmentRecommendationNotFoundError,
-  deleteFitmentRecommendation,
+  FitmentProfileItemNotFoundError,
+  deleteFitmentProfileItem,
   getCategoryPartType,
-  getFitmentRecommendationById,
-  updateFitmentRecommendation,
-} from "@/server/fitmentRecommendation";
+  getFitmentProfileItemById,
+  updateFitmentProfileItem,
+} from "@/server/fitmentProfile";
 
-type RouteContext = { params: Promise<{ id: string }> };
+type RouteContext = { params: Promise<{ id: string; itemId: string }> };
 
 function extractCategoryId(body: unknown): string | undefined {
   if (
@@ -37,36 +37,17 @@ async function ensureAdmin() {
   }
 }
 
-export async function GET(_request: NextRequest, { params }: RouteContext) {
-  const unauthorized = await ensureAdmin();
-  if (unauthorized) return unauthorized;
-
-  const { id } = await params;
-  try {
-    const fitmentRecommendation = await getFitmentRecommendationById(id);
-    return NextResponse.json({ success: true, data: { fitmentRecommendation } });
-  } catch (error) {
-    if (error instanceof FitmentRecommendationNotFoundError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 404 },
-      );
-    }
-    throw error;
-  }
-}
-
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const unauthorized = await ensureAdmin();
   if (unauthorized) return unauthorized;
 
-  const { id } = await params;
+  const { id, itemId } = await params;
 
   let existing;
   try {
-    existing = await getFitmentRecommendationById(id);
+    existing = await getFitmentProfileItemById(id, itemId);
   } catch (error) {
-    if (error instanceof FitmentRecommendationNotFoundError) {
+    if (error instanceof FitmentProfileItemNotFoundError) {
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 404 },
@@ -82,7 +63,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const categoryId = extractCategoryId(body) ?? existing.categoryId;
   const categoryPartType = await getCategoryPartType(categoryId);
 
-  const parsed = fitmentRecommendationUpdateSchema.safeParse({
+  const parsed = fitmentProfileItemUpdateSchema.safeParse({
     ...(body && typeof body === "object" ? body : {}),
     categoryPartType,
   });
@@ -94,10 +75,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
 
   try {
-    const fitmentRecommendation = await updateFitmentRecommendation(id, parsed.data);
-    return NextResponse.json({ success: true, data: { fitmentRecommendation } });
+    const item = await updateFitmentProfileItem(id, itemId, parsed.data);
+    return NextResponse.json({ success: true, data: { item } });
   } catch (error) {
-    if (error instanceof FitmentRecommendationNotFoundError) {
+    if (error instanceof FitmentProfileItemNotFoundError) {
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 404 },
@@ -111,12 +92,12 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
   const unauthorized = await ensureAdmin();
   if (unauthorized) return unauthorized;
 
-  const { id } = await params;
+  const { id, itemId } = await params;
   try {
-    await deleteFitmentRecommendation(id);
+    await deleteFitmentProfileItem(id, itemId);
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
-    if (error instanceof FitmentRecommendationNotFoundError) {
+    if (error instanceof FitmentProfileItemNotFoundError) {
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 404 },

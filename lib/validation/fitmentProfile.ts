@@ -2,8 +2,26 @@ import { z } from "zod";
 import { pageSchema, pageSizeSchema } from "./common";
 import { fitmentClimateSchema, partTypeSchema } from "./enums";
 
-const fitmentRecommendationShape = {
-  carEngineId: z.string().min(1, "carEngineId is required"),
+const fitmentProfileShape = {
+  label: z.string().min(1, "Label is required").max(200),
+  internalNote: z.string().max(2000).nullable().optional(),
+};
+
+export const fitmentProfileCreateSchema = z.object(fitmentProfileShape);
+export const fitmentProfileUpdateSchema = z.object(fitmentProfileShape).partial();
+
+export type FitmentProfileCreateInput = z.infer<typeof fitmentProfileCreateSchema>;
+export type FitmentProfileUpdateInput = z.infer<typeof fitmentProfileUpdateSchema>;
+
+export const fitmentProfileListQuerySchema = z.object({
+  search: z.string().trim().min(1).optional(),
+  page: pageSchema,
+  pageSize: pageSizeSchema,
+});
+
+export type FitmentProfileListQuery = z.infer<typeof fitmentProfileListQuerySchema>;
+
+const fitmentProfileItemShape = {
   categoryId: z.string().min(1, "categoryId is required"),
   // Looked up by the caller from the related Category — not a persisted field.
   // Passed alongside the payload solely so the climate/partType rule below can
@@ -54,32 +72,27 @@ function checkTargetPresent(
   }
 }
 
-export const fitmentRecommendationCreateSchema = z
-  .object(fitmentRecommendationShape)
+export const fitmentProfileItemCreateSchema = z
+  .object(fitmentProfileItemShape)
   .superRefine((data, ctx) => {
     checkClimate(data, ctx);
     checkTargetPresent(data, ctx);
   });
 
-export const fitmentRecommendationUpdateSchema = z
-  .object(fitmentRecommendationShape)
+export const fitmentProfileItemUpdateSchema = z
+  .object(fitmentProfileItemShape)
   .partial()
   .superRefine(checkClimate);
 
-export type FitmentRecommendationCreateInput = z.infer<
-  typeof fitmentRecommendationCreateSchema
+export type FitmentProfileItemCreateInput = z.infer<
+  typeof fitmentProfileItemCreateSchema
 >;
-export type FitmentRecommendationUpdateInput = z.infer<
-  typeof fitmentRecommendationUpdateSchema
+export type FitmentProfileItemUpdateInput = z.infer<
+  typeof fitmentProfileItemUpdateSchema
 >;
 
-export const fitmentRecommendationListQuerySchema = z.object({
-  carEngineId: z.string().min(1).optional(),
-  categoryId: z.string().min(1).optional(),
-  page: pageSchema,
-  pageSize: pageSizeSchema,
+export const fitmentProfileAttachSchema = z.object({
+  carEngineIds: z.array(z.string().min(1)).min(1, "Select at least one engine"),
 });
 
-export type FitmentRecommendationListQuery = z.infer<
-  typeof fitmentRecommendationListQuerySchema
->;
+export type FitmentProfileAttachInput = z.infer<typeof fitmentProfileAttachSchema>;

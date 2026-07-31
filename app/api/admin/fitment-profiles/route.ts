@@ -1,25 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
-  fitmentRecommendationCreateSchema,
-  fitmentRecommendationListQuerySchema,
+  fitmentProfileCreateSchema,
+  fitmentProfileListQuerySchema,
 } from "@/lib/validation";
 import { AuthError, requireAdmin } from "@/server/auth";
-import {
-  createFitmentRecommendation,
-  getCategoryPartType,
-  listFitmentRecommendations,
-} from "@/server/fitmentRecommendation";
-
-function extractCategoryId(body: unknown): string | undefined {
-  if (
-    body &&
-    typeof body === "object" &&
-    typeof (body as Record<string, unknown>).categoryId === "string"
-  ) {
-    return (body as Record<string, unknown>).categoryId as string;
-  }
-  return undefined;
-}
+import { createFitmentProfile, listFitmentProfiles } from "@/server/fitmentProfile";
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,7 +19,7 @@ export async function GET(request: NextRequest) {
     throw error;
   }
 
-  const parsed = fitmentRecommendationListQuerySchema.safeParse(
+  const parsed = fitmentProfileListQuerySchema.safeParse(
     Object.fromEntries(request.nextUrl.searchParams),
   );
   if (!parsed.success) {
@@ -44,13 +29,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { fitmentRecommendations, total } = await listFitmentRecommendations(
-    parsed.data,
-  );
+  const { fitmentProfiles, total } = await listFitmentProfiles(parsed.data);
   return NextResponse.json({
     success: true,
     data: {
-      fitmentRecommendations,
+      fitmentProfiles,
       total,
       page: parsed.data.page,
       pageSize: parsed.data.pageSize,
@@ -72,15 +55,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => null);
-  const categoryId = extractCategoryId(body);
-  const categoryPartType = categoryId
-    ? await getCategoryPartType(categoryId)
-    : undefined;
-
-  const parsed = fitmentRecommendationCreateSchema.safeParse({
-    ...(body && typeof body === "object" ? body : {}),
-    categoryPartType,
-  });
+  const parsed = fitmentProfileCreateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { success: false, error: parsed.error.issues[0]?.message ?? "Invalid request" },
@@ -88,9 +63,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const fitmentRecommendation = await createFitmentRecommendation(parsed.data);
+  const fitmentProfile = await createFitmentProfile(parsed.data);
   return NextResponse.json(
-    { success: true, data: { fitmentRecommendation } },
+    { success: true, data: { fitmentProfile } },
     { status: 201 },
   );
 }

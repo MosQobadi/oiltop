@@ -124,7 +124,7 @@ export async function deleteProduct(id: string) {
     where: { id },
     include: {
       _count: { select: { orderItems: true } },
-      fitmentRecommendations: { select: { id: true } },
+      fitmentProfileItems: { select: { id: true } },
     },
   });
   if (!existing) {
@@ -132,7 +132,7 @@ export async function deleteProduct(id: string) {
   }
 
   const orderItemCount = existing._count.orderItems;
-  const fitmentIds = existing.fitmentRecommendations.map((f) => f.id);
+  const fitmentIds = existing.fitmentProfileItems.map((f) => f.id);
 
   if (orderItemCount > 0 || fitmentIds.length > 0) {
     await prisma.product.update({
@@ -146,7 +146,7 @@ export async function deleteProduct(id: string) {
     }
     if (fitmentIds.length > 0) {
       reasons.push(
-        `fitment recommendation(s) [${fitmentIds.join(", ")}]`,
+        `fitment profile item(s) [${fitmentIds.join(", ")}]`,
       );
     }
     throw new ProductDeleteBlockedError(

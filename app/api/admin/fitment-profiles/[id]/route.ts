@@ -1,13 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { carEngineUpdateSchema } from "@/lib/validation";
+import { fitmentProfileUpdateSchema } from "@/lib/validation";
 import { AuthError, requireAdmin } from "@/server/auth";
 import {
-  CarEngineHasFitmentProfileLinksError,
-  CarEngineNotFoundError,
-  deleteCarEngine,
-  getCarEngineById,
-  updateCarEngine,
-} from "@/server/carEngine";
+  FitmentProfileLinkedError,
+  FitmentProfileNotFoundError,
+  deleteFitmentProfile,
+  getFitmentProfileById,
+  updateFitmentProfile,
+} from "@/server/fitmentProfile";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -32,10 +32,10 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 
   const { id } = await params;
   try {
-    const carEngine = await getCarEngineById(id);
-    return NextResponse.json({ success: true, data: { carEngine } });
+    const fitmentProfile = await getFitmentProfileById(id);
+    return NextResponse.json({ success: true, data: { fitmentProfile } });
   } catch (error) {
-    if (error instanceof CarEngineNotFoundError) {
+    if (error instanceof FitmentProfileNotFoundError) {
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 404 },
@@ -51,7 +51,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 
   const { id } = await params;
   const body = await request.json().catch(() => null);
-  const parsed = carEngineUpdateSchema.safeParse(body);
+  const parsed = fitmentProfileUpdateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { success: false, error: parsed.error.issues[0]?.message ?? "Invalid request" },
@@ -60,10 +60,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   }
 
   try {
-    const carEngine = await updateCarEngine(id, parsed.data);
-    return NextResponse.json({ success: true, data: { carEngine } });
+    const fitmentProfile = await updateFitmentProfile(id, parsed.data);
+    return NextResponse.json({ success: true, data: { fitmentProfile } });
   } catch (error) {
-    if (error instanceof CarEngineNotFoundError) {
+    if (error instanceof FitmentProfileNotFoundError) {
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 404 },
@@ -79,16 +79,16 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
 
   const { id } = await params;
   try {
-    await deleteCarEngine(id);
+    await deleteFitmentProfile(id);
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
-    if (error instanceof CarEngineNotFoundError) {
+    if (error instanceof FitmentProfileNotFoundError) {
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 404 },
       );
     }
-    if (error instanceof CarEngineHasFitmentProfileLinksError) {
+    if (error instanceof FitmentProfileLinkedError) {
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 409 },

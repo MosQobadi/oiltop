@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import {
+  AlertDialog,
+  Button,
+  Chip,
+  ComboBox,
+  Input,
+  Label,
+  ListBox,
+} from "@heroui/react";
 import {
   BilingualTextField,
   FormActions,
@@ -13,6 +22,143 @@ import {
   TextField,
   ToggleField,
 } from "@/components/admin/form";
+import { CloseIcon } from "@/components/admin/icons";
+
+interface ProfileOption {
+  id: string;
+  label: string;
+}
+
+interface FitmentProfileLink {
+  id: string;
+  profile: { id: string; label: string; itemCount: number };
+}
+
+const PROFILE_SEARCH_DEBOUNCE_MS = 300;
+
+function AttachExistingProfileControl({
+  carEngineId,
+  onAttached,
+}: {
+  carEngineId: string;
+  onAttached: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<ProfileOption[]>([]);
+  const [selected, setSelected] = useState<ProfileOption | null>(null);
+  const [isAttaching, setIsAttaching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function search() {
+      const searchParams = new URLSearchParams({ pageSize: "20" });
+      if (query) searchParams.set("search", query);
+
+      const response = await fetch(
+        `/api/admin/fitment-profiles?${searchParams.toString()}`,
+      );
+      const result = await response.json();
+      if (ignore || !result.success) return;
+
+      setResults(
+        result.data.fitmentProfiles.map((profile: { id: string; label: string }) => ({
+          id: profile.id,
+          label: profile.label,
+        })),
+      );
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => void search(), PROFILE_SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      ignore = true;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query]);
+
+  const handleAttach = async () => {
+    if (!selected) return;
+    setIsAttaching(true);
+    setError(null);
+
+    const response = await fetch(`/api/admin/fitment-profiles/${selected.id}/attach`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ carEngineIds: [carEngineId] }),
+    });
+    const result = await response.json();
+    setIsAttaching(false);
+
+    if (!result.success) {
+      setError(result.error ?? "Failed to attach profile");
+      return;
+    }
+
+    setSelected(null);
+    setQuery("");
+    onAttached();
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <ComboBox
+          items={results}
+          selectedKey={selected?.id ?? null}
+          onSelectionChange={(key) => {
+            if (key == null) {
+              setSelected(null);
+              return;
+            }
+            setSelected(results.find((r) => r.id === String(key)) ?? null);
+          }}
+          onInputChange={setQuery}
+          allowsEmptyCollection
+          fullWidth
+          className="flex-1"
+        >
+          <Label>Attach Existing Profile</Label>
+          <ComboBox.InputGroup>
+            <Input placeholder="Search fitment profiles..." fullWidth />
+            <ComboBox.Trigger />
+          </ComboBox.InputGroup>
+          <ComboBox.Popover>
+            <ListBox
+              items={results}
+              renderEmptyState={() => (
+                <div className="px-3 py-2 text-sm text-neutral-500">
+                  No fitment profiles found.
+                </div>
+              )}
+            >
+              {(item) => (
+                <ListBox.Item id={item.id} textValue={item.label}>
+                  {item.label}
+                </ListBox.Item>
+              )}
+            </ListBox>
+          </ComboBox.Popover>
+        </ComboBox>
+        <Button
+          type="button"
+          onPress={() => void handleAttach()}
+          isDisabled={!selected || isAttaching}
+        >
+          {isAttaching ? "Attaching..." : "Attach"}
+        </Button>
+      </div>
+      {error && (
+        <p role="alert" className="text-sm text-danger">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
 
 const FUEL_TYPE_OPTIONS = [
   { label: "Petrol", value: "PETROL" },
@@ -103,6 +249,16 @@ export default function CarEngineFormPage() {
   const [isLoading, setIsLoading] = useState(isEdit);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [engineLabelEn, setEngineLabelEn] = useState("");
+  const [fitmentProfileLinks, setFitmentProfileLinks] = useState<FitmentProfileLink[]>(
+    [],
+  );
+  const [fitmentReloadKey, setFitmentReloadKey] = useState(0);
+  const [detachTarget, setDetachTarget] = useState<FitmentProfileLink | null>(null);
+  const [isDetaching, setIsDetaching] = useState(false);
+  const [detachError, setDetachError] = useState<string | null>(null);
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
+  const [createProfileError, setCreateProfileError] = useState<string | null>(null);
 
   const {
     control,
@@ -153,6 +309,8 @@ export default function CarEngineFormPage() {
         engineCode: carEngine.engineCode ?? "",
         isActive: carEngine.status === "ACTIVE",
       });
+      setEngineLabelEn(carEngine.labelEn);
+      setFitmentProfileLinks(carEngine.fitmentProfileLinks ?? []);
       setIsLoading(false);
     }
 
@@ -160,7 +318,66 @@ export default function CarEngineFormPage() {
     return () => {
       ignore = true;
     };
-  }, [isEdit, carEngineId, reset]);
+  }, [isEdit, carEngineId, reset, fitmentReloadKey]);
+
+  const handleDetachProfile = async () => {
+    if (!detachTarget || !carEngineId) return;
+    setIsDetaching(true);
+    setDetachError(null);
+
+    const response = await fetch(
+      `/api/admin/fitment-profiles/${detachTarget.profile.id}/attach/${carEngineId}`,
+      { method: "DELETE" },
+    );
+    const result = await response.json();
+    setIsDetaching(false);
+
+    if (!result.success) {
+      setDetachError(result.error ?? "Failed to detach fitment profile");
+      return;
+    }
+
+    setDetachTarget(null);
+    setFitmentReloadKey((key) => key + 1);
+  };
+
+  const handleCreateProfileForEngine = async () => {
+    if (!carEngineId) return;
+    setIsCreatingProfile(true);
+    setCreateProfileError(null);
+
+    const createResponse = await fetch("/api/admin/fitment-profiles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: `${engineLabelEn} Fitment` }),
+    });
+    const createResult = await createResponse.json();
+
+    if (!createResult.success) {
+      setIsCreatingProfile(false);
+      setCreateProfileError(createResult.error ?? "Failed to create fitment profile");
+      return;
+    }
+
+    const newProfileId = createResult.data.fitmentProfile.id;
+    const attachResponse = await fetch(
+      `/api/admin/fitment-profiles/${newProfileId}/attach`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ carEngineIds: [carEngineId] }),
+      },
+    );
+    const attachResult = await attachResponse.json();
+    setIsCreatingProfile(false);
+
+    if (!attachResult.success) {
+      setCreateProfileError(attachResult.error ?? "Failed to attach new fitment profile");
+      return;
+    }
+
+    router.push(`/admin/cars/fitment-profiles/${newProfileId}`);
+  };
 
   const onSubmit = async (values: CarEngineFormValues) => {
     setSubmitError(null);
@@ -315,6 +532,112 @@ export default function CarEngineFormPage() {
           isSubmitting={isSubmitting}
         />
       </form>
+
+      {isEdit && carEngineId && (
+        <section className="flex max-w-2xl flex-col gap-4 border-t border-neutral-200 pt-6">
+          <h2 className="text-base font-semibold text-neutral-900">Fitment</h2>
+
+          {fitmentProfileLinks.length === 0 ? (
+            <p className="text-sm text-neutral-500">
+              No fitment profile attached to this engine yet.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {fitmentProfileLinks.map((link) => (
+                <Chip key={link.id} size="sm" variant="soft">
+                  <Chip.Label>
+                    <Link
+                      href={`/admin/cars/fitment-profiles/${link.profile.id}`}
+                      className="hover:underline"
+                    >
+                      {link.profile.label} ({link.profile.itemCount} item
+                      {link.profile.itemCount === 1 ? "" : "s"})
+                    </Link>
+                  </Chip.Label>
+                  <button
+                    type="button"
+                    aria-label={`Detach ${link.profile.label}`}
+                    className="ml-1 inline-flex items-center hover:opacity-70"
+                    onClick={() => {
+                      setDetachError(null);
+                      setDetachTarget(link);
+                    }}
+                  >
+                    <CloseIcon className="size-3" />
+                  </button>
+                </Chip>
+              ))}
+            </div>
+          )}
+
+          <AttachExistingProfileControl
+            carEngineId={carEngineId}
+            onAttached={() => setFitmentReloadKey((key) => key + 1)}
+          />
+
+          <div className="flex flex-col gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onPress={() => void handleCreateProfileForEngine()}
+              isDisabled={isCreatingProfile}
+              className="self-start"
+            >
+              {isCreatingProfile ? "Creating..." : "Create New Profile for This Engine"}
+            </Button>
+            {createProfileError && (
+              <p role="alert" className="text-sm text-danger">
+                {createProfileError}
+              </p>
+            )}
+          </div>
+        </section>
+      )}
+
+      <AlertDialog
+        isOpen={detachTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDetachTarget(null);
+        }}
+      >
+        <AlertDialog.Backdrop>
+          <AlertDialog.Container>
+            <AlertDialog.Dialog>
+              <AlertDialog.Header>
+                <AlertDialog.Icon status="danger" />
+                <AlertDialog.Heading>Detach fitment profile</AlertDialog.Heading>
+              </AlertDialog.Header>
+              <AlertDialog.Body>
+                <p>
+                  Detach &ldquo;{detachTarget?.profile.label}&rdquo; from this car
+                  engine?
+                </p>
+                {detachError && (
+                  <p role="alert" className="mt-2 text-sm text-danger">
+                    {detachError}
+                  </p>
+                )}
+              </AlertDialog.Body>
+              <AlertDialog.Footer>
+                <Button
+                  variant="outline"
+                  onPress={() => setDetachTarget(null)}
+                  isDisabled={isDetaching}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  onPress={() => void handleDetachProfile()}
+                  isDisabled={isDetaching}
+                >
+                  {isDetaching ? "Detaching..." : "Detach"}
+                </Button>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
+      </AlertDialog>
     </div>
   );
 }

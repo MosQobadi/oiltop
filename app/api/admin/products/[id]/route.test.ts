@@ -82,7 +82,7 @@ afterAll(async () => {
   await prisma.orderItem.deleteMany({
     where: { product: { sku: { startsWith: SKU_PREFIX } } },
   });
-  await prisma.fitmentRecommendation.deleteMany({
+  await prisma.fitmentProfileItem.deleteMany({
     where: { product: { sku: { startsWith: SKU_PREFIX } } },
   });
   await prisma.inventory.deleteMany({
@@ -210,10 +210,12 @@ describe("DELETE /api/admin/products/:id", () => {
 
   it("deactivates instead of deleting and names the referencing fitment rows", async () => {
     const product = await createTestProduct();
-    const carEngine = await prisma.carEngine.findFirstOrThrow();
-    const fitment = await prisma.fitmentRecommendation.create({
+    const profile = await prisma.fitmentProfile.create({
+      data: { label: `${SKU_PREFIX} profile` },
+    });
+    const item = await prisma.fitmentProfileItem.create({
       data: {
-        carEngineId: carEngine.id,
+        profileId: profile.id,
         categoryId: engineOilCategory.id,
         productId: product.id,
       },
@@ -224,13 +226,14 @@ describe("DELETE /api/admin/products/:id", () => {
 
     expect(res.status).toBe(409);
     expect(json.success).toBe(false);
-    expect(json.error).toMatch(/fitment recommendation/i);
-    expect(json.error).toContain(fitment.id);
+    expect(json.error).toMatch(/fitment profile item/i);
+    expect(json.error).toContain(item.id);
 
     const stillExists = await prisma.product.findUnique({ where: { id: product.id } });
     expect(stillExists).not.toBeNull();
     expect(stillExists?.status).toBe("INACTIVE");
 
-    await prisma.fitmentRecommendation.delete({ where: { id: fitment.id } });
+    await prisma.fitmentProfileItem.delete({ where: { id: item.id } });
+    await prisma.fitmentProfile.delete({ where: { id: profile.id } });
   });
 });

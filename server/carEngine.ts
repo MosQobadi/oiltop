@@ -3,11 +3,12 @@ import type { Prisma } from "@/lib/generated/prisma/client";
 import type {
   CarEngineCreateInput,
   CarEngineListQuery,
+  CarEngineSearchableQuery,
   CarEngineUpdateInput,
 } from "@/lib/validation";
 
 export class CarEngineNotFoundError extends Error {}
-export class CarEngineHasFitmentRecommendationsError extends Error {}
+export class CarEngineHasFitmentProfileLinksError extends Error {}
 
 export async function listCarEngines(query: CarEngineListQuery) {
   const where: Prisma.CarEngineWhereInput = {
@@ -37,11 +38,33 @@ export async function listCarEngines(query: CarEngineListQuery) {
 }
 
 export async function getCarEngineById(id: string) {
-  const carEngine = await prisma.carEngine.findUnique({ where: { id } });
+  const carEngine = await prisma.carEngine.findUnique({
+    where: { id },
+    include: {
+      fitmentProfileLinks: {
+        include: {
+          profile: { include: { _count: { select: { items: true } } } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
   if (!carEngine) {
     throw new CarEngineNotFoundError(`Car engine "${id}" was not found`);
   }
-  return carEngine;
+
+  const { fitmentProfileLinks, ...rest } = carEngine;
+  return {
+    ...rest,
+    fitmentProfileLinks: fitmentProfileLinks.map((link) => ({
+      id: link.id,
+      profile: {
+        id: link.profile.id,
+        label: link.profile.label,
+        itemCount: link.profile._count.items,
+      },
+    })),
+  };
 }
 
 export async function createCarEngine(input: CarEngineCreateInput) {
@@ -63,16 +86,80 @@ export async function updateCarEngine(
 export async function deleteCarEngine(id: string) {
   const existing = await prisma.carEngine.findUnique({
     where: { id },
-    include: { _count: { select: { fitmentRecommendations: true } } },
+    include: { _count: { select: { fitmentProfileLinks: true } } },
   });
   if (!existing) {
     throw new CarEngineNotFoundError(`Car engine "${id}" was not found`);
   }
-  if (existing._count.fitmentRecommendations > 0) {
-    throw new CarEngineHasFitmentRecommendationsError(
-      `Cannot delete car engine with ${existing._count.fitmentRecommendations} fitment recommendation(s) attached — reassign or remove them first`,
+  if (existing._count.fitmentProfileLinks > 0) {
+    throw new CarEngineHasFitmentProfileLinksError(
+      `Cannot delete car engine with ${existing._count.fitmentProfileLinks} fitment profile(s) attached — detach them first`,
     );
   }
 
   await prisma.carEngine.delete({ where: { id } });
+}
+
+// Backs the Fitment Profile "Attach Engines" picker: {id, label} pairs
+// (label = "Brand Model Engine (yearStart–yearEnd)") filterable by brand,
+// model, and year range so an admin can narrow before bulk-attaching.
+export async function listSearchableCarEngines(query: CarEngineSearchableQuery) {
+  const where: Prisma.CarEngineWhereInput = {
+    status: "ACTIVE",
+    carModelId: query.carModelId,
+    carModel: query.carBrandId ? { carBrandId: query.carBrandId } : undefined,
+    AND: [
+      ...(query.yearFrom !== undefined
+        ? [{ OR: [{ yearEnd: null }, { yearEnd: { gte: query.yearFrom } }] }]
+        : []),
+      ...(query.yearTo !== undefined
+        ? [{ yearStart: { lte: query.yearTo } }]
+        : []),
+      ...(query.search
+        ? [
+            {
+              OR: [
+                { labelEn: { contains: query.search, mode: "insensitive" as const } },
+                { labelFa: { contains: query.search, mode: "insensitive" as const } },
+                {
+                  carModel: {
+                    nameEn: { contains: query.search, mode: "insensitive" as const },
+                  },
+                },
+                {
+                  carModel: {
+                    carBrand: {
+                      nameEn: { contains: query.search, mode: "insensitive" as const },
+                    },
+                  },
+                },
+              ],
+            },
+          ]
+        : []),
+    ],
+  };
+
+  const [carEngines, total] = await Promise.all([
+    prisma.carEngine.findMany({
+      where,
+      include: { carModel: { include: { carBrand: true } } },
+      orderBy: [
+        { carModel: { carBrand: { nameEn: "asc" } } },
+        { carModel: { nameEn: "asc" } },
+        { labelEn: "asc" },
+      ],
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+    }),
+    prisma.carEngine.count({ where }),
+  ]);
+
+  return {
+    carEngines: carEngines.map((engine) => ({
+      id: engine.id,
+      label: `${engine.carModel.carBrand.nameEn} ${engine.carModel.nameEn} ${engine.labelEn} (${engine.yearStart}–${engine.yearEnd ?? "Present"})`,
+    })),
+    total,
+  };
 }

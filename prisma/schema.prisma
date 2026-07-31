@@ -153,10 +153,9 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  products                Product[]
-  fitmentRecommendations  FitmentRecommendation[]
-  fitmentProfileItems     FitmentProfileItem[]
-  fitmentInquiries        FitmentInquiry[]
+  products            Product[]
+  fitmentProfileItems FitmentProfileItem[]
+  fitmentInquiries    FitmentInquiry[]
 }
 
 model Brand {
@@ -211,10 +210,9 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  inventory               Inventory?
-  orderItems              OrderItem[]
-  fitmentRecommendations  FitmentRecommendation[]
-  fitmentProfileItems     FitmentProfileItem[]
+  inventory           Inventory?
+  orderItems          OrderItem[]
+  fitmentProfileItems FitmentProfileItem[]
 }
 
 // stock thresholds (derived, not stored): 0 = out of stock, <10 = low stock, otherwise in stock
@@ -295,39 +293,8 @@ model CarEngine {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  fitmentRecommendations FitmentRecommendation[]
-  fitmentProfileLinks    CarEngineFitmentProfile[]
-  fitmentInquiries       FitmentInquiry[]
-}
-
-// climate must be STANDARD unless the related category's partType is ENGINE_OIL —
-// enforced as a Zod cross-field rule (lib/validation/), not a DB constraint.
-// Superseded by FitmentProfile/FitmentProfileItem (see Design Decision 9 in
-// topoil-admin-claude-code-tasks.md) — kept until scripts/migrate-fitment.ts has
-// moved all existing rows over and the result is verified in the Fitment Preview
-// tool, then dropped in a follow-up migration.
-model FitmentRecommendation {
-  id String @id @default(cuid())
-
-  carEngineId String
-  carEngine   CarEngine @relation(fields: [carEngineId], references: [id])
-
-  categoryId String
-  category   Category @relation(fields: [categoryId], references: [id])
-
-  climate FitmentClimate @default(STANDARD)
-
-  productId String?
-  product   Product? @relation(fields: [productId], references: [id])
-
-  specNote       String?
-  specAttributes Json?
-
-  priority  Int     @default(0)
-  adminNote String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  fitmentProfileLinks CarEngineFitmentProfile[]
+  fitmentInquiries    FitmentInquiry[]
 }
 
 // A reusable set of fitment recommendations, attached to any number of CarEngine

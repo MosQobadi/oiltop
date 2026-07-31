@@ -54,3 +54,33 @@ export const carEngineListQuerySchema = z.object({
 });
 
 export type CarEngineListQuery = z.infer<typeof carEngineListQuerySchema>;
+
+// Backs the Fitment Profile "Attach Engines" picker — all filters optional so
+// an admin can narrow by brand/model/year range before picking from the list.
+export const carEngineSearchableQuerySchema = z
+  .object({
+    carBrandId: z.string().min(1).optional(),
+    carModelId: z.string().min(1).optional(),
+    yearFrom: z.coerce.number().int().min(1900).max(2100).optional(),
+    yearTo: z.coerce.number().int().min(1900).max(2100).optional(),
+    search: z.string().trim().min(1).optional(),
+    page: pageSchema,
+    pageSize: pageSizeSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.yearFrom !== undefined &&
+      data.yearTo !== undefined &&
+      data.yearFrom > data.yearTo
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["yearTo"],
+        message: "yearTo must be greater than or equal to yearFrom",
+      });
+    }
+  });
+
+export type CarEngineSearchableQuery = z.infer<
+  typeof carEngineSearchableQuerySchema
+>;

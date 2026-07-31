@@ -8,7 +8,7 @@ export * from "./common";
 export * from "./customer";
 export * from "./enums";
 export * from "./fitmentInquiry";
-export * from "./fitmentRecommendation";
+export * from "./fitmentProfile";
 export * from "./inventory";
 export * from "./order";
 export * from "./product";

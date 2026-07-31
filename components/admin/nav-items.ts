@@ -13,6 +13,10 @@ import {
   SettingsIcon,
 } from "./icons";
 
+// Fitment Profiles reuses the Categories icon — no dedicated icon exists for
+// it yet and it's visually close enough (a grouped-items concept) to not
+// warrant adding a new one just for this nav entry.
+
 export interface NavItem {
   label: string;
   href: string;
@@ -31,6 +35,11 @@ export const navItems: NavItem[] = [
     icon: CarIcon,
     children: [
       { label: "Car Brands", href: "/admin/cars/brands", icon: BrandsIcon },
+      {
+        label: "Fitment Profiles",
+        href: "/admin/cars/fitment-profiles",
+        icon: CategoriesIcon,
+      },
       { label: "Fitment Preview", href: "/admin/cars/preview", icon: PreviewIcon },
     ],
   },

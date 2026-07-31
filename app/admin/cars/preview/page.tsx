@@ -29,7 +29,7 @@ interface FitmentProduct {
   image: string | null;
 }
 
-interface FitmentRecommendation {
+interface FitmentItem {
   id: string;
   category: { id: string; nameEn: string };
   climate: "STANDARD" | "HOT" | "COLD";
@@ -39,7 +39,7 @@ interface FitmentRecommendation {
 
 interface CategoryGroup {
   category: { id: string; nameEn: string };
-  items: FitmentRecommendation[];
+  items: FitmentItem[];
 }
 
 interface PreviewFormValues {
@@ -56,7 +56,7 @@ const emptyDefaults: PreviewFormValues = {
   carEngineId: "",
 };
 
-const CLIMATE_LABELS: Partial<Record<FitmentRecommendation["climate"], string>> = {
+const CLIMATE_LABELS: Partial<Record<FitmentItem["climate"], string>> = {
   HOT: "Hot climate",
   COLD: "Cold climate",
 };
@@ -73,11 +73,11 @@ function expandYearOptions(carEngines: CarEngine[]) {
     .map((year) => ({ label: String(year), value: String(year) }));
 }
 
-function groupByCategory(fitmentRecommendations: FitmentRecommendation[]): CategoryGroup[] {
+function groupByCategory(items: FitmentItem[]): CategoryGroup[] {
   const groups: CategoryGroup[] = [];
   const groupByCategoryId = new Map<string, CategoryGroup>();
 
-  for (const item of fitmentRecommendations) {
+  for (const item of items) {
     let group = groupByCategoryId.get(item.category.id);
     if (!group) {
       group = { category: item.category, items: [] };
@@ -103,10 +103,8 @@ export default function FitmentPreviewPage() {
   const [carBrands, setCarBrands] = useState<CarBrand[]>([]);
   const [carModels, setCarModels] = useState<CarModel[]>([]);
   const [carEngines, setCarEngines] = useState<CarEngine[]>([]);
-  const [fitmentRecommendations, setFitmentRecommendations] = useState<
-    FitmentRecommendation[]
-  >([]);
-  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [fitmentItems, setFitmentItems] = useState<FitmentItem[]>([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -201,38 +199,39 @@ export default function FitmentPreviewPage() {
 
   useEffect(() => {
     if (!carEngineId) {
-      setFitmentRecommendations([]);
+      setFitmentItems([]);
       return;
     }
 
     let ignore = false;
 
-    async function loadFitmentRecommendations() {
-      setIsLoadingRecommendations(true);
+    async function loadFitmentItems() {
+      setIsLoadingItems(true);
       setLoadError(null);
 
-      const queryParams = new URLSearchParams({ carEngineId, pageSize: "100" });
-      const response = await fetch(`/api/admin/fitment?${queryParams.toString()}`);
+      // Resolves via CarEngineFitmentProfile → FitmentProfile → FitmentProfileItem —
+      // the same read path the storefront will eventually use.
+      const response = await fetch(`/api/admin/car-engines/${carEngineId}/fitment`);
       const result = await response.json();
       if (ignore) return;
 
       if (!result.success) {
         setLoadError(result.error ?? "Failed to load fitment recommendations");
-        setIsLoadingRecommendations(false);
+        setIsLoadingItems(false);
         return;
       }
 
-      setFitmentRecommendations(result.data.fitmentRecommendations);
-      setIsLoadingRecommendations(false);
+      setFitmentItems(result.data.items);
+      setIsLoadingItems(false);
     }
 
-    void loadFitmentRecommendations();
+    void loadFitmentItems();
     return () => {
       ignore = true;
     };
   }, [carEngineId]);
 
-  const categoryGroups = groupByCategory(fitmentRecommendations);
+  const categoryGroups = groupByCategory(fitmentItems);
 
   return (
     <div className="flex flex-col gap-6 p-8">
@@ -297,17 +296,17 @@ export default function FitmentPreviewPage() {
         </p>
       )}
 
-      {carEngineId && isLoadingRecommendations && (
+      {carEngineId && isLoadingItems && (
         <p className="text-sm text-neutral-500">Loading...</p>
       )}
 
-      {carEngineId && !isLoadingRecommendations && categoryGroups.length === 0 && !loadError && (
+      {carEngineId && !isLoadingItems && categoryGroups.length === 0 && !loadError && (
         <p className="text-sm text-neutral-500">
           No fitment recommendations exist yet for this engine.
         </p>
       )}
 
-      {carEngineId && !isLoadingRecommendations && categoryGroups.length > 0 && (
+      {carEngineId && !isLoadingItems && categoryGroups.length > 0 && (
         <div className="flex max-w-3xl flex-col gap-6">
           {categoryGroups.map((group) => (
             <div key={group.category.id} className="flex flex-col gap-3">

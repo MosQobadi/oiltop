@@ -33,7 +33,6 @@ async function main() {
   await prisma.carEngineFitmentProfile.deleteMany();
   await prisma.fitmentProfileItem.deleteMany();
   await prisma.fitmentProfile.deleteMany();
-  await prisma.fitmentRecommendation.deleteMany();
   await prisma.inventory.deleteMany();
   await prisma.product.deleteMany();
   await prisma.carEngine.deleteMany();
@@ -602,23 +601,30 @@ async function main() {
   }
 
   // ---------------------------------------------------------------------
-  // Fitment Recommendations
+  // Fitment Profiles
   // ---------------------------------------------------------------------
+  // One profile per engine here for simplicity — in practice several engines
+  // that share an oil/filter plan would share a single profile instead (see
+  // Design Decision 9), attached to each via the Fitment Profiles UI.
 
   for (const [index, engine] of engines.entries()) {
+    const profile = await prisma.fitmentProfile.create({
+      data: { label: `${engine.labelEn} Fitment` },
+    });
+
     if (engine.oilPlan === "dual") {
-      await prisma.fitmentRecommendation.create({
+      await prisma.fitmentProfileItem.create({
         data: {
-          carEngineId: engine.id,
+          profileId: profile.id,
           categoryId: engineOil.id,
           climate: FitmentClimate.HOT,
           productId: products.mobilOil0w40.id,
           priority: 1,
         },
       });
-      await prisma.fitmentRecommendation.create({
+      await prisma.fitmentProfileItem.create({
         data: {
-          carEngineId: engine.id,
+          profileId: profile.id,
           categoryId: engineOil.id,
           climate: FitmentClimate.COLD,
           productId: products.castrolOil0w20.id,
@@ -626,18 +632,18 @@ async function main() {
         },
       });
     } else if (engine.oilPlan === "standard") {
-      await prisma.fitmentRecommendation.create({
+      await prisma.fitmentProfileItem.create({
         data: {
-          carEngineId: engine.id,
+          profileId: profile.id,
           categoryId: engineOil.id,
           climate: FitmentClimate.STANDARD,
           productId: index % 2 === 0 ? products.mobilOil5w30.id : products.castrolOil5w40.id,
         },
       });
     } else {
-      await prisma.fitmentRecommendation.create({
+      await prisma.fitmentProfileItem.create({
         data: {
-          carEngineId: engine.id,
+          profileId: profile.id,
           categoryId: engineOil.id,
           climate: FitmentClimate.STANDARD,
           productId: null,
@@ -648,37 +654,41 @@ async function main() {
       });
     }
 
-    await prisma.fitmentRecommendation.create({
+    await prisma.fitmentProfileItem.create({
       data: {
-        carEngineId: engine.id,
+        profileId: profile.id,
         categoryId: oilFilter.id,
         climate: FitmentClimate.STANDARD,
         productId: index % 2 === 0 ? products.boschOilFilter.id : products.mannOilFilter.id,
       },
     });
-    await prisma.fitmentRecommendation.create({
+    await prisma.fitmentProfileItem.create({
       data: {
-        carEngineId: engine.id,
+        profileId: profile.id,
         categoryId: airFilter.id,
         climate: FitmentClimate.STANDARD,
         productId: index % 2 === 0 ? products.boschAirFilter.id : products.mannAirFilter.id,
       },
     });
-    await prisma.fitmentRecommendation.create({
+    await prisma.fitmentProfileItem.create({
       data: {
-        carEngineId: engine.id,
+        profileId: profile.id,
         categoryId: cabinFilter.id,
         climate: FitmentClimate.STANDARD,
         productId: products.boschCabinFilter.id,
       },
     });
-    await prisma.fitmentRecommendation.create({
+    await prisma.fitmentProfileItem.create({
       data: {
-        carEngineId: engine.id,
+        profileId: profile.id,
         categoryId: fuelFilter.id,
         climate: FitmentClimate.STANDARD,
         productId: products.mannFuelFilter.id,
       },
+    });
+
+    await prisma.carEngineFitmentProfile.create({
+      data: { carEngineId: engine.id, profileId: profile.id },
     });
   }
 

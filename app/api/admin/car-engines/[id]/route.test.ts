@@ -43,7 +43,6 @@ function ctx(id: string) {
 
 let seededCarBrand: { id: string };
 let seededCarModel: { id: string };
-let engineOilCategory: { id: string };
 
 async function createTestCarEngine(overrides: Record<string, unknown> = {}) {
   return prisma.carEngine.create({
@@ -83,13 +82,10 @@ beforeAll(async () => {
       status: "ACTIVE",
     },
   });
-  engineOilCategory = await prisma.category.findUniqueOrThrow({
-    where: { slug: "engine-oil" },
-  });
 });
 
 afterAll(async () => {
-  await prisma.fitmentRecommendation.deleteMany({
+  await prisma.carEngineFitmentProfile.deleteMany({
     where: { carEngine: { labelEn: { startsWith: SLUG_PREFIX } } },
   });
   await prisma.carEngine.deleteMany({ where: { labelEn: { startsWith: SLUG_PREFIX } } });
@@ -173,7 +169,7 @@ describe("PATCH /api/admin/car-engines/:id", () => {
 });
 
 describe("DELETE /api/admin/car-engines/:id", () => {
-  it("deletes a car engine with no fitment recommendations", async () => {
+  it("deletes a car engine with no fitment profiles attached", async () => {
     const carEngine = await createTestCarEngine();
     const res = await DELETE(requestWithBody("DELETE"), ctx(carEngine.id));
     const json = await res.json();
@@ -190,13 +186,13 @@ describe("DELETE /api/admin/car-engines/:id", () => {
     expect(res.status).toBe(404);
   });
 
-  it("soft-fails with a clear error when the car engine has fitment recommendations", async () => {
+  it("soft-fails with a clear error when the car engine has a fitment profile attached", async () => {
     const carEngine = await createTestCarEngine();
-    const fitment = await prisma.fitmentRecommendation.create({
-      data: {
-        carEngineId: carEngine.id,
-        categoryId: engineOilCategory.id,
-      },
+    const profile = await prisma.fitmentProfile.create({
+      data: { label: `${SLUG_PREFIX} profile` },
+    });
+    const link = await prisma.carEngineFitmentProfile.create({
+      data: { carEngineId: carEngine.id, profileId: profile.id },
     });
 
     const res = await DELETE(requestWithBody("DELETE"), ctx(carEngine.id));
@@ -204,13 +200,14 @@ describe("DELETE /api/admin/car-engines/:id", () => {
 
     expect(res.status).toBe(409);
     expect(json.success).toBe(false);
-    expect(json.error).toMatch(/fitment recommendation/i);
+    expect(json.error).toMatch(/fitment profile/i);
 
     const stillExists = await prisma.carEngine.findUnique({
       where: { id: carEngine.id },
     });
     expect(stillExists).not.toBeNull();
 
-    await prisma.fitmentRecommendation.delete({ where: { id: fitment.id } });
+    await prisma.carEngineFitmentProfile.delete({ where: { id: link.id } });
+    await prisma.fitmentProfile.delete({ where: { id: profile.id } });
   });
 });
