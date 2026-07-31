@@ -57,7 +57,7 @@ async function main() {
     },
   });
 
-  const mosPasswordHash = await bcrypt.hash("1234", 10);
+  const mosPasswordHash = await bcrypt.hash("mostafa123", 10);
   await prisma.user.create({
     data: {
       email: "mos.qobad@gmail.com",
