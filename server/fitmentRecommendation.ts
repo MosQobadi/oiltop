@@ -8,6 +8,23 @@ import type {
 
 export class FitmentRecommendationNotFoundError extends Error {}
 
+// Prisma returns Product.price as a Decimal; consumers (e.g. the fitment
+// preview page) render it with Number.prototype.toLocaleString(), so convert
+// it here rather than pushing the Decimal-to-number concern onto every caller.
+function serializeFitmentRecommendation<
+  T extends { product: { price: Prisma.Decimal } | null },
+>(fitmentRecommendation: T) {
+  return {
+    ...fitmentRecommendation,
+    product: fitmentRecommendation.product
+      ? {
+          ...fitmentRecommendation.product,
+          price: Number(fitmentRecommendation.product.price),
+        }
+      : null,
+  };
+}
+
 // Prisma's Json fields distinguish a true SQL NULL column (Prisma.DbNull)
 // from the JSON literal null (Prisma.JsonNull) — a plain `null` isn't a valid
 // input for either. "Clearing" specAttributes means the former.
@@ -20,7 +37,7 @@ function toJsonInput(value: Record<string, unknown> | null | undefined) {
 const fitmentRecommendationInclude = {
   carEngine: { select: { id: true, labelEn: true } },
   category: { select: { id: true, nameEn: true, partType: true } },
-  product: { select: { id: true, nameEn: true } },
+  product: { select: { id: true, nameEn: true, price: true, image: true } },
 } satisfies Prisma.FitmentRecommendationInclude;
 
 // Looks up the partType of a recommendation's category so the route layer can
@@ -53,7 +70,10 @@ export async function listFitmentRecommendations(
     prisma.fitmentRecommendation.count({ where }),
   ]);
 
-  return { fitmentRecommendations, total };
+  return {
+    fitmentRecommendations: fitmentRecommendations.map(serializeFitmentRecommendation),
+    total,
+  };
 }
 
 export async function getFitmentRecommendationById(id: string) {
@@ -66,13 +86,13 @@ export async function getFitmentRecommendationById(id: string) {
       `Fitment recommendation "${id}" was not found`,
     );
   }
-  return fitmentRecommendation;
+  return serializeFitmentRecommendation(fitmentRecommendation);
 }
 
 export async function createFitmentRecommendation(
   input: FitmentRecommendationCreateInput,
 ) {
-  return prisma.fitmentRecommendation.create({
+  const fitmentRecommendation = await prisma.fitmentRecommendation.create({
     data: {
       carEngineId: input.carEngineId,
       categoryId: input.categoryId,
@@ -85,6 +105,7 @@ export async function createFitmentRecommendation(
     },
     include: fitmentRecommendationInclude,
   });
+  return serializeFitmentRecommendation(fitmentRecommendation);
 }
 
 export async function updateFitmentRecommendation(
@@ -100,7 +121,7 @@ export async function updateFitmentRecommendation(
     );
   }
 
-  return prisma.fitmentRecommendation.update({
+  const fitmentRecommendation = await prisma.fitmentRecommendation.update({
     where: { id },
     data: {
       carEngineId: input.carEngineId,
@@ -114,6 +135,7 @@ export async function updateFitmentRecommendation(
     },
     include: fitmentRecommendationInclude,
   });
+  return serializeFitmentRecommendation(fitmentRecommendation);
 }
 
 export async function deleteFitmentRecommendation(id: string) {

@@ -1,0 +1,370 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { Chip } from "@heroui/react";
+import { SelectField } from "@/components/admin/form";
+
+interface CarBrand {
+  id: string;
+  nameEn: string;
+}
+
+interface CarModel {
+  id: string;
+  nameEn: string;
+}
+
+interface CarEngine {
+  id: string;
+  labelEn: string;
+  yearStart: number;
+  yearEnd: number | null;
+}
+
+interface FitmentProduct {
+  id: string;
+  nameEn: string;
+  price: number;
+  image: string | null;
+}
+
+interface FitmentRecommendation {
+  id: string;
+  category: { id: string; nameEn: string };
+  climate: "STANDARD" | "HOT" | "COLD";
+  product: FitmentProduct | null;
+  specNote: string | null;
+}
+
+interface CategoryGroup {
+  category: { id: string; nameEn: string };
+  items: FitmentRecommendation[];
+}
+
+interface PreviewFormValues {
+  carBrandId: string;
+  carModelId: string;
+  year: string;
+  carEngineId: string;
+}
+
+const emptyDefaults: PreviewFormValues = {
+  carBrandId: "",
+  carModelId: "",
+  year: "",
+  carEngineId: "",
+};
+
+const CLIMATE_LABELS: Partial<Record<FitmentRecommendation["climate"], string>> = {
+  HOT: "Hot climate",
+  COLD: "Cold climate",
+};
+
+function expandYearOptions(carEngines: CarEngine[]) {
+  const currentYear = new Date().getFullYear();
+  const years = new Set<number>();
+  for (const engine of carEngines) {
+    const end = engine.yearEnd ?? currentYear;
+    for (let year = engine.yearStart; year <= end; year++) years.add(year);
+  }
+  return Array.from(years)
+    .sort((a, b) => b - a)
+    .map((year) => ({ label: String(year), value: String(year) }));
+}
+
+function groupByCategory(fitmentRecommendations: FitmentRecommendation[]): CategoryGroup[] {
+  const groups: CategoryGroup[] = [];
+  const groupByCategoryId = new Map<string, CategoryGroup>();
+
+  for (const item of fitmentRecommendations) {
+    let group = groupByCategoryId.get(item.category.id);
+    if (!group) {
+      group = { category: item.category, items: [] };
+      groupByCategoryId.set(item.category.id, group);
+      groups.push(group);
+    }
+    group.items.push(item);
+  }
+
+  return groups;
+}
+
+export default function FitmentPreviewPage() {
+  const { control, watch, setValue } = useForm<PreviewFormValues>({
+    defaultValues: emptyDefaults,
+  });
+
+  const carBrandId = watch("carBrandId");
+  const carModelId = watch("carModelId");
+  const year = watch("year");
+  const carEngineId = watch("carEngineId");
+
+  const [carBrands, setCarBrands] = useState<CarBrand[]>([]);
+  const [carModels, setCarModels] = useState<CarModel[]>([]);
+  const [carEngines, setCarEngines] = useState<CarEngine[]>([]);
+  const [fitmentRecommendations, setFitmentRecommendations] = useState<
+    FitmentRecommendation[]
+  >([]);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadCarBrands() {
+      const response = await fetch("/api/admin/car-brands?status=ACTIVE&pageSize=100");
+      const result = await response.json();
+      if (ignore) return;
+      if (result.success) setCarBrands(result.data.carBrands);
+    }
+
+    void loadCarBrands();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setValue("carModelId", "");
+
+    if (!carBrandId) {
+      setCarModels([]);
+      return;
+    }
+
+    let ignore = false;
+
+    async function loadCarModels() {
+      const queryParams = new URLSearchParams({
+        carBrandId,
+        status: "ACTIVE",
+        pageSize: "100",
+      });
+      const response = await fetch(`/api/admin/car-models?${queryParams.toString()}`);
+      const result = await response.json();
+      if (ignore) return;
+      if (result.success) setCarModels(result.data.carModels);
+    }
+
+    void loadCarModels();
+    return () => {
+      ignore = true;
+    };
+  }, [carBrandId, setValue]);
+
+  useEffect(() => {
+    setValue("year", "");
+
+    if (!carModelId) {
+      setCarEngines([]);
+      return;
+    }
+
+    let ignore = false;
+
+    async function loadCarEngines() {
+      const queryParams = new URLSearchParams({
+        carModelId,
+        status: "ACTIVE",
+        pageSize: "100",
+      });
+      const response = await fetch(`/api/admin/car-engines?${queryParams.toString()}`);
+      const result = await response.json();
+      if (ignore) return;
+      if (result.success) setCarEngines(result.data.carEngines);
+    }
+
+    void loadCarEngines();
+    return () => {
+      ignore = true;
+    };
+  }, [carModelId, setValue]);
+
+  const yearOptions = expandYearOptions(carEngines);
+  const matchingCarEngines = year
+    ? carEngines.filter(
+        (engine) =>
+          engine.yearStart <= Number(year) && (engine.yearEnd ?? Infinity) >= Number(year),
+      )
+    : [];
+
+  useEffect(() => {
+    if (matchingCarEngines.length === 1) {
+      setValue("carEngineId", matchingCarEngines[0].id);
+    } else {
+      setValue("carEngineId", "");
+    }
+    // matchingCarEngines is derived from year + carEngines each render, so depend on those directly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, carEngines, setValue]);
+
+  useEffect(() => {
+    if (!carEngineId) {
+      setFitmentRecommendations([]);
+      return;
+    }
+
+    let ignore = false;
+
+    async function loadFitmentRecommendations() {
+      setIsLoadingRecommendations(true);
+      setLoadError(null);
+
+      const queryParams = new URLSearchParams({ carEngineId, pageSize: "100" });
+      const response = await fetch(`/api/admin/fitment?${queryParams.toString()}`);
+      const result = await response.json();
+      if (ignore) return;
+
+      if (!result.success) {
+        setLoadError(result.error ?? "Failed to load fitment recommendations");
+        setIsLoadingRecommendations(false);
+        return;
+      }
+
+      setFitmentRecommendations(result.data.fitmentRecommendations);
+      setIsLoadingRecommendations(false);
+    }
+
+    void loadFitmentRecommendations();
+    return () => {
+      ignore = true;
+    };
+  }, [carEngineId]);
+
+  const categoryGroups = groupByCategory(fitmentRecommendations);
+
+  return (
+    <div className="flex flex-col gap-6 p-8">
+      <div>
+        <h1 className="text-lg font-semibold text-neutral-900">Fitment Preview</h1>
+        <p className="text-sm text-neutral-500">
+          Walk the Brand → Model → Year → Engine flow a customer will eventually use, and
+          see exactly what fitment recommendations would be shown.
+        </p>
+      </div>
+
+      <div className="grid max-w-3xl grid-cols-1 gap-4 rounded-field bg-field p-4 sm:grid-cols-2">
+        <SelectField
+          control={control}
+          name="carBrandId"
+          label="Car Brand"
+          options={carBrands.map((brand) => ({ label: brand.nameEn, value: brand.id }))}
+          placeholder="Select a brand..."
+        />
+
+        <SelectField
+          control={control}
+          name="carModelId"
+          label="Car Model"
+          options={carModels.map((model) => ({ label: model.nameEn, value: model.id }))}
+          placeholder="Select a model..."
+          isDisabled={!carBrandId}
+        />
+
+        <SelectField
+          control={control}
+          name="year"
+          label="Year"
+          options={yearOptions}
+          placeholder="Select a year..."
+          isDisabled={!carModelId}
+        />
+
+        {matchingCarEngines.length > 1 && (
+          <SelectField
+            control={control}
+            name="carEngineId"
+            label="Engine"
+            options={matchingCarEngines.map((engine) => ({
+              label: `${engine.labelEn} (${engine.yearStart}–${engine.yearEnd ?? "Present"})`,
+              value: engine.id,
+            }))}
+            placeholder="Select an engine..."
+          />
+        )}
+      </div>
+
+      {loadError && (
+        <p role="alert" className="text-sm text-danger">
+          {loadError}
+        </p>
+      )}
+
+      {!carEngineId && !loadError && (
+        <p className="text-sm text-neutral-500">
+          Select a brand, model, year and engine to preview its fitment recommendations.
+        </p>
+      )}
+
+      {carEngineId && isLoadingRecommendations && (
+        <p className="text-sm text-neutral-500">Loading...</p>
+      )}
+
+      {carEngineId && !isLoadingRecommendations && categoryGroups.length === 0 && !loadError && (
+        <p className="text-sm text-neutral-500">
+          No fitment recommendations exist yet for this engine.
+        </p>
+      )}
+
+      {carEngineId && !isLoadingRecommendations && categoryGroups.length > 0 && (
+        <div className="flex max-w-3xl flex-col gap-6">
+          {categoryGroups.map((group) => (
+            <div key={group.category.id} className="flex flex-col gap-3">
+              <h2 className="text-sm font-semibold text-neutral-900">
+                {group.category.nameEn}
+              </h2>
+              <div className="flex flex-col gap-2">
+                {group.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 rounded-field bg-field p-3"
+                  >
+                    {item.product ? (
+                      <>
+                        <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-field bg-white">
+                          {item.product.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- product image URL isn't a known static/remote-configured asset
+                            <img
+                              src={item.product.image}
+                              alt=""
+                              className="size-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-xs text-neutral-400">—</span>
+                          )}
+                        </div>
+                        <div className="flex flex-1 flex-col">
+                          <span className="text-sm font-medium text-neutral-900">
+                            {item.product.nameEn}
+                          </span>
+                          <span className="text-xs text-neutral-500">
+                            {item.product.price.toLocaleString()}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-1 flex-col gap-1">
+                        <Chip color="warning" size="sm" variant="soft" className="self-start">
+                          <Chip.Label>Spec only — not yet in catalog</Chip.Label>
+                        </Chip>
+                        {item.specNote && (
+                          <span className="text-sm text-neutral-700">{item.specNote}</span>
+                        )}
+                      </div>
+                    )}
+                    {CLIMATE_LABELS[item.climate] && (
+                      <Chip size="sm" variant="soft">
+                        <Chip.Label>{CLIMATE_LABELS[item.climate]}</Chip.Label>
+                      </Chip>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
