@@ -1,10 +1,15 @@
 # Top Oil — Admin Panel — Claude Code Task List
 
-Reference wireframe: none attached yet (a `.excalidraw` file was mentioned but never arrived in this
-session — send it any time and I'll fold frame-accurate layouts into the tasks below; until then,
-each UI task describes the screen directly). No wireframe exists yet for the two modules that don't
-exist in Technotopia at all: **Cars & Fitment** and **Fitment Inquiries** — these are new, described
-in full in Phase 8 and Phase 12.
+Reference wireframe: `top-oil.excalidraw` — this is Technotopia's own 27-frame wireframe (15 admin
+frames + 12 storefront frames), reused as-is; it was not redrawn for Top Oil. The 15 admin frames
+(Login, Dashboard, Products List/Form, Categories List/Form, Brands List/Form, Orders List/Details,
+Inventory List/Modal, Customers List/Details, Settings) apply directly — just rebrand copy/colors
+and, for Categories/Brands/Products forms, add the bilingual/SEO/partType fields described in Phase
+1's Design Decisions. A separate companion file, `topoil-admin-new-frames.excalidraw`, has two frames
+(Car Brands - List, Car Brand - Add / Edit) built fresh in the same visual style, covering Task 8.1.
+No wireframe exists yet for the rest of Cars & Fitment (Car Models, Car Engines, Fitment Profiles,
+Fitment Preview) or for Fitment Inquiries — these are new, and every task below describes the screen
+fully in text (fields, columns, layout), so none of this blocks starting Claude Code sessions.
 
 **Stack:** Next.js 16 · TypeScript · React 19 · HeroUI · Tailwind CSS · PostgreSQL · Prisma · Zustand
 · React Hook Form · Zod · JWT + bcryptjs + HTTP-only cookies · Route Handlers (REST) · date-fns ·
@@ -46,7 +51,7 @@ itself. This avoids Persian-character URL encoding issues and keeps one canonica
 for SEO (with `hreflang` linking the two locale URLs — a storefront task, not admin).
 
 **3. Fitment hierarchy: Car Brand → Car Model → Car Engine, with year as a range on Engine.** You
-asked for Brand → Model → Year → Engine as the _lookup_ flow, which is exactly what the future
+asked for Brand → Model → Year → Engine as the *lookup* flow, which is exactly what the future
 storefront wizard does — but modeling "Year" as its own database row (one row per model per year)
 would mean re-entering identical engine data 10-15 times for cars whose engine didn't change across
 years. Instead, `CarEngine` carries `yearStart`/`yearEnd`, and the storefront wizard's "Year" dropdown
@@ -63,14 +68,16 @@ language freely; the fitment engine keys off the enum, not the label. If a 5th f
 later (e.g. transmission filter), add one enum value — no migration of existing data needed.
 
 **5. Engine oil can have STANDARD, HOT, or COLD variants — other categories don't need this, but the
-field exists on all of them for consistency.** `FitmentRecommendation.climate` defaults to `STANDARD`
+field exists on all of them for consistency.** `FitmentProfileItem.climate` defaults to `STANDARD`
 (one right answer, most cars/most categories). For a car where the manual specifies a different
-viscosity for hot vs. cold climates, you add two rows for the same car engine + Engine Oil category:
+viscosity for hot vs. cold climates, you add two items for the same profile + Engine Oil category:
 one `climate = HOT`, one `climate = COLD`, and the storefront shows both with labels ("For hot
-climates: 0W-20" / "For cold climates: 5W-30").
+climates: 0W-20" / "For cold climates: 5W-30"). This also covers "more than one valid product for the
+same category" generally — e.g. two acceptable oil filter brands are just two items, same category,
+same climate, differentiated by `priority`; they're co-equal valid options, not a fallback chain.
 
 **6. "Buy it or get help" is modeled as a nullable product reference, not a boolean flag.**
-`FitmentRecommendation.productId` is nullable. When it's set, the storefront shows a real, buyable
+`FitmentProfileItem.productId` is nullable. When it's set, the storefront shows a real, buyable
 product. When it's null, `specNote` (plain text, e.g. "5W-30, API SP / ILSAC GF-6") and optionally
 `specAttributes` (structured JSON, e.g. `{"viscosity":"5W-30","apiRating":"SP"}`) still tell the user
 exactly what to look for, with a "we don't carry this yet — request it" call to action. That request
@@ -86,8 +93,22 @@ given the rest of the data structure.
 OEM code (common for auto parts shoppers) find the matching product directly, and gives you another
 free source of long-tail search traffic (people search the OEM code itself).
 
-If any of these seven calls doesn't match how you actually want this to work, say so before Task 1.1
-— everything downstream assumes this shape.
+**9. Fitment is defined once as a reusable "Fitment Profile," then attached to as many car engines
+as share it — not re-entered per engine.** In practice, dozens of car engines (e.g. a Peugeot 206
+Type 2 and Type 5, both 2000-2020) run the identical engine family and need the identical recommended
+oil and filters. Modeling fitment directly on `CarEngine` (as the original `FitmentRecommendation`
+did) would mean re-creating the same rows on every matching engine, and re-editing all of them again
+the day a product gets swapped. Instead: `FitmentProfile` holds a set of `FitmentProfileItem` rows
+(one per category + climate, exactly like before — including multiple items for the same category
+when more than one product is a valid recommendation), and a `CarEngineFitmentProfile` join table
+attaches that profile to any number of `CarEngine` rows. You build the profile once, bulk-attach it
+to every matching engine (filtered by brand/model/year range, not one-by-one), and editing the
+profile later updates every attached engine at once. This replaces Phase 8's original per-engine
+design — see Task 8.4 (redesigned) and Task 8.6 (migration path, since Phase 8 as originally written
+modeled fitment directly on `CarEngine`).
+
+If any of these calls doesn't match how you actually want this to work, say so — everything
+downstream assumes this shape.
 
 ---
 
@@ -185,7 +206,7 @@ Product: nameEn, nameFa (bilingual), sku (unique), categoryId (FK), brandId (FK)
   metaTitleEn/Fa, metaDescriptionEn/Fa (bilingual, nullable, SEO),
   image (nullable String url), status (enum: ACTIVE, INACTIVE)
   relation: inventory (Inventory, one-to-one), orderItems (OrderItem[]),
-  fitmentRecommendations (FitmentRecommendation[])
+  fitmentProfileItems (FitmentProfileItem[])
   NOTE: finalPrice is NOT stored — compute price * (1 - discountPercent/100) at read time.
 
 Inventory: productId (FK, unique), stock (Int, default 0), lastUpdatedAt (DateTime)
@@ -205,15 +226,25 @@ CarEngine: carModelId (FK), labelEn, labelFa (bilingual, e.g. "2.5L I4 Petrol"),
   yearStart (Int), yearEnd (Int, nullable — nullable means still in production),
   fuelType (enum: PETROL, DIESEL, HYBRID, ELECTRIC, LPG_CNG), displacementCc (Int, nullable),
   engineCode (String, nullable), status (enum: ACTIVE, INACTIVE)
-  relation: fitmentRecommendations (FitmentRecommendation[])
+  relation: fitmentProfileLinks (CarEngineFitmentProfile[])
 
-FitmentRecommendation: carEngineId (FK), categoryId (FK), climate (enum: STANDARD, HOT, COLD;
+FitmentProfile: label (String — internal admin-only identifier, never shown to customers, e.g.
+  "Peugeot 206 TU5 1.6 8v — Standard"), internalNote (Text, nullable)
+  relation: items (FitmentProfileItem[]), carEngineLinks (CarEngineFitmentProfile[])
+
+FitmentProfileItem: profileId (FK), categoryId (FK), climate (enum: STANDARD, HOT, COLD;
   default STANDARD — only meaningfully varies for partType=ENGINE_OIL, but the field exists on
   all rows for consistency), productId (FK to Product, NULLABLE), specNote (Text, nullable —
   human-readable guidance shown when productId is null, e.g. "5W-30, API SP / ILSAC GF-6"),
   specAttributes (Json, nullable — structured spec e.g. {"viscosity":"5W-30","apiRating":"SP"}),
-  priority (Int, default 0 — lower = shown first, for ranking alternates), adminNote (Text,
-  nullable, internal only)
+  priority (Int, default 0 — display order when a category+climate has more than one valid item;
+  items are co-equal valid options, not a strict fallback chain), adminNote (Text, nullable,
+  internal only)
+
+CarEngineFitmentProfile: carEngineId (FK), profileId (FK), unique([carEngineId, profileId])
+  — the join table that lets one profile be attached to many engines (and, less commonly, one
+  engine to reference more than one profile). A car's resolved fitment recommendations come from
+  walking CarEngine → CarEngineFitmentProfile → FitmentProfile → FitmentProfileItem.
 
 FitmentInquiry: carEngineId (FK, nullable), categoryId (FK, nullable), customerName,
   phone, email (nullable), message (Text, nullable), status (enum: NEW, CONTACTED, RESOLVED),
@@ -239,9 +270,9 @@ Run `prisma migrate dev --name init` and confirm it applies cleanly.
 
 ### Task 1.2 — Seed script
 
-**DoD:** `pnpm prisma:seed` populates realistic sample data, including at least two car engines
-where the same engine has both a HOT and a COLD engine-oil recommendation, and at least one
-fitment recommendation with `productId = null` (spec-only, no matching product yet).
+**DoD:** `pnpm prisma:seed` populates realistic sample data, including at least one Fitment Profile
+attached to two different car engines (proving the reuse case), a HOT/COLD engine-oil pair within a
+profile, and at least one profile item with `productId = null` (spec-only, no matching product yet).
 **Prompt:**
 
 ```
@@ -255,12 +286,16 @@ Write a prisma/seed.ts that creates:
   (include at least one low-stock and one out-of-stock item), bilingual names/descriptions,
   a couple with oemPartNumbers populated
 - 3 car brands (e.g. Toyota, Peugeot, Hyundai) each with 2 models, each model with 1-2 engines
-  covering different year ranges — bilingual names throughout
-- Fitment recommendations: for at least one car engine, two Engine Oil rows (climate HOT and
-  climate COLD, pointing at two different seeded oil products); for the four filter categories,
-  one recommendation per engine pointing at a seeded product; for at least one engine/category
-  combination, a recommendation with productId null and a populated specNote + specAttributes
-  (to exercise the "no product yet" path)
+  covering different year ranges — bilingual names throughout. Make Peugeot's two models "206 Type
+  2" and "206 Type 5" specifically, each with one engine covering 2000-2020, so the shared-profile
+  case below has two real engines to attach to.
+- Fitment profiles: create at least 2 FitmentProfiles. One, e.g. "Peugeot 206 TU5 1.6 8v —
+  Standard", with items covering all 5 categories — two Engine Oil items (climate HOT and climate
+  COLD, pointing at two different seeded oil products) plus one item per filter category pointing at
+  a seeded product — attached via CarEngineFitmentProfile to BOTH the "206 Type 2" and "206 Type 5"
+  engines (don't create two separate profiles for these). A second profile for a different car
+  brand/engine with at least one item that has productId null and a populated specNote +
+  specAttributes (to exercise the "no product yet" path).
 - 2 fitment inquiries in different statuses (NEW, CONTACTED)
 - 5 customers; 5 orders in different statuses (Pending, Sending, Delivered, Cancelled) with
   1-3 items each and correct computed totals
@@ -276,10 +311,11 @@ unit-tested, including the fitment models.
 ```
 In lib/validation/, create Zod schemas mirroring the Prisma models from Task 1.1: productSchema
 (create/update), categorySchema, brandSchema, carBrandSchema, carModelSchema, carEngineSchema,
-fitmentRecommendationSchema (validate: if the related category's partType is not ENGINE_OIL,
-climate must be STANDARD; at least one of productId/specNote must be present),
-fitmentInquirySchema, orderStatusUpdateSchema, orderNoteSchema, inventoryUpdateSchema,
-customerStatusSchema, settingsSchema, loginSchema. Each should validate types, required fields,
+fitmentProfileSchema (label required, internalNote optional), fitmentProfileItemSchema (validate:
+if the related category's partType is not ENGINE_OIL, climate must be STANDARD; at least one of
+productId/specNote must be present), carEngineFitmentProfileSchema (attach/detach — carEngineId
+and profileId both required), fitmentInquirySchema, orderStatusUpdateSchema, orderNoteSchema,
+inventoryUpdateSchema, customerStatusSchema, settingsSchema, loginSchema. Each should validate types, required fields,
 string lengths, and numeric ranges (e.g. discountPercent 0-100, price >= 0, yearStart <= yearEnd
 when yearEnd is present). Write unit tests (Vitest or Jest, whichever is already configured)
 covering one valid and one invalid case per schema, plus the climate/partType cross-field rule.
@@ -541,8 +577,8 @@ GET / — list with ?search=&category=&brand=&status=&page=&pageSize=, joins cat
   sku, and oemPartNumbers.
 POST / — create; also creates a linked Inventory row with stock=0.
 GET /:id, PATCH /:id, DELETE /:id — standard CRUD; DELETE should block if the product has
-  order history (has OrderItems) or is referenced by any FitmentRecommendation — deactivate
-  instead in that case, with a clear error naming which fitment rows reference it.
+  order history (has OrderItems) or is referenced by any FitmentProfileItem — deactivate
+  instead in that case, with a clear error naming which Fitment Profiles reference it.
 Also implement GET /api/admin/categories/options and /api/admin/brands/options returning
 {id, nameEn} pairs for the product form's select inputs.
 Integration-test list filtering combinations, OEM search, and the delete-blocked cases.
@@ -577,8 +613,15 @@ note in the UI that stock is managed from the Inventory screen.
 ## Phase 8 — Cars & Fitment (the new module — the core of this app)
 
 This is the module Technotopia never had. It has its own sidebar section with three sub-pages
-(Car Brands, Car Models & Engines, Fitment Rules) plus a preview tool. Build it in this order —
+(Car Brands, Car Models & Engines, Fitment Profiles) plus a preview tool. Build it in this order —
 each level depends on the one before it existing.
+
+**If you already built Tasks 8.1-8.5 from an earlier version of this doc and pushed to GitHub:**
+Tasks 8.1-8.3 (Car Brands, Car Models, Car Engines) are unchanged — nothing to redo. Task 8.4 below
+is a redesign of what you built (per-engine `FitmentRecommendation` → reusable `FitmentProfile`, see
+Design Decision 9) to solve the "same oil across 40 engines" data-entry problem — don't rebuild it
+from scratch; Task 8.6 is the migration prompt that adapts your existing code and data. Task 8.5
+(Fitment Preview) needs a small follow-up patch, noted inline below, not a rebuild.
 
 ### Task 8.1 — Car Brands API + UI
 
@@ -632,50 +675,106 @@ CNG), Displacement cc (numeric, optional), Engine Code (text, optional), Status 
 Integration-test the year-range validation and delete-with-fitment guard.
 ```
 
-### Task 8.4 — Fitment Recommendations API + UI
+### Task 8.4 — Fitment Profiles API + UI
 
-**DoD:** The actual "which product fits which car" table — supports multiple recommendations
-per engine/category (climate variants, ranked alternates), and the spec-only (no product)
+**DoD:** A Fitment Profile is created once and attached to any number of car engines in bulk — an
+admin should never have to re-enter the same recommendation per engine. Supports multiple items per
+category (climate variants, or multiple co-equal valid products), and the spec-only (no product)
 path.
 **Prompt:**
 
 ```
-Implement app/api/admin/fitment/ route handlers:
-GET / — list with ?carEngineId=&categoryId=&page=&pageSize=, returns recommendations with
-  joined engine label, category name, climate, product name (or null), specNote, priority.
-POST / — create, validated with fitmentRecommendationSchema (enforce: climate must be
-  STANDARD unless the category's partType is ENGINE_OIL; at least one of productId/specNote
-  must be present).
-GET /:id, PATCH /:id, DELETE /:id — standard CRUD.
-Build app/admin/cars/brands/[carBrandId]/models/[carModelId]/engines/[carEngineId]/fitment/
-page.tsx: breadcrumb back through brand → model → engine, a DataTable grouped or filterable by
-Category (columns: Category, Climate, Product or "Spec only", Priority, Actions), "+ Add
-Recommendation". Add/edit form: Category (SelectField), Climate (SelectField: Standard/Hot/
-Cold — disabled and forced to Standard unless Category's partType is Engine Oil, enforced
-client-side too), Product (SelectField, searchable, optional), Spec Note (TextareaField, shown
-prominently when no product is selected — label it "Shown to customers when no exact product
-match exists yet"), Spec Attributes (a simple key-value repeater, optional), Priority (numeric),
-Admin Note (TextareaField, internal). Integration-test the climate/partType rule and the
-product-or-specNote-required rule.
+Implement app/api/admin/fitment-profiles/ route handlers:
+GET / — list with ?search=&page=&pageSize=, returns profiles with item count and linked-engine
+  count.
+POST / — create (label required).
+GET /:id — full detail: items (joined category name, climate, product name or null, specNote,
+  priority) and linked car engines (joined brand/model/engine label).
+PATCH /:id, DELETE /:id — standard CRUD; DELETE should block with a clear error if the profile is
+  still linked to any car engine (admin must detach first).
+POST /:id/items, PATCH /:id/items/:itemId, DELETE /:id/items/:itemId — manage a profile's line
+  items, validated with fitmentProfileItemSchema (climate forced to STANDARD unless the category's
+  partType is ENGINE_OIL; at least one of productId/specNote required).
+POST /:id/attach — accepts {carEngineIds: string[]}, bulk-creates CarEngineFitmentProfile rows
+  (skip any that already exist rather than erroring).
+DELETE /:id/attach/:carEngineId — detach one engine from the profile.
+GET /api/admin/car-engines/searchable — returns {id, label} pairs filterable by ?carBrandId=&
+  carModelId=&yearFrom=&yearTo=&search=, for the attach picker below.
+
+Build app/admin/cars/fitment-profiles/page.tsx: DataTable (Label, Items, Linked Engines, Actions),
+search, "+ Add Profile". Build the profile editor (app/admin/cars/fitment-profiles/[id]/page.tsx):
+- Profile Label (TextField), Internal Note (TextareaField)
+- Items table: Category, Climate (disabled/forced Standard unless category's partType is Engine
+  Oil), Product (searchable SelectField, optional), Spec Note (TextareaField, shown prominently
+  when no product selected), Spec Attributes (key-value repeater), Priority, Admin Note, per-row
+  Edit/Delete, "+ Add Item"
+- Linked Car Engines panel: chips showing brand/model/engine label per attached engine with a
+  Detach action, and an "Attach Engines" button opening a modal with Car Brand/Car Model/Year-range
+  filters over a multi-select list (backed by GET /car-engines/searchable) plus an "Attach N
+  Engines" confirm button that calls POST /:id/attach once with all selected IDs — this bulk action
+  is the whole point: attaching a profile to 40 matching engines should be one action, not 40.
+
+Also add a lightweight entry point from each Car Engine's own page (built in Task 8.3): a "Fitment"
+tab/section showing whatever profile(s) are currently attached (usually one) with a link to that
+profile's editor, an "Attach Existing Profile" search-and-pick control, and a "Create New Profile
+for This Engine" shortcut that creates a profile pre-attached to just this engine and redirects to
+its editor.
+
+Integration-test: profile CRUD, delete-blocked-while-linked, item climate/partType rule, bulk
+attach (including the skip-existing-link case), detach.
 ```
 
 ### Task 8.5 — Fitment Preview tool
 
 **DoD:** Lets an admin walk the same Brand → Model → Year → Engine flow a customer eventually
 will, and see exactly what would be recommended — the QA tool for all the data entered in
-8.1-8.4 before the storefront exists to display it.
+8.1-8.4 before the storefront exists to display it. **If you already built this against the old
+per-engine `FitmentRecommendation` shape, this is a small follow-up patch, not a rebuild:** only the
+data-fetching query changes (resolve via `CarEngineFitmentProfile` → `FitmentProfile` →
+`FitmentProfileItem` instead of a direct `carEngineId` filter); the page layout and grouping-by-
+category behavior described below stay the same.
 **Prompt:**
 
 ```
-Build app/admin/cars/preview/page.tsx: four cascading SelectFields — Car Brand, Car Model (options
-load once a brand is picked), Year (options computed by expanding the yearStart/yearEnd ranges
-of that model's engines — not a separate table), Engine (only shown if more than one engine
-covers the selected year). Once an engine is resolved, fetch and render its fitment
-recommendations grouped by category, each showing either the recommended product (name, price,
-image) or the spec-only fallback text — visually distinguished (e.g. a "Spec only — not yet in
-catalog" badge) so an admin can spot gaps in fitment coverage at a glance. This page calls the
-same GET /api/admin/fitment endpoint the storefront will eventually use — treat it as a
-read-only internal consumer, not a special-cased admin-only endpoint.
+Build (or patch) app/admin/cars/preview/page.tsx: four cascading SelectFields — Car Brand, Car Model
+(options load once a brand is picked), Year (options computed by expanding the yearStart/yearEnd
+ranges of that model's engines — not a separate table), Engine (only shown if more than one engine
+covers the selected year). Once an engine is resolved, fetch its attached Fitment Profile(s) (via
+CarEngineFitmentProfile) and render their combined items grouped by category, each showing either
+the recommended product (name, price, image) or the spec-only fallback text — visually distinguished
+(e.g. a "Spec only — not yet in catalog" badge) so an admin can spot gaps in fitment coverage at a
+glance. If a category has more than one item (e.g. two acceptable oil filter brands), show all of
+them under that category, not just the first. This page calls the same read path the storefront will
+eventually use — treat it as a read-only internal consumer, not a special-cased admin-only endpoint.
+```
+
+### Task 8.6 — Migrate existing Fitment Recommendations to Fitment Profiles
+
+**Only needed if you already built the original Task 8.4/8.5 against a per-engine
+`FitmentRecommendation` model and have real data in it — skip this task entirely if you're building
+Phase 8 fresh from this version of the doc.**
+
+**DoD:** Every existing `FitmentRecommendation` row is preserved (as a `FitmentProfileItem` under a
+new one-engine-only `FitmentProfile`), no data loss, old model removed once verified; the Fitment
+Preview tool returns identical results before and after for a spot-checked sample of engines.
+**Prompt:**
+
+```
+Add FitmentProfile, FitmentProfileItem, and CarEngineFitmentProfile to the Prisma schema (see Task
+1.1's updated model definitions). Write a one-time migration script (e.g. scripts/migrate-fitment.ts,
+run once via pnpm, not a Prisma migration) that: for every CarEngine with one or more existing
+FitmentRecommendation rows, creates a new FitmentProfile labeled "{car brand} {car model} {engine
+label} (migrated)", moves each of that engine's FitmentRecommendation rows into a FitmentProfileItem
+under the new profile (same categoryId/climate/productId/specNote/specAttributes/priority/adminNote,
+minus carEngineId), and creates one CarEngineFitmentProfile row linking that engine to the new
+profile. This intentionally creates a 1:1 profile-per-engine to start — it does not try to detect
+which engines should already share a profile, since that's a judgment call for you to make afterward
+using Task 8.4's UI (attach one engine's existing profile to another, then delete the now-redundant
+one). Run the script, spot-check a few engines' resolved fitment in the Fitment Preview tool against
+what they showed before the migration, then drop the old FitmentRecommendation table in a follow-up
+migration once confirmed. Update the Task 8.4 API/UI to the new profile-based version if not already
+done. Do NOT run this against production data without a backup — this is intended for your current
+pre-launch dataset.
 ```
 
 ---
@@ -967,8 +1066,10 @@ Phase 0 → 1 → 2 → 3 (strict order, foundation).
 Phase 4 (dashboard shell) can happen any time after Phase 3.
 Phases 5 → 6 → 7 in order (Categories and Brands are referenced by Products).
 Phase 8 (Cars & Fitment) after Phase 7 — its Task 8.4 references Products and Categories
-directly, and its five tasks are themselves strictly ordered (Brand → Model → Engine →
-Recommendations → Preview).
+directly, and its tasks are themselves strictly ordered (Brand → Model → Engine → Fitment
+Profiles → Preview → Migration-if-needed). If you already built through 8.5 under the old
+per-engine design, do Task 8.6 next before touching Phase 9+; nothing downstream depends on the
+migration, but doing it now avoids carrying the data-entry problem forward as you add more cars.
 Phase 9 → 10 → 11 in order (Inventory and Orders both need Products; Orders needs Customers to
 exist as Users).
 Phase 12 (Inquiries) any time after Phase 8, since it references CarEngine/Category but nothing

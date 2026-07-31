@@ -10,6 +10,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prisma:seed": "prisma db seed",
+    "migrate:fitment": "tsx scripts/migrate-fitment.ts",
     "test": "vitest run"
   },
   "dependencies": {

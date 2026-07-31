@@ -155,6 +155,7 @@ model Category {
 
   products                Product[]
   fitmentRecommendations  FitmentRecommendation[]
+  fitmentProfileItems     FitmentProfileItem[]
   fitmentInquiries        FitmentInquiry[]
 }
 
@@ -213,6 +214,7 @@ model Product {
   inventory               Inventory?
   orderItems              OrderItem[]
   fitmentRecommendations  FitmentRecommendation[]
+  fitmentProfileItems     FitmentProfileItem[]
 }
 
 // stock thresholds (derived, not stored): 0 = out of stock, <10 = low stock, otherwise in stock
@@ -294,11 +296,16 @@ model CarEngine {
   updatedAt DateTime @updatedAt
 
   fitmentRecommendations FitmentRecommendation[]
+  fitmentProfileLinks    CarEngineFitmentProfile[]
   fitmentInquiries       FitmentInquiry[]
 }
 
 // climate must be STANDARD unless the related category's partType is ENGINE_OIL —
 // enforced as a Zod cross-field rule (lib/validation/), not a DB constraint.
+// Superseded by FitmentProfile/FitmentProfileItem (see Design Decision 9 in
+// topoil-admin-claude-code-tasks.md) — kept until scripts/migrate-fitment.ts has
+// moved all existing rows over and the result is verified in the Fitment Preview
+// tool, then dropped in a follow-up migration.
 model FitmentRecommendation {
   id String @id @default(cuid())
 
@@ -321,6 +328,68 @@ model FitmentRecommendation {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// A reusable set of fitment recommendations, attached to any number of CarEngine
+// rows via CarEngineFitmentProfile — this lets one profile (e.g. "Peugeot 206
+// TU5 1.6 8v — Standard") cover many engines without re-entering the same rows
+// per engine. See Design Decision 9 in topoil-admin-claude-code-tasks.md.
+model FitmentProfile {
+  id String @id @default(cuid())
+
+  // Internal admin-only identifier, never shown to a customer — the deliberate
+  // exception to the bilingual nameEn/nameFa convention (see CLAUDE.md).
+  label        String
+  internalNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items          FitmentProfileItem[]
+  carEngineLinks CarEngineFitmentProfile[]
+}
+
+// climate must be STANDARD unless the related category's partType is ENGINE_OIL —
+// enforced as a Zod cross-field rule (lib/validation/), not a DB constraint.
+// priority orders items when a category+climate has more than one valid item
+// (e.g. two acceptable oil filter brands) — they're co-equal options, not a
+// fallback chain.
+model FitmentProfileItem {
+  id String @id @default(cuid())
+
+  profileId String
+  profile   FitmentProfile @relation(fields: [profileId], references: [id])
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  climate FitmentClimate @default(STANDARD)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+
+  specNote       String?
+  specAttributes Json?
+
+  priority  Int     @default(0)
+  adminNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CarEngineFitmentProfile {
+  id String @id @default(cuid())
+
+  carEngineId String
+  carEngine   CarEngine @relation(fields: [carEngineId], references: [id])
+
+  profileId String
+  profile   FitmentProfile @relation(fields: [profileId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([carEngineId, profileId])
 }
 
 model FitmentInquiry {

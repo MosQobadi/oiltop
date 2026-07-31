@@ -131,19 +131,29 @@ Do not create unnecessary layers. If a task doesn't need a new top-level folder,
 - Every model: `id` (cuid), `createdAt`, `updatedAt`.
 - Proper relations, not loose foreign-key-shaped strings.
 - Soft delete / deactivate where a hard delete would orphan history or break a
-  reference: products with order history or active Fitment Recommendations get
+  reference: products with order history or active Fitment Profile items get
   deactivated, not deleted; categories/brands/car models/car engines with children
-  block delete with a clear error rather than orphaning them.
+  block delete with a clear error rather than orphaning them; a Fitment Profile
+  blocks delete while still linked to any car engine (detach first).
 - Bilingual text fields are column pairs (`nameEn`/`nameFa`, etc.), never a JSON
   blob or a separate translations table — see `AGENTS.md` for the naming convention.
+  `FitmentProfile.label` is the one deliberate exception: it's an internal
+  admin-only identifier, never shown to a customer, so it's a single field, not
+  a bilingual pair.
 - `Category.partType` (`ENGINE_OIL` / `FILTER` / `ACCESSORY` / `OTHER`) and
   `Category.filterKind` (`OIL_FILTER` / `AIR_FILTER` / `CABIN_FILTER` / `FUEL_FILTER`,
   set only when `partType = FILTER`) are how the fitment engine identifies a
   category — never match on `nameEn`/`nameFa` strings for logic, only for display.
-- `FitmentRecommendation.climate` (`STANDARD` / `HOT` / `COLD`) must be `STANDARD`
+- `FitmentProfileItem.climate` (`STANDARD` / `HOT` / `COLD`) must be `STANDARD`
   unless the related category's `partType` is `ENGINE_OIL` — this is a Zod
   cross-field rule (see `lib/validation/`), not a database constraint, so it can
   be relaxed later without a migration if a non-oil category ever needs it.
+- Fitment is never modeled directly on `CarEngine`. A recommendation is a
+  `FitmentProfile` (a reusable set of `FitmentProfileItem`s) attached to one or
+  more engines via `CarEngineFitmentProfile` — this is what lets one profile
+  cover many engines (e.g. multiple trims/years of the same car) without
+  re-entering it per engine. Don't add fields to `CarEngine` that duplicate
+  what belongs on the profile.
 - Any schema change: update `schema.prisma` and the migration together, then run
   `pnpm prisma generate`.
 
@@ -237,7 +247,7 @@ source of truth for what the screen contains:
 - Only improve visual appearance, responsiveness, accessibility, and code quality
   beyond what the wireframe literally shows.
 
-**Where no frame exists yet** — Car Models, Car Engines, Fitment Recommendations,
+**Where no frame exists yet** — Car Models, Car Engines, Fitment Profiles,
 the Fitment Preview tool, and Fitment Inquiries — there is no `.excalidraw` frame
 to defer to. For these, the relevant task's prompt in
 `topoil-admin-claude-code-tasks.md` (Phase 8, Phase 12) is the source of truth

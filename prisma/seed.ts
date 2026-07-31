@@ -30,6 +30,9 @@ async function main() {
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
   await prisma.fitmentInquiry.deleteMany();
+  await prisma.carEngineFitmentProfile.deleteMany();
+  await prisma.fitmentProfileItem.deleteMany();
+  await prisma.fitmentProfile.deleteMany();
   await prisma.fitmentRecommendation.deleteMany();
   await prisma.inventory.deleteMany();
   await prisma.product.deleteMany();
