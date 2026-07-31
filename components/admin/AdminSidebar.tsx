@@ -65,7 +65,7 @@ export function AdminSidebar() {
   const logout = useAuthStore((state) => state.logout);
 
   return (
-    <aside className="flex h-screen w-64 shrink-0 flex-col border-r border-neutral-200 bg-white">
+    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-neutral-200 bg-white">
       <div className="px-5 py-6">
         <span className="text-lg font-semibold text-accent">Top Oil</span>
       </div>
