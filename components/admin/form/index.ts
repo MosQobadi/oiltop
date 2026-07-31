@@ -24,3 +24,9 @@ export type { BilingualTextareaFieldProps } from "./BilingualTextareaField";
 
 export { FormActions } from "./FormActions";
 export type { FormActionsProps } from "./FormActions";
+
+export { KeyValueField } from "./KeyValueField";
+export type { KeyValueFieldProps } from "./KeyValueField";
+
+export { ProductSelectField } from "./ProductSelectField";
+export type { ProductSelectFieldProps, ProductOption } from "./ProductSelectField";

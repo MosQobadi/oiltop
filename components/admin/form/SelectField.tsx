@@ -16,6 +16,7 @@ export interface SelectFieldProps<TFieldValues extends FieldValues> {
   options: SelectFieldOption[];
   placeholder?: string;
   isRequired?: boolean;
+  isDisabled?: boolean;
   className?: string;
 }
 
@@ -26,6 +27,7 @@ export function SelectField<TFieldValues extends FieldValues>({
   options,
   placeholder = "Select...",
   isRequired,
+  isDisabled,
   className,
 }: SelectFieldProps<TFieldValues>) {
   const {
@@ -43,6 +45,7 @@ export function SelectField<TFieldValues extends FieldValues>({
       placeholder={placeholder}
       isInvalid={!!error}
       isRequired={isRequired}
+      isDisabled={isDisabled}
       fullWidth
       className={className}
     >
