@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@heroui/react";
 import { DataTable, StatusPill, type DataTableColumn } from "@/components/admin/DataTable";
+import { StockEditModal, type StockEditProduct } from "./StockEditModal";
 import type { InventoryStatus } from "@/lib/validation";
 
 interface InventoryItem {
@@ -46,6 +47,8 @@ export default function InventoryPage() {
   const [brandOptions, setBrandOptions] = useState<Option[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [editingProduct, setEditingProduct] = useState<StockEditProduct | null>(null);
 
   useEffect(() => {
     async function loadOptions() {
@@ -97,7 +100,7 @@ export default function InventoryPage() {
     return () => {
       ignore = true;
     };
-  }, [page, search, status, category, brand]);
+  }, [page, search, status, category, brand, refreshKey]);
 
   const columns: DataTableColumn<InventoryItem>[] = [
     { key: "nameEn", label: "Product" },
@@ -126,9 +129,14 @@ export default function InventoryPage() {
     {
       key: "id",
       label: "Actions",
-      render: () => (
-        // TODO(Task 9.3): open StockEditModal for this row
-        <Button variant="ghost" size="sm" isDisabled>
+      render: (row) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onPress={() =>
+            setEditingProduct({ id: row.id, nameEn: row.nameEn, stock: row.stock })
+          }
+        >
           Edit
         </Button>
       ),
@@ -188,6 +196,13 @@ export default function InventoryPage() {
         onPageChange={setPage}
         emptyMessage={isLoading ? "Loading..." : "No inventory items found."}
         aria-label="Inventory"
+      />
+
+      <StockEditModal
+        isOpen={editingProduct !== null}
+        onClose={() => setEditingProduct(null)}
+        product={editingProduct}
+        onSaved={() => setRefreshKey((key) => key + 1)}
       />
     </div>
   );
