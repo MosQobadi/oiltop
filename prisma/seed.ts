@@ -57,6 +57,18 @@ async function main() {
     },
   });
 
+  const mosPasswordHash = await bcrypt.hash("1234", 10);
+  await prisma.user.create({
+    data: {
+      email: "mos.qobad@gmail.com",
+      passwordHash: mosPasswordHash,
+      firstName: "Mos",
+      lastName: "Qobadi",
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
   const customerPasswordHash = await bcrypt.hash("Customer123!", 10);
   const customerSeeds = [
     { email: "sara.ahmadi@example.com", phone: "+989351112233", firstName: "Sara", lastName: "Ahmadi" },
