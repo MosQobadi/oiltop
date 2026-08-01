@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { stripHtml } from "@/lib/sanitize";
 import { pageSchema, pageSizeSchema } from "./common";
 import { productStatusSchema } from "./enums";
 
@@ -12,14 +13,14 @@ const productShape = {
   discountPercent: z.number().int().min(0).max(100).default(0),
   tags: z.array(z.string().min(1).max(50)).default([]),
   oemPartNumbers: z.array(z.string().min(1).max(50)).default([]),
-  shortDescriptionEn: z.string().min(1).max(500),
-  shortDescriptionFa: z.string().min(1).max(500),
-  longDescriptionEn: z.string().min(1).max(5000),
-  longDescriptionFa: z.string().min(1).max(5000),
-  metaTitleEn: z.string().max(70).optional(),
-  metaTitleFa: z.string().max(70).optional(),
-  metaDescriptionEn: z.string().max(160).optional(),
-  metaDescriptionFa: z.string().max(160).optional(),
+  shortDescriptionEn: z.string().min(1).max(500).transform(stripHtml),
+  shortDescriptionFa: z.string().min(1).max(500).transform(stripHtml),
+  longDescriptionEn: z.string().min(1).max(5000).transform(stripHtml),
+  longDescriptionFa: z.string().min(1).max(5000).transform(stripHtml),
+  metaTitleEn: z.string().max(70).transform(stripHtml).optional(),
+  metaTitleFa: z.string().max(70).transform(stripHtml).optional(),
+  metaDescriptionEn: z.string().max(160).transform(stripHtml).optional(),
+  metaDescriptionFa: z.string().max(160).transform(stripHtml).optional(),
   image: z.string().min(1).optional(),
   status: productStatusSchema,
 };
