@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # No `ports:` — not exposed to the host or the public internet, only
+    # reachable by other services on this compose network.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-off migration runner: applies pending Prisma migrations and exits.
+  # Kept as a separate service (rather than having the app container run
+  # `prisma migrate deploy` itself on boot) so migrations run exactly once
+  # per deploy even if `app` is later scaled to multiple replicas.
+  migrate:
+    build:
+      context: .
+      target: migrator
+    env_file:
+      - .env.production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    volumes:
+      - uploads:/app/public/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # Not published to the host — only nginx talks to it, over the compose
+    # network, on the port the standalone server listens on (see Dockerfile).
+    expose:
+      - "3000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # Host paths, not named volumes: certbot runs directly on the VPS (see
+      # DEPLOYMENT.md), so both it and this container need the same
+      # filesystem paths for the ACME webroot challenge and issued certs.
+      - /var/www/certbot:/var/www/certbot:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+volumes:
+  postgres_data:
+  uploads:

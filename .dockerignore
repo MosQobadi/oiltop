@@ -1,0 +1,36 @@
+node_modules
+.next
+.git
+.github
+
+# env files — passed in at runtime, never baked into the image
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# generated / local-only
+lib/generated/prisma
+*.tsbuildinfo
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# tests, reports, docs
+e2e
+playwright-report
+test-results
+blob-report
+playwright/.cache
+graphify-out
+*.md
+!DEPLOYMENT.md
+
+# misc
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+Dockerfile
+docker-compose*.yml
+.dockerignore

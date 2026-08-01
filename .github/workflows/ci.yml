@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: topoil_ci
+          POSTGRES_PASSWORD: topoil_ci
+          POSTGRES_DB: topoil_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U topoil_ci -d topoil_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://topoil_ci:topoil_ci@localhost:5432/topoil_ci?schema=public
+      JWT_SECRET: ci-test-secret
+      NODE_ENV: development
+      COOKIE_NAME: topoil_session
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm tsc --noEmit
+
+      - name: Generate Prisma client
+        run: pnpm prisma generate
+
+      - name: Apply database migrations
+        run: pnpm prisma migrate deploy
+
+      - name: Seed database
+        run: pnpm prisma:seed
+
+      - name: Run tests
+        run: pnpm test
