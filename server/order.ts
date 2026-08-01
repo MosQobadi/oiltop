@@ -20,7 +20,7 @@ const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   CANCELLED: [],
 };
 
-function toOrderListItem(
+export function toOrderListItem(
   order: Prisma.OrderGetPayload<{
     include: {
       customer: { select: { firstName: true; lastName: true } };
