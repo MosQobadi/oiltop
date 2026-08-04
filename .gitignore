@@ -56,3 +56,8 @@ next-env.d.ts
 /test-results/
 /blob-report/
 /playwright/.cache/
+
+# scratch docs
+/storefront-design-brief.md
+/docs/
+/topoil-storefront.excalidraw
