@@ -1,20 +1,56 @@
 import type { NextRequest } from "next/server";
 
-const WINDOW_MS = 15 * 60 * 1000;
-const MAX_ATTEMPTS = 5;
 // Bounds memory on a long-running server process — sweep expired entries
-// once the map grows past this instead of letting it grow unbounded.
+// once a bucket grows past this instead of letting it grow unbounded.
 const SWEEP_THRESHOLD = 1000;
 
 type Entry = { count: number; resetAt: number };
 
-const attemptsByIp = new Map<string, Entry>();
+type Bucket = {
+  windowMs: number;
+  maxAttempts: number;
+  entries: Map<string, Entry>;
+};
 
-function sweepExpired(now: number): void {
-  if (attemptsByIp.size < SWEEP_THRESHOLD) return;
-  for (const [ip, entry] of attemptsByIp) {
-    if (now > entry.resetAt) attemptsByIp.delete(ip);
+export type RateLimitResult = {
+  allowed: boolean;
+  retryAfterSeconds: number;
+};
+
+function bucket(windowMs: number, maxAttempts: number): Bucket {
+  return { windowMs, maxAttempts, entries: new Map() };
+}
+
+function sweepExpired(entries: Map<string, Entry>, now: number): void {
+  if (entries.size < SWEEP_THRESHOLD) return;
+  for (const [key, entry] of entries) {
+    if (now > entry.resetAt) entries.delete(key);
   }
+}
+
+// In-memory fixed-window limiter — sufficient for a single-instance VPS
+// deployment (see DEPLOYMENT.md); would need a shared store (e.g. Redis)
+// if this app is ever run across multiple instances. Each bucket keeps its
+// own map, so a customer hitting the inquiry limit can still log in.
+function consume(target: Bucket, key: string): RateLimitResult {
+  const now = Date.now();
+  sweepExpired(target.entries, now);
+
+  const entry = target.entries.get(key);
+  if (!entry || now > entry.resetAt) {
+    target.entries.set(key, { count: 1, resetAt: now + target.windowMs });
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+
+  if (entry.count >= target.maxAttempts) {
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.ceil((entry.resetAt - now) / 1000),
+    };
+  }
+
+  entry.count += 1;
+  return { allowed: true, retryAfterSeconds: 0 };
 }
 
 export function getClientIp(request: NextRequest): string {
@@ -25,29 +61,17 @@ export function getClientIp(request: NextRequest): string {
   return request.headers.get("x-real-ip") ?? "unknown";
 }
 
-// In-memory fixed-window limiter — sufficient for a single-instance VPS
-// deployment (see DEPLOYMENT.md); would need a shared store (e.g. Redis)
-// if this app is ever run across multiple instances.
-export function checkLoginRateLimit(ip: string): {
-  allowed: boolean;
-  retryAfterSeconds: number;
-} {
-  const now = Date.now();
-  sweepExpired(now);
+const loginBucket = bucket(15 * 60 * 1000, 5);
 
-  const entry = attemptsByIp.get(ip);
-  if (!entry || now > entry.resetAt) {
-    attemptsByIp.set(ip, { count: 1, resetAt: now + WINDOW_MS });
-    return { allowed: true, retryAfterSeconds: 0 };
-  }
+export function checkLoginRateLimit(ip: string): RateLimitResult {
+  return consume(loginBucket, ip);
+}
 
-  if (entry.count >= MAX_ATTEMPTS) {
-    return {
-      allowed: false,
-      retryAfterSeconds: Math.ceil((entry.resetAt - now) / 1000),
-    };
-  }
+// Lead capture is public and unauthenticated, so the window is longer than
+// login's: a real customer submits one inquiry, and five an hour is generous
+// for a household behind one IP while still making a spam run pointless.
+const fitmentInquiryBucket = bucket(60 * 60 * 1000, 5);
 
-  entry.count += 1;
-  return { allowed: true, retryAfterSeconds: 0 };
+export function checkFitmentInquiryRateLimit(ip: string): RateLimitResult {
+  return consume(fitmentInquiryBucket, ip);
 }

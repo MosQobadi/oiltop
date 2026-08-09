@@ -78,3 +78,54 @@ export const stockNotificationCreateSchema = z.object({
 export type StockNotificationCreateInput = z.infer<
   typeof stockNotificationCreateSchema
 >;
+
+// --- Fitment inquiry (lead capture) ----------------------------------------
+
+// An untouched optional field in the storefront form posts as "" rather than
+// being omitted, and 400ing a customer over a field they deliberately skipped
+// is a dead end — so blank means "not provided" here.
+const blankToUndefined = (value: unknown) =>
+  typeof value === "string" && value.trim() === "" ? undefined : value;
+
+// Deliberately leaner than the admin fitmentInquiryCreateSchema: a customer
+// hitting the "no recommendation for your car yet" fallback gives a name and a
+// phone number, and everything else is optional. `status` and `adminNote` are
+// absent on purpose — the server always writes status NEW, and the note is the
+// admin panel's field, not the customer's.
+export const storefrontFitmentInquiryCreateSchema = z.object({
+  customerName: z
+    .string()
+    .trim()
+    .min(1, "customerName is required")
+    .max(150, "customerName must be 150 characters or fewer"),
+  phone: z
+    .string()
+    .trim()
+    .min(6, "phone is required")
+    .max(30, "phone must be 30 characters or fewer"),
+  email: z.preprocess(
+    blankToUndefined,
+    z
+      .string()
+      .trim()
+      .email("email must be a valid email address")
+      .max(150)
+      .optional(),
+  ),
+  message: z.preprocess(
+    blankToUndefined,
+    z
+      .string()
+      .trim()
+      .max(2000, "message must be 2000 characters or fewer")
+      .optional(),
+  ),
+  // Supplied by the car finder when the customer got this far through it; an
+  // id that doesn't exist is rejected by the service, not here.
+  carEngineId: z.preprocess(blankToUndefined, z.string().trim().optional()),
+  categoryId: z.preprocess(blankToUndefined, z.string().trim().optional()),
+});
+
+export type StorefrontFitmentInquiryCreateInput = z.infer<
+  typeof storefrontFitmentInquiryCreateSchema
+>;
