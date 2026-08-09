@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
-import type { StorefrontFitmentInquiryCreateInput } from "@/lib/validation";
 
 // Shared fitment resolution — the Brand → Model → Year → Engine walk plus the
 // CarEngine → CarEngineFitmentProfile → FitmentProfile → FitmentProfileItem
@@ -312,63 +311,4 @@ export async function resolveFitmentForEngine(
   });
 
   return groupFitmentItemsByCategory(links.flatMap((link) => link.profile.items));
-}
-
-export class UnknownFitmentInquiryReferenceError extends Error {}
-
-// The other side of resolution: when an engine resolves to nothing (or to a
-// spec-only recommendation with no product behind it), the storefront captures
-// a lead instead of dead-ending the customer. Admins then work the row from
-// the Fitment Inquiries screen, which is why it always starts at NEW.
-//
-// carEngineId/categoryId come from the car finder and are checked before the
-// insert: a stale or forged id would otherwise surface as a Prisma
-// foreign-key 500 on a form the customer filled in correctly. Unlike the read
-// paths above, an INACTIVE engine or category is still accepted — the
-// reference is context for the admin, and deactivating a car model shouldn't
-// start rejecting leads about it.
-export async function createFitmentInquiry(
-  input: StorefrontFitmentInquiryCreateInput,
-) {
-  if (input.carEngineId) {
-    const carEngine = await prisma.carEngine.findUnique({
-      where: { id: input.carEngineId },
-      select: { id: true },
-    });
-    if (!carEngine) {
-      throw new UnknownFitmentInquiryReferenceError("Unknown car engine");
-    }
-  }
-
-  if (input.categoryId) {
-    const category = await prisma.category.findUnique({
-      where: { id: input.categoryId },
-      select: { id: true },
-    });
-    if (!category) {
-      throw new UnknownFitmentInquiryReferenceError("Unknown category");
-    }
-  }
-
-  return prisma.fitmentInquiry.create({
-    data: {
-      customerName: input.customerName,
-      phone: input.phone,
-      email: input.email ?? null,
-      message: input.message ?? null,
-      carEngineId: input.carEngineId ?? null,
-      categoryId: input.categoryId ?? null,
-      status: "NEW",
-    },
-    // No adminNote, and no echo of the whole row — the form only needs enough
-    // back to render a confirmation.
-    select: {
-      id: true,
-      customerName: true,
-      phone: true,
-      email: true,
-      status: true,
-      createdAt: true,
-    },
-  });
 }

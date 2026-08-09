@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { storefrontFitmentInquiryCreateSchema } from "@/lib/validation";
 import {
   createFitmentInquiry,
   UnknownFitmentInquiryReferenceError,
-} from "@/lib/services/fitment";
-import { storefrontFitmentInquiryCreateSchema } from "@/lib/validation";
+} from "@/server/fitmentInquiry";
 import { checkFitmentInquiryRateLimit, getClientIp } from "@/server/rateLimit";
 
 // Lead capture for the car finder's no-match fallback. Public and
