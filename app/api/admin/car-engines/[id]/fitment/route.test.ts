@@ -93,6 +93,7 @@ beforeAll(async () => {
       profileId: profileA.id,
       categoryId: engineOilCategory.id,
       specNote: `${SLUG_PREFIX} oil spec`,
+      priority: 5,
     },
   });
   await prisma.fitmentProfileItem.create({
@@ -100,6 +101,16 @@ beforeAll(async () => {
       profileId: profileB.id,
       categoryId: oilFilterCategory.id,
       specNote: `${SLUG_PREFIX} filter spec`,
+    },
+  });
+  // Same category as profile A's item but a lower priority — the two profiles
+  // attached to one engine must merge into a single priority-ordered group.
+  await prisma.fitmentProfileItem.create({
+    data: {
+      profileId: profileB.id,
+      categoryId: engineOilCategory.id,
+      specNote: `${SLUG_PREFIX} preferred oil spec`,
+      priority: 1,
     },
   });
 
@@ -122,17 +133,36 @@ afterAll(async () => {
   await prisma.carBrand.deleteMany({ where: { slug: { startsWith: SLUG_PREFIX } } });
 });
 
+interface ResponseGroup {
+  category: { id: string };
+  items: { specNote: string | null; priority: number }[];
+}
+
 describe("GET /api/admin/car-engines/:id/fitment", () => {
-  it("flattens items across every attached fitment profile", async () => {
+  it("groups items by category across every attached fitment profile", async () => {
     const res = await GET(new NextRequest("http://localhost/x"), ctx(carEngine.id));
     const json = await res.json();
 
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
-    expect(json.data.items).toHaveLength(2);
-    const categoryIds = json.data.items.map((item: { category: { id: string } }) => item.category.id);
+
+    const groups: ResponseGroup[] = json.data.groups;
+    expect(groups).toHaveLength(2);
+    const categoryIds = groups.map((group) => group.category.id);
     expect(categoryIds).toContain(engineOilCategory.id);
     expect(categoryIds).toContain(oilFilterCategory.id);
+  });
+
+  it("orders items sharing a category by priority, across profiles", async () => {
+    const res = await GET(new NextRequest("http://localhost/x"), ctx(carEngine.id));
+    const json = await res.json();
+
+    const groups: ResponseGroup[] = json.data.groups;
+    const oilGroup = groups.find((group) => group.category.id === engineOilCategory.id);
+    expect(oilGroup?.items.map((item) => item.specNote)).toEqual([
+      `${SLUG_PREFIX} preferred oil spec`,
+      `${SLUG_PREFIX} oil spec`,
+    ]);
   });
 
   it("returns an empty list for an engine with no attached profiles", async () => {
@@ -155,7 +185,7 @@ describe("GET /api/admin/car-engines/:id/fitment", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json.data.items).toHaveLength(0);
+    expect(json.data.groups).toHaveLength(0);
 
     await prisma.carEngine.delete({ where: { id: bareEngine.id } });
   });

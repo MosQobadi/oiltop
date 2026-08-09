@@ -22,17 +22,20 @@ interface CarEngine {
   yearEnd: number | null;
 }
 
+// Mirrors the payload lib/services/fitment.ts returns (grouping, climate label
+// and priority ordering all resolved server-side).
 interface FitmentProduct {
   id: string;
   nameEn: string;
   price: number;
+  finalPrice: number;
   image: string | null;
 }
 
 interface FitmentItem {
   id: string;
-  category: { id: string; nameEn: string };
   climate: "STANDARD" | "HOT" | "COLD";
+  climateLabel: string | null;
   product: FitmentProduct | null;
   specNote: string | null;
 }
@@ -56,11 +59,6 @@ const emptyDefaults: PreviewFormValues = {
   carEngineId: "",
 };
 
-const CLIMATE_LABELS: Partial<Record<FitmentItem["climate"], string>> = {
-  HOT: "Hot climate",
-  COLD: "Cold climate",
-};
-
 function expandYearOptions(carEngines: CarEngine[]) {
   const currentYear = new Date().getFullYear();
   const years = new Set<number>();
@@ -71,23 +69,6 @@ function expandYearOptions(carEngines: CarEngine[]) {
   return Array.from(years)
     .sort((a, b) => b - a)
     .map((year) => ({ label: String(year), value: String(year) }));
-}
-
-function groupByCategory(items: FitmentItem[]): CategoryGroup[] {
-  const groups: CategoryGroup[] = [];
-  const groupByCategoryId = new Map<string, CategoryGroup>();
-
-  for (const item of items) {
-    let group = groupByCategoryId.get(item.category.id);
-    if (!group) {
-      group = { category: item.category, items: [] };
-      groupByCategoryId.set(item.category.id, group);
-      groups.push(group);
-    }
-    group.items.push(item);
-  }
-
-  return groups;
 }
 
 export default function FitmentPreviewPage() {
@@ -103,7 +84,7 @@ export default function FitmentPreviewPage() {
   const [carBrands, setCarBrands] = useState<CarBrand[]>([]);
   const [carModels, setCarModels] = useState<CarModel[]>([]);
   const [carEngines, setCarEngines] = useState<CarEngine[]>([]);
-  const [fitmentItems, setFitmentItems] = useState<FitmentItem[]>([]);
+  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -199,7 +180,7 @@ export default function FitmentPreviewPage() {
 
   useEffect(() => {
     if (!carEngineId) {
-      setFitmentItems([]);
+      setCategoryGroups([]);
       return;
     }
 
@@ -210,7 +191,7 @@ export default function FitmentPreviewPage() {
       setLoadError(null);
 
       // Resolves via CarEngineFitmentProfile → FitmentProfile → FitmentProfileItem —
-      // the same read path the storefront will eventually use.
+      // the same read path (lib/services/fitment.ts) the storefront uses.
       const response = await fetch(`/api/admin/car-engines/${carEngineId}/fitment`);
       const result = await response.json();
       if (ignore) return;
@@ -221,7 +202,7 @@ export default function FitmentPreviewPage() {
         return;
       }
 
-      setFitmentItems(result.data.items);
+      setCategoryGroups(result.data.groups);
       setIsLoadingItems(false);
     }
 
@@ -230,8 +211,6 @@ export default function FitmentPreviewPage() {
       ignore = true;
     };
   }, [carEngineId]);
-
-  const categoryGroups = groupByCategory(fitmentItems);
 
   return (
     <div className="flex flex-col gap-6 p-8">
@@ -352,9 +331,9 @@ export default function FitmentPreviewPage() {
                         )}
                       </div>
                     )}
-                    {CLIMATE_LABELS[item.climate] && (
+                    {item.climateLabel && (
                       <Chip size="sm" variant="soft">
-                        <Chip.Label>{CLIMATE_LABELS[item.climate]}</Chip.Label>
+                        <Chip.Label>{item.climateLabel}</Chip.Label>
                       </Chip>
                     )}
                   </div>

@@ -259,25 +259,3 @@ export async function detachCarEngineFromProfile(
     where: { profileId, carEngineId },
   });
 }
-
-// Flattens every item across all Fitment Profiles attached to a car engine —
-// the read path the Fitment Preview tool (and eventually the storefront) uses
-// to resolve "what should we recommend for this engine" without caring how
-// many profiles happen to be linked to it.
-export async function getResolvedFitmentForCarEngine(carEngineId: string) {
-  const links = await prisma.carEngineFitmentProfile.findMany({
-    where: { carEngineId },
-    include: {
-      profile: {
-        include: {
-          items: {
-            include: itemInclude,
-            orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
-          },
-        },
-      },
-    },
-  });
-
-  return links.flatMap((link) => link.profile.items.map(serializeItem));
-}
