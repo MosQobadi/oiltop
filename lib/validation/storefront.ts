@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { slugSchema } from "./common";
+import { pageSchema, pageSizeSchema, slugSchema } from "./common";
+import { filterKindSchema, partTypeSchema } from "./enums";
 
 // Public storefront input schemas. Unlike the admin schemas these mostly guard
 // path/query params rather than bodies — the car-finder routes are read-only —
@@ -23,3 +24,57 @@ export const carFinderEngineQuerySchema = z.object({
 });
 
 export type CarFinderEngineQuery = z.infer<typeof carFinderEngineQuerySchema>;
+
+// --- Catalog (PLP / PDP) ---------------------------------------------------
+
+// PLP sorting. Name sorting is deliberately absent: the correct ordering
+// depends on which of nameEn/nameFa is being rendered, and the API doesn't
+// know the locale — add it alongside the PLP screen if it's wanted, with the
+// locale passed in.
+export const storefrontProductSortSchema = z
+  .enum(["newest", "price-asc", "price-desc"])
+  .default("newest");
+
+export type StorefrontProductSort = z.infer<typeof storefrontProductSortSchema>;
+
+export const storefrontProductListQuerySchema = z.object({
+  // Both accept a slug (what a storefront URL carries) or a cuid — see
+  // categoryOrSlugFilter in lib/services/catalog.ts.
+  category: z.string().trim().min(1).optional(),
+  brand: z.string().trim().min(1).optional(),
+  partType: partTypeSchema.optional(),
+  filterKind: filterKindSchema.optional(),
+  search: z.string().trim().min(1).max(200).optional(),
+  sort: storefrontProductSortSchema,
+  page: pageSchema,
+  pageSize: pageSizeSchema,
+});
+
+export type StorefrontProductListQuery = z.infer<
+  typeof storefrontProductListQuerySchema
+>;
+
+export const storefrontProductSlugParamSchema = slugSchema;
+
+// The storefront's out-of-stock form asks for one field and accepts either an
+// email or a phone number, so this can't be z.email() — it's a loose shape
+// check to keep obvious junk out of the table, not an identity check. The
+// contact is only ever read back by the restock notifier.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_PATTERN = /^\+?[\d\s()-]{7,20}$/;
+
+export const stockNotificationCreateSchema = z.object({
+  contact: z
+    .string()
+    .trim()
+    .min(1, "contact is required")
+    .max(150)
+    .refine(
+      (value) => EMAIL_PATTERN.test(value) || PHONE_PATTERN.test(value),
+      "contact must be a valid email address or phone number",
+    ),
+});
+
+export type StockNotificationCreateInput = z.infer<
+  typeof stockNotificationCreateSchema
+>;

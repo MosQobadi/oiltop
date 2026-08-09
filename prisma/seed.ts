@@ -13,6 +13,7 @@ import {
   UserRole,
   UserStatus,
 } from "../lib/generated/prisma/client";
+import { slugify } from "../lib/slug";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -381,7 +382,9 @@ async function main() {
   for (const [key, seed] of Object.entries(productSeeds)) {
     const { stock, ...productData } = seed;
     const product = await prisma.product.create({
-      data: { ...productData, status: "ACTIVE" },
+      // Slug is derived rather than spelled out per seed, the same way
+      // createProduct() derives it — none of the seeded English names collide.
+      data: { ...productData, slug: slugify(seed.nameEn), status: "ACTIVE" },
     });
     products[key] = product;
     await prisma.inventory.create({

@@ -4,6 +4,7 @@ import { SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { vi } from "vitest";
 import { prisma } from "@/lib/db";
+import { slugify } from "@/lib/slug";
 import { GET, POST } from "./route";
 
 const cookieJar = new Map<string, string>();
@@ -45,8 +46,13 @@ function postRequest(body: unknown) {
 }
 
 function validProductPayload(overrides: Record<string, unknown> = {}) {
+  const unique = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return {
-    sku: `${SKU_PREFIX}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    sku: `${SKU_PREFIX}-${unique}`,
+    // Explicit and unique: every payload here shares one nameEn, so relying on
+    // the auto-generated slug would make each create after the first a
+    // duplicate-slug conflict.
+    slug: `${SKU_PREFIX}-${unique}`.toLowerCase(),
     nameEn: "Test Product 7.1",
     nameFa: "محصول آزمایشی",
     price: 1000,
@@ -89,6 +95,7 @@ beforeAll(async () => {
   productActiveEngineOilMobil = await prisma.product.create({
     data: {
       sku: `${SKU_PREFIX}-A`,
+      slug: `${SKU_PREFIX}-A`.toLowerCase(),
       nameEn: `${SKU_PREFIX} Mobil Engine Oil`,
       nameFa: "روغن موتور آزمایشی",
       categoryId: engineOilCategory.id,
@@ -107,6 +114,7 @@ beforeAll(async () => {
   productInactiveOilFilterBosch = await prisma.product.create({
     data: {
       sku: `${SKU_PREFIX}-B`,
+      slug: `${SKU_PREFIX}-B`.toLowerCase(),
       nameEn: `${SKU_PREFIX} Bosch Oil Filter`,
       nameFa: "فیلتر روغن آزمایشی",
       categoryId: oilFilterCategory.id,
@@ -125,6 +133,7 @@ beforeAll(async () => {
   productActiveEngineOilCastrolWithOem = await prisma.product.create({
     data: {
       sku: `${SKU_PREFIX}-C`,
+      slug: `${SKU_PREFIX}-C`.toLowerCase(),
       nameEn: `${SKU_PREFIX} Castrol Engine Oil`,
       nameFa: "روغن موتور کاسترول آزمایشی",
       categoryId: engineOilCategory.id,
@@ -327,6 +336,42 @@ describe("POST /api/admin/products", () => {
     });
     expect(inventory).toBeTruthy();
     expect(inventory?.stock).toBe(0);
+  });
+
+  it("auto-generates the slug from nameEn when one isn't supplied", async () => {
+    const payload: Record<string, unknown> = validProductPayload({
+      nameEn: `${SKU_PREFIX} Auto Slug ${Date.now()}`,
+      categoryId: engineOilCategory.id,
+      brandId: mobil1Brand.id,
+    });
+    delete payload.slug;
+
+    const res = await POST(postRequest(payload));
+    const json = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(json.data.product.slug).toBe(slugify(payload.nameEn as string));
+  });
+
+  it("rejects a duplicate slug with a clear error", async () => {
+    const slug = `${SKU_PREFIX}-dup-slug`.toLowerCase();
+    const first = await POST(
+      postRequest(
+        validProductPayload({ slug, categoryId: engineOilCategory.id, brandId: mobil1Brand.id }),
+      ),
+    );
+    expect(first.status).toBe(201);
+
+    const second = await POST(
+      postRequest(
+        validProductPayload({ slug, categoryId: engineOilCategory.id, brandId: mobil1Brand.id }),
+      ),
+    );
+    const json = await second.json();
+
+    expect(second.status).toBe(409);
+    expect(json.success).toBe(false);
+    expect(json.error).toMatch(/slug .* already exists/i);
   });
 
   it("rejects a duplicate SKU with a clear error", async () => {

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { slugify } from "@/lib/slug";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import type {
   ProductCreateInput,
@@ -8,6 +9,7 @@ import type {
 
 export class ProductNotFoundError extends Error {}
 export class DuplicateSkuError extends Error {}
+export class DuplicateProductSlugError extends Error {}
 export class ProductDeleteBlockedError extends Error {}
 
 const productInclude = {
@@ -84,9 +86,18 @@ export async function createProduct(input: ProductCreateInput) {
     throw new DuplicateSkuError(`A product with SKU "${input.sku}" already exists`);
   }
 
+  const slug = input.slug ?? slugify(input.nameEn);
+  const slugConflict = await prisma.product.findUnique({ where: { slug } });
+  if (slugConflict) {
+    throw new DuplicateProductSlugError(
+      `A product with slug "${slug}" already exists`,
+    );
+  }
+
   const product = await prisma.product.create({
     data: {
       ...input,
+      slug,
       inventory: { create: { stock: 0, lastUpdatedAt: new Date() } },
     },
     include: productInclude,
@@ -107,6 +118,19 @@ export async function updateProduct(id: string, input: ProductUpdateInput) {
     if (conflict) {
       throw new DuplicateSkuError(
         `A product with SKU "${input.sku}" already exists`,
+      );
+    }
+  }
+
+  // Never regenerated from a renamed nameEn — an existing product's slug is a
+  // live URL, so changing it is an explicit edit only.
+  if (input.slug && input.slug !== existing.slug) {
+    const conflict = await prisma.product.findUnique({
+      where: { slug: input.slug },
+    });
+    if (conflict) {
+      throw new DuplicateProductSlugError(
+        `A product with slug "${input.slug}" already exists`,
       );
     }
   }

@@ -1,10 +1,13 @@
 import { z } from "zod";
 import { stripHtml } from "@/lib/sanitize";
-import { pageSchema, pageSizeSchema } from "./common";
+import { pageSchema, pageSizeSchema, slugSchema } from "./common";
 import { productStatusSchema } from "./enums";
 
 const productShape = {
   sku: z.string().min(1).max(64),
+  // Optional on create — auto-generated from nameEn via slugify() when omitted,
+  // same as Category and Brand.
+  slug: slugSchema.optional(),
   nameEn: z.string().min(1).max(200),
   nameFa: z.string().min(1).max(200),
   categoryId: z.string().min(1, "categoryId is required"),

@@ -97,6 +97,7 @@ beforeAll(async () => {
   product = await prisma.product.create({
     data: {
       sku: `${PREFIX}-sku`,
+      slug: `${PREFIX}-slug`,
       nameEn: "Status test product",
       nameFa: "محصول آزمایشی",
       categoryId: engineOilCategory.id,

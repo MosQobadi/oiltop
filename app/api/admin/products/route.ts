@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { productCreateSchema, productListQuerySchema } from "@/lib/validation";
 import { AuthError, requireAdmin } from "@/server/auth";
-import { createProduct, DuplicateSkuError, listProducts } from "@/server/product";
+import {
+  createProduct,
+  DuplicateProductSlugError,
+  DuplicateSkuError,
+  listProducts,
+} from "@/server/product";
 
 export async function GET(request: NextRequest) {
   try {
@@ -67,7 +72,10 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     );
   } catch (error) {
-    if (error instanceof DuplicateSkuError) {
+    if (
+      error instanceof DuplicateSkuError ||
+      error instanceof DuplicateProductSlugError
+    ) {
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 409 },

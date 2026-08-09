@@ -46,6 +46,7 @@ async function createTestProduct(sku: string, stock: number) {
   return prisma.product.create({
     data: {
       sku,
+      slug: sku.toLowerCase(),
       nameEn: `${sku} name`,
       nameFa: "محصول آزمایشی",
       categoryId: engineOilCategory.id,

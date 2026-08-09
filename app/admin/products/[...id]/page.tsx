@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Disclosure } from "@heroui/react";
+import { slugify } from "@/lib/slug";
 import {
   BilingualTextField,
   BilingualTextareaField,
@@ -24,6 +25,7 @@ interface Option {
 
 const productFormSchema = z.object({
   sku: z.string().min(1, "SKU is required").max(64),
+  slug: z.string().min(1, "Slug is required"),
   nameEn: z.string().min(1, "English name is required").max(200),
   nameFa: z.string().min(1, "Persian name is required").max(200),
   categoryId: z.string().min(1, "Category is required"),
@@ -72,6 +74,7 @@ type ProductFormValues = z.infer<typeof productFormSchema>;
 
 const emptyDefaults: ProductFormValues = {
   sku: "",
+  slug: "",
   nameEn: "",
   nameFa: "",
   categoryId: "",
@@ -124,15 +127,25 @@ export default function ProductFormPage() {
     control,
     handleSubmit,
     watch,
+    setValue,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, dirtyFields },
   } = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
     defaultValues: emptyDefaults,
   });
 
+  const nameEn = watch("nameEn");
   const price = watch("price");
   const discountPercent = watch("discountPercent");
+
+  // Same rule as the Category form: auto-fill from the English name while
+  // creating and only until the user edits it directly — never on edit, so a
+  // live product URL isn't silently changed by a rename.
+  useEffect(() => {
+    if (isEdit || dirtyFields.slug) return;
+    setValue("slug", slugify(nameEn));
+  }, [nameEn, isEdit, dirtyFields.slug, setValue]);
   const finalPrice = useMemo(() => {
     const priceNumber = Number(price) || 0;
     const discountNumber = Number(discountPercent) || 0;
@@ -175,6 +188,7 @@ export default function ProductFormPage() {
       const product = result.data.product;
       reset({
         sku: product.sku,
+        slug: product.slug,
         nameEn: product.nameEn,
         nameFa: product.nameFa,
         categoryId: product.category.id,
@@ -223,6 +237,7 @@ export default function ProductFormPage() {
 
     const payload = {
       sku: values.sku,
+      slug: values.slug,
       nameEn: values.nameEn,
       nameFa: values.nameFa,
       categoryId: values.categoryId,
@@ -299,6 +314,8 @@ export default function ProductFormPage() {
         />
 
         <TextField control={control} name="sku" label="SKU" isRequired />
+
+        <TextField control={control} name="slug" label="Slug" isRequired />
 
         <SelectField
           control={control}

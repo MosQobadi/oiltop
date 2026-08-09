@@ -48,6 +48,7 @@ async function createTestProduct(overrides: Record<string, unknown> = {}) {
   return prisma.product.create({
     data: {
       sku: `${SKU_PREFIX}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      slug: `${SKU_PREFIX}-${Date.now()}-${Math.random().toString(36).slice(2)}`.toLowerCase(),
       nameEn: "Test Product For ID Route",
       nameFa: "محصول آزمایشی",
       categoryId: engineOilCategory.id,

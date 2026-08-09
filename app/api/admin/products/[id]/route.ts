@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { productUpdateSchema } from "@/lib/validation";
 import { AuthError, requireAdmin } from "@/server/auth";
 import {
+  DuplicateProductSlugError,
   DuplicateSkuError,
   ProductDeleteBlockedError,
   ProductNotFoundError,
@@ -70,7 +71,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
         { status: 404 },
       );
     }
-    if (error instanceof DuplicateSkuError) {
+    if (
+      error instanceof DuplicateSkuError ||
+      error instanceof DuplicateProductSlugError
+    ) {
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 409 },
