@@ -111,22 +111,28 @@ describe("groupFitmentItemsByCategory", () => {
         productId: "product_1",
         product: {
           id: "product_1",
+          slug: "mobil-1-5w30",
           nameEn: "Mobil 1 5W-30",
           nameFa: "موبیل ۱ ۵W-۳۰",
           price: new Prisma.Decimal(1_000_000),
           discountPercent: 20,
           image: null,
+          inventory: { stock: 40 },
         },
       }),
     ]);
 
+    // The card the storefront renders: a PDP link, a charged price, and the
+    // three-state stock signal — never the raw count.
     expect(groups[0].items[0].product).toEqual({
       id: "product_1",
+      slug: "mobil-1-5w30",
       nameEn: "Mobil 1 5W-30",
       nameFa: "موبیل ۱ ۵W-۳۰",
       price: 1_000_000,
       finalPrice: 800_000,
       image: null,
+      stockStatus: null,
     });
   });
 

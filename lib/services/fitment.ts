@@ -1,3 +1,4 @@
+import { deriveStorefrontStockStatus, type StorefrontStockStatus } from "./catalog";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
@@ -22,13 +23,18 @@ const CLIMATE_LABELS: Record<FitmentClimate, string | null> = {
   COLD: "Cold climate",
 };
 
+// Everything components/storefront/ProductCard needs, so a fitment result is a
+// normal product tile rather than a second kind of card — hence the slug (its
+// PDP link) and the stock status, which are otherwise catalog concerns.
 export interface FitmentProductSummary {
   id: string;
+  slug: string;
   nameEn: string;
   nameFa: string;
   price: number;
   finalPrice: number;
   image: string | null;
+  stockStatus: StorefrontStockStatus | null;
 }
 
 export interface FitmentResolvedItem {
@@ -63,11 +69,13 @@ const fitmentItemInclude = {
   product: {
     select: {
       id: true,
+      slug: true,
       nameEn: true,
       nameFa: true,
       price: true,
       discountPercent: true,
       image: true,
+      inventory: { select: { stock: true } },
     },
   },
 } satisfies Prisma.FitmentProfileItemInclude;
@@ -239,6 +247,7 @@ function toResolvedItem(item: FitmentItemWithRelations): FitmentResolvedItem {
     product: product
       ? {
           id: product.id,
+          slug: product.slug,
           nameEn: product.nameEn,
           nameFa: product.nameFa,
           price,
@@ -246,6 +255,9 @@ function toResolvedItem(item: FitmentItemWithRelations): FitmentResolvedItem {
           // server/product.ts, kept in sync with it deliberately.
           finalPrice: price * (1 - product.discountPercent / 100),
           image: product.image,
+          // Same three-state derivation the PLP uses; the raw count stays in
+          // the admin panel.
+          stockStatus: deriveStorefrontStockStatus(product.inventory?.stock ?? 0),
         }
       : null,
     specNote: item.specNote,

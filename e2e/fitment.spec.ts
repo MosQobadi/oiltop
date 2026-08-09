@@ -10,6 +10,15 @@ function categoryGroup(page: Page, categoryName: string) {
   return page.locator("h2", { hasText: categoryName }).locator("..");
 }
 
+// The storefront results page groups the same way, but each category is a
+// <section> around its <h2>, so scoping there rather than at the heading's
+// immediate parent.
+function resultsCategory(page: Page, categoryName: string) {
+  return page.locator('[data-testid="fitment-category"]', {
+    has: page.locator("h2", { hasText: categoryName }),
+  });
+}
+
 test.describe.serial("fitment: car brand → model → engine → fitment profile → preview", () => {
   const stamp = Date.now();
   const brandName = `E2E Car Brand ${stamp}`;
@@ -156,9 +165,24 @@ test.describe.serial("fitment: car brand → model → engine → fitment profil
 
     // This model has exactly one engine, so picking the year is the last thing
     // the customer does: the Engine step is skipped and the wizard resolves
-    // straight to the results URL. `/en/fitment` itself is Task 3.2's work —
-    // what's asserted here is that the car context arrives there.
+    // straight to the results URL.
     await wizard.getByLabel("Year", { exact: true }).selectOption(yearStart);
     await page.waitForURL(/\/en\/fitment\?fit=.+/);
+
+    // The results the wizard resolved to: the car above the results, the
+    // matched product in its category, and the spec-only item rendered as a
+    // request path rather than an empty category.
+    await expect(page.getByRole("heading", { name: `${brandName} ${modelName}` })).toBeVisible();
+
+    const engineOil = resultsCategory(page, "Engine Oil");
+    await expect(engineOil.getByText("Mobil 1 5W-30 Advanced Fully Synthetic")).toBeVisible();
+
+    const airFilter = resultsCategory(page, "Air Filter");
+    await expect(
+      airFilter.getByText("No catalog match yet — needs a standard panel air filter."),
+    ).toBeVisible();
+    await expect(
+      airFilter.getByRole("button", { name: "We don't carry this yet — Request it" }),
+    ).toBeVisible();
   });
 });

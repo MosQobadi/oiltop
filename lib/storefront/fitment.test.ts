@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { FIT_PARAM, formatEngineOptionLabel, withFitContext } from "./fitment";
+import {
+  buildFitmentRequestMessage,
+  climateColumnLabel,
+  FIT_PARAM,
+  formatCarLabel,
+  formatCarName,
+  formatEngineOptionLabel,
+  formatSpecAttributes,
+  sortFitmentGroups,
+  splitItemsByClimate,
+  withFitContext,
+} from "./fitment";
 
 describe("withFitContext", () => {
   it("starts a query string when the href has none", () => {
@@ -46,5 +57,167 @@ describe("formatEngineOptionLabel", () => {
     expect(formatEngineOptionLabel("fa", { ...engine, labelFa: "  " })).toBe(
       "1.4L TU3 Petrol (۲۰۰۱–۲۰۱۰)",
     );
+  });
+});
+
+const car = {
+  carBrand: { nameEn: "Peugeot", nameFa: "پژو" },
+  carModel: { nameEn: "206", nameFa: "۲۰۶" },
+  carEngine: {
+    labelEn: "1.4L TU3 Petrol",
+    labelFa: "۱٫۴ لیتر TU3 بنزینی",
+    yearStart: 2001,
+    yearEnd: 2010,
+  },
+};
+
+describe("formatCarName / formatCarLabel", () => {
+  it("names the car the way a customer does, brand then model", () => {
+    expect(formatCarName("en", car)).toBe("Peugeot 206");
+    expect(formatCarName("fa", car)).toBe("پژو ۲۰۶");
+  });
+
+  it("adds the engine when the whole car has to fit on one line", () => {
+    expect(formatCarLabel("en", car)).toBe("Peugeot 206 · 1.4L TU3 Petrol (2001–2010)");
+  });
+});
+
+describe("sortFitmentGroups", () => {
+  const group = (partType: string, filterKind: string | null) => ({
+    category: { partType, filterKind },
+  });
+
+  it("puts engine oil first and the filters in the design brief's order", () => {
+    const sorted = sortFitmentGroups([
+      group("FILTER", "CABIN_FILTER"),
+      group("FILTER", "FUEL_FILTER"),
+      group("ENGINE_OIL", null),
+      group("FILTER", "AIR_FILTER"),
+      group("FILTER", "OIL_FILTER"),
+    ]);
+
+    expect(sorted.map((entry) => entry.category.filterKind)).toEqual([
+      null,
+      "OIL_FILTER",
+      "AIR_FILTER",
+      "CABIN_FILTER",
+      "FUEL_FILTER",
+    ]);
+  });
+
+  it("sorts on partType/filterKind, never on a category name", () => {
+    // Two categories the fitment engine can't rank keep the order they came in.
+    const first = group("OTHER", null);
+    const second = group("OTHER", null);
+    expect(sortFitmentGroups([first, second])).toEqual([first, second]);
+  });
+
+  it("leaves the caller's array untouched", () => {
+    const groups = [group("FILTER", "OIL_FILTER"), group("ENGINE_OIL", null)];
+    sortFitmentGroups(groups);
+    expect(groups[0].category.partType).toBe("FILTER");
+  });
+});
+
+describe("splitItemsByClimate", () => {
+  it("separates the hot/cold pair from the standard items", () => {
+    const items = [
+      { id: "a", climate: "STANDARD" as const },
+      { id: "b", climate: "HOT" as const },
+      { id: "c", climate: "COLD" as const },
+      { id: "d", climate: "STANDARD" as const },
+    ];
+    const split = splitItemsByClimate(items);
+
+    expect(split.standard.map((item) => item.id)).toEqual(["a", "d"]);
+    expect(split.hot.map((item) => item.id)).toEqual(["b"]);
+    expect(split.cold.map((item) => item.id)).toEqual(["c"]);
+  });
+
+  it("keeps every co-equal item of a climate, not just the first", () => {
+    const split = splitItemsByClimate([
+      { id: "a", climate: "HOT" as const },
+      { id: "b", climate: "HOT" as const },
+    ]);
+    expect(split.hot).toHaveLength(2);
+  });
+});
+
+describe("climateColumnLabel", () => {
+  it("labels both columns as climates, not as a ranking", () => {
+    expect(climateColumnLabel("en", "HOT")).toBe("For hot climates");
+    expect(climateColumnLabel("en", "COLD")).toBe("For cold climates");
+    expect(climateColumnLabel("fa", "HOT")).toBe("برای اقلیم گرم");
+  });
+});
+
+describe("formatSpecAttributes", () => {
+  it("turns the Json column into readable rows", () => {
+    expect(
+      formatSpecAttributes({ viscosity: "5W-30 or 10W-40", apiRating: "API SL or newer" }),
+    ).toEqual([
+      { label: "Viscosity", value: "5W-30 or 10W-40" },
+      { label: "Api Rating", value: "API SL or newer" },
+    ]);
+  });
+
+  it("renders numbers, booleans and lists, and drops what has no one-line form", () => {
+    expect(
+      formatSpecAttributes({
+        capacityLitres: 4.2,
+        approved: true,
+        standards: ["API SP", "ILSAC GF-6"],
+        nested: { a: 1 },
+        missing: null,
+        blank: "   ",
+      }),
+    ).toEqual([
+      { label: "Capacity Litres", value: "4.2" },
+      { label: "Approved", value: "true" },
+      { label: "Standards", value: "API SP, ILSAC GF-6" },
+    ]);
+  });
+
+  it("proves the shape rather than trusting the Json column", () => {
+    expect(formatSpecAttributes(null)).toEqual([]);
+    expect(formatSpecAttributes("5W-30")).toEqual([]);
+    expect(formatSpecAttributes(["5W-30"])).toEqual([]);
+  });
+});
+
+describe("buildFitmentRequestMessage", () => {
+  const carLabel = formatCarLabel("en", car);
+
+  it("writes the spec from the attributes when there are any", () => {
+    expect(
+      buildFitmentRequestMessage("en", {
+        carLabel,
+        categoryName: "Engine Oil",
+        specNote: "ignored when attributes exist",
+        specAttributes: { viscosity: "5W-30", apiRating: "API SP" },
+      }),
+    ).toBe("Looking for: 5W-30, API SP — Engine Oil for Peugeot 206 · 1.4L TU3 Petrol (2001–2010)");
+  });
+
+  it("falls back to the admin's free-text note", () => {
+    expect(
+      buildFitmentRequestMessage("en", {
+        carLabel,
+        categoryName: "Oil Filter",
+        specNote: "Standard spin-on filter",
+        specAttributes: null,
+      }),
+    ).toContain("Looking for: Standard spin-on filter — Oil Filter for");
+  });
+
+  it("names what's being asked for when there is no category and no spec", () => {
+    expect(
+      buildFitmentRequestMessage("en", {
+        carLabel,
+        categoryName: null,
+        specNote: null,
+        specAttributes: null,
+      }),
+    ).toBe("Looking for: Parts for Peugeot 206 · 1.4L TU3 Petrol (2001–2010)");
   });
 });

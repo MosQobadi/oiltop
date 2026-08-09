@@ -234,6 +234,31 @@ copy.
   reset — that's what keeps the cascade out of effect bodies and the React
   Compiler's `set-state-in-effect` rule satisfied.
 
+**`FitmentResults`** renders what the wizard resolved: `locale`, `car`
+(`CarEngineContext`) and `groups` (`FitmentCategoryGroup[]`), straight off
+`lib/services/fitment`. It has no `"use client"` — a Server Component renders
+the whole tree and only the interactive leaves ship to the browser.
+
+- **Categories are ordered here, not by the query.** `sortFitmentGroups` ranks
+  on `partType`/`filterKind` (engine oil, then oil/air/cabin/fuel filters) —
+  the service returns whatever order the admin entered items in. Never rank on
+  a category name.
+- **HOT/COLD is a pair, not a fallback chain.** `splitItemsByClimate` puts them
+  in two labelled columns visible at once ("For hot climates" / "For cold
+  climates"); a category's STANDARD items render below in their own grid, all
+  of them, because two acceptable filter brands are co-equal options.
+- **`SpecOnlyCard`** is the other half of a result: the item has no product, so
+  it renders the `specNote`/`specAttributes` we do know plus the "Request it"
+  disclosure. Informational styling, never error styling. `categoryName: null`
+  is the whole-car case (an engine with no fitment profile), which reuses the
+  same card so a customer is never left at a dead end.
+
+`app/[locale]/fitment/page.tsx` is both states of that screen, told apart by
+`?fit=`: no car means the wizard, a resolved car means its results. It reads
+through `lib/services/fitment` directly rather than fetching its own
+`/api/storefront/...` route — same functions that route serves, rendered on the
+server (the pattern `app/[locale]/layout.tsx` uses for Settings).
+
 ### `lib/storefront/pricing.ts`
 
 Price formatting and discount maths, shared by the components above and by
