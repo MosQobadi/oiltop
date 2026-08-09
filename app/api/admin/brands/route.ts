@@ -8,17 +8,12 @@ export async function GET(request: NextRequest) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
 
-  const parsed = brandListQuerySchema.safeParse(
-    Object.fromEntries(request.nextUrl.searchParams),
-  );
+  const parsed = brandListQuerySchema.safeParse(Object.fromEntries(request.nextUrl.searchParams));
   if (!parsed.success) {
     return NextResponse.json(
       { success: false, error: parsed.error.issues[0]?.message ?? "Invalid query" },
@@ -43,10 +38,7 @@ export async function POST(request: NextRequest) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -62,16 +54,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const brand = await createBrand(parsed.data);
-    return NextResponse.json(
-      { success: true, data: { brand } },
-      { status: 201 },
-    );
+    return NextResponse.json({ success: true, data: { brand } }, { status: 201 });
   } catch (error) {
     if (error instanceof DuplicateSlugError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 409 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 409 });
     }
     throw error;
   }

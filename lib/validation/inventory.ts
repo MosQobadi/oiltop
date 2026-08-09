@@ -3,11 +3,7 @@ import { pageSchema, pageSizeSchema } from "./common";
 
 // Derived from Inventory.stock at read time (see the threshold comment on
 // the Inventory model in schema.prisma) — not a stored DB enum.
-export const inventoryStatusSchema = z.enum([
-  "OUT_OF_STOCK",
-  "LOW_STOCK",
-  "IN_STOCK",
-]);
+export const inventoryStatusSchema = z.enum(["OUT_OF_STOCK", "LOW_STOCK", "IN_STOCK"]);
 export type InventoryStatus = z.infer<typeof inventoryStatusSchema>;
 
 export const inventoryListQuerySchema = z.object({

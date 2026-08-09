@@ -125,9 +125,7 @@ describe("GET /api/admin/car-models", () => {
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
     expect(
-      json.data.carModels.every(
-        (m: { carBrandId: string }) => m.carBrandId === seededCarBrandA.id,
-      ),
+      json.data.carModels.every((m: { carBrandId: string }) => m.carBrandId === seededCarBrandA.id),
     ).toBe(true);
     const seeded = json.data.carModels.find(
       (m: { slug: string }) => m.slug === seededCarModel.slug,
@@ -141,9 +139,9 @@ describe("GET /api/admin/car-models", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(
-      json.data.carModels.some((m: { slug: string }) => m.slug === seededCarModel.slug),
-    ).toBe(false);
+    expect(json.data.carModels.some((m: { slug: string }) => m.slug === seededCarModel.slug)).toBe(
+      false,
+    );
   });
 
   it("filters by status", async () => {
@@ -153,9 +151,7 @@ describe("GET /api/admin/car-models", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(
-      json.data.carModels.every((m: { status: string }) => m.status === "ACTIVE"),
-    ).toBe(true);
+    expect(json.data.carModels.every((m: { status: string }) => m.status === "ACTIVE")).toBe(true);
   });
 
   it("searches against both nameEn and nameFa", async () => {
@@ -180,9 +176,7 @@ describe("GET /api/admin/car-models", () => {
 describe("POST /api/admin/car-models", () => {
   it("rejects an unauthenticated request", async () => {
     cookieJar.clear();
-    const res = await POST(
-      postRequest(validCarModelPayload({ carBrandId: seededCarBrandA.id })),
-    );
+    const res = await POST(postRequest(validCarModelPayload({ carBrandId: seededCarBrandA.id })));
     expect(res.status).toBe(401);
 
     const admin = await prisma.user.findUniqueOrThrow({

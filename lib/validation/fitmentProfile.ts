@@ -51,10 +51,7 @@ const fitmentProfileItemShape = {
   adminNote: z.string().max(2000).nullable().optional(),
 };
 
-function checkClimate(
-  data: { categoryPartType?: string; climate?: string },
-  ctx: z.RefinementCtx,
-) {
+function checkClimate(data: { categoryPartType?: string; climate?: string }, ctx: z.RefinementCtx) {
   if (
     data.categoryPartType !== undefined &&
     data.categoryPartType !== "ENGINE_OIL" &&
@@ -64,8 +61,7 @@ function checkClimate(
     ctx.addIssue({
       code: "custom",
       path: ["climate"],
-      message:
-        "climate must be STANDARD unless the category's partType is ENGINE_OIL",
+      message: "climate must be STANDARD unless the category's partType is ENGINE_OIL",
     });
   }
 }
@@ -101,12 +97,8 @@ export const fitmentProfileItemUpdateSchema = z
   .partial()
   .superRefine(checkClimate);
 
-export type FitmentProfileItemCreateInput = z.infer<
-  typeof fitmentProfileItemCreateSchema
->;
-export type FitmentProfileItemUpdateInput = z.infer<
-  typeof fitmentProfileItemUpdateSchema
->;
+export type FitmentProfileItemCreateInput = z.infer<typeof fitmentProfileItemCreateSchema>;
+export type FitmentProfileItemUpdateInput = z.infer<typeof fitmentProfileItemUpdateSchema>;
 
 export const fitmentProfileAttachSchema = z.object({
   carEngineIds: z.array(z.string().min(1)).min(1, "Select at least one engine"),

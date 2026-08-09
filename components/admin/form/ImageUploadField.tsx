@@ -48,14 +48,10 @@ export function ImageUploadField<TFieldValues extends FieldValues>({
     <div className={`flex flex-col gap-1.5 ${className ?? ""}`}>
       <Label>{label}</Label>
       <div className="flex items-center gap-4">
-        <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-field border border-dashed bg-field [border-width:var(--border-width-field)]">
+        <div className="rounded-field bg-field flex size-20 shrink-0 items-center justify-center overflow-hidden border [border-width:var(--border-width-field)] border-dashed">
           {previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- ephemeral client-side object-URL preview, not an optimized asset
-            <img
-              src={previewUrl}
-              alt={`${label} preview`}
-              className="size-full object-cover"
-            />
+            <img src={previewUrl} alt={`${label} preview`} className="size-full object-cover" />
           ) : (
             <span className="text-xs text-neutral-400">No image</span>
           )}
@@ -80,7 +76,7 @@ export function ImageUploadField<TFieldValues extends FieldValues>({
             <button
               type="button"
               onClick={() => onChange(null)}
-              className="inline-flex items-center gap-1 text-sm text-danger hover:opacity-80"
+              className="text-danger inline-flex items-center gap-1 text-sm hover:opacity-80"
             >
               <CloseIcon className="size-3" />
               Remove
@@ -89,7 +85,7 @@ export function ImageUploadField<TFieldValues extends FieldValues>({
         </div>
       </div>
       {error?.message && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {error.message}
         </p>
       )}

@@ -122,7 +122,7 @@ export default function CarModelsPage() {
       key: "image",
       label: "Image",
       render: (row) => (
-        <div className="flex size-10 items-center justify-center overflow-hidden rounded-field bg-field">
+        <div className="rounded-field bg-field flex size-10 items-center justify-center overflow-hidden">
           {row.image ? (
             // eslint-disable-next-line @next/next/no-img-element -- car model image URL isn't a known static/remote-configured asset
             <img src={row.image} alt="" className="size-full object-cover" />
@@ -148,18 +148,14 @@ export default function CarModelsPage() {
           <Button
             variant="ghost"
             size="sm"
-            onPress={() =>
-              router.push(`/admin/cars/brands/${carBrandId}/models/${row.id}/engines`)
-            }
+            onPress={() => router.push(`/admin/cars/brands/${carBrandId}/models/${row.id}/engines`)}
           >
             Engines
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onPress={() =>
-              router.push(`/admin/cars/brands/${carBrandId}/models/${row.id}`)
-            }
+            onPress={() => router.push(`/admin/cars/brands/${carBrandId}/models/${row.id}`)}
           >
             Edit
           </Button>
@@ -185,10 +181,7 @@ export default function CarModelsPage() {
           Car Brands
         </Link>
         <span>/</span>
-        <Link
-          href={`/admin/cars/brands/${carBrandId}`}
-          className="hover:text-neutral-700"
-        >
+        <Link href={`/admin/cars/brands/${carBrandId}`} className="hover:text-neutral-700">
           {carBrand?.nameEn ?? "…"}
         </Link>
         <span>/</span>
@@ -199,15 +192,13 @@ export default function CarModelsPage() {
         <h1 className="text-lg font-semibold text-neutral-900">
           {carBrand ? `${carBrand.nameEn} — Models` : "Models"}
         </h1>
-        <Button
-          onPress={() => router.push(`/admin/cars/brands/${carBrandId}/models/add`)}
-        >
+        <Button onPress={() => router.push(`/admin/cars/brands/${carBrandId}/models/add`)}>
           + Add Model
         </Button>
       </div>
 
       {loadError && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       )}
@@ -258,7 +249,7 @@ export default function CarModelsPage() {
                   &rdquo;? This action cannot be undone.
                 </p>
                 {deleteError && (
-                  <p role="alert" className="mt-2 text-sm text-danger">
+                  <p role="alert" className="text-danger mt-2 text-sm">
                     {deleteError}
                   </p>
                 )}

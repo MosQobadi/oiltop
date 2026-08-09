@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  fitmentProfileItemCreateSchema,
-  fitmentProfileItemUpdateSchema,
-} from "./fitmentProfile";
+import { fitmentProfileItemCreateSchema, fitmentProfileItemUpdateSchema } from "./fitmentProfile";
 
 const validItem = {
   categoryId: "cat_1",
@@ -44,9 +41,7 @@ describe("fitmentProfileItemCreateSchema", () => {
 
 describe("fitmentProfileItemUpdateSchema", () => {
   it("accepts a partial update", () => {
-    expect(
-      fitmentProfileItemUpdateSchema.safeParse({ adminNote: "Checked" }).success,
-    ).toBe(true);
+    expect(fitmentProfileItemUpdateSchema.safeParse({ adminNote: "Checked" }).success).toBe(true);
   });
 
   // A default that survives `.partial()` turns "add a note to this item" into
@@ -58,16 +53,11 @@ describe("fitmentProfileItemUpdateSchema", () => {
   });
 
   it("still validates climate and priority when they are supplied", () => {
-    expect(
-      fitmentProfileItemUpdateSchema.safeParse({ climate: "TROPICAL" }).success,
-    ).toBe(false);
-    expect(
-      fitmentProfileItemUpdateSchema.safeParse({ priority: 1.5 }).success,
-    ).toBe(false);
-    expect(
-      fitmentProfileItemUpdateSchema.safeParse({ climate: "HOT", priority: 2 })
-        .success,
-    ).toBe(true);
+    expect(fitmentProfileItemUpdateSchema.safeParse({ climate: "TROPICAL" }).success).toBe(false);
+    expect(fitmentProfileItemUpdateSchema.safeParse({ priority: 1.5 }).success).toBe(false);
+    expect(fitmentProfileItemUpdateSchema.safeParse({ climate: "HOT", priority: 2 }).success).toBe(
+      true,
+    );
   });
 
   it("still applies the climate/partType rule to a supplied climate", () => {

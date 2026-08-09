@@ -34,13 +34,8 @@ function checkYearRange(
   }
 }
 
-export const carEngineCreateSchema = z
-  .object(carEngineShape)
-  .superRefine(checkYearRange);
-export const carEngineUpdateSchema = z
-  .object(carEngineShape)
-  .partial()
-  .superRefine(checkYearRange);
+export const carEngineCreateSchema = z.object(carEngineShape).superRefine(checkYearRange);
+export const carEngineUpdateSchema = z.object(carEngineShape).partial().superRefine(checkYearRange);
 
 export type CarEngineCreateInput = z.infer<typeof carEngineCreateSchema>;
 export type CarEngineUpdateInput = z.infer<typeof carEngineUpdateSchema>;
@@ -68,11 +63,7 @@ export const carEngineSearchableQuerySchema = z
     pageSize: pageSizeSchema,
   })
   .superRefine((data, ctx) => {
-    if (
-      data.yearFrom !== undefined &&
-      data.yearTo !== undefined &&
-      data.yearFrom > data.yearTo
-    ) {
+    if (data.yearFrom !== undefined && data.yearTo !== undefined && data.yearFrom > data.yearTo) {
       ctx.addIssue({
         code: "custom",
         path: ["yearTo"],
@@ -81,6 +72,4 @@ export const carEngineSearchableQuerySchema = z
     }
   });
 
-export type CarEngineSearchableQuery = z.infer<
-  typeof carEngineSearchableQuerySchema
->;
+export type CarEngineSearchableQuery = z.infer<typeof carEngineSearchableQuerySchema>;

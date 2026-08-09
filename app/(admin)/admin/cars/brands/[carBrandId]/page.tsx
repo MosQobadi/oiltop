@@ -122,9 +122,7 @@ export default function CarBrandFormPage() {
       try {
         logoUrl = await uploadImage(values.logo);
       } catch (error) {
-        setSubmitError(
-          error instanceof Error ? error.message : "Failed to upload image",
-        );
+        setSubmitError(error instanceof Error ? error.message : "Failed to upload image");
         return;
       }
     } else {
@@ -168,7 +166,7 @@ export default function CarBrandFormPage() {
   if (loadError) {
     return (
       <div className="p-8">
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       </div>
@@ -181,11 +179,7 @@ export default function CarBrandFormPage() {
         {isEdit ? "Edit Car Brand" : "Add Car Brand"}
       </h1>
 
-      <form
-        className="flex max-w-2xl flex-col gap-6"
-        noValidate
-        onSubmit={handleSubmit(onSubmit)}
-      >
+      <form className="flex max-w-2xl flex-col gap-6" noValidate onSubmit={handleSubmit(onSubmit)}>
         <BilingualTextField
           control={control}
           nameEn="nameEn"
@@ -201,7 +195,7 @@ export default function CarBrandFormPage() {
         <ToggleField control={control} name="isActive" label="Active" />
 
         {submitError && (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-danger text-sm">
             {submitError}
           </p>
         )}

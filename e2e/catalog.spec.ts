@@ -63,7 +63,12 @@ test.describe.serial("catalog: category → brand → product", () => {
     await page.getByLabel("SKU", { exact: true }).fill(sku);
     await selectOption(page, "Category", categoryName);
     await selectOption(page, "Brand", brandName);
-    await fillBilingual(page, 1, "Short description for E2E product.", "توضیح کوتاه محصول آزمایشی.");
+    await fillBilingual(
+      page,
+      1,
+      "Short description for E2E product.",
+      "توضیح کوتاه محصول آزمایشی.",
+    );
     await fillBilingual(
       page,
       2,

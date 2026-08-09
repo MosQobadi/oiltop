@@ -50,9 +50,7 @@ export const storefrontProductListQuerySchema = z.object({
   pageSize: pageSizeSchema,
 });
 
-export type StorefrontProductListQuery = z.infer<
-  typeof storefrontProductListQuerySchema
->;
+export type StorefrontProductListQuery = z.infer<typeof storefrontProductListQuerySchema>;
 
 export const storefrontProductSlugParamSchema = slugSchema;
 
@@ -75,9 +73,7 @@ export const stockNotificationCreateSchema = z.object({
     ),
 });
 
-export type StockNotificationCreateInput = z.infer<
-  typeof stockNotificationCreateSchema
->;
+export type StockNotificationCreateInput = z.infer<typeof stockNotificationCreateSchema>;
 
 // An untouched optional field in a storefront form posts as "" rather than
 // being omitted, and 400ing a customer over a field they deliberately skipped
@@ -111,12 +107,7 @@ export const storefrontRegisterSchema = z.object({
     .regex(PHONE_PATTERN, "phone must be a valid phone number"),
   email: z.preprocess(
     blankToUndefined,
-    z
-      .string()
-      .trim()
-      .email("email must be a valid email address")
-      .max(150)
-      .optional(),
+    z.string().trim().email("email must be a valid email address").max(150).optional(),
   ),
   password: z
     .string()
@@ -146,20 +137,11 @@ export const storefrontFitmentInquiryCreateSchema = z.object({
     .max(30, "phone must be 30 characters or fewer"),
   email: z.preprocess(
     blankToUndefined,
-    z
-      .string()
-      .trim()
-      .email("email must be a valid email address")
-      .max(150)
-      .optional(),
+    z.string().trim().email("email must be a valid email address").max(150).optional(),
   ),
   message: z.preprocess(
     blankToUndefined,
-    z
-      .string()
-      .trim()
-      .max(2000, "message must be 2000 characters or fewer")
-      .optional(),
+    z.string().trim().max(2000, "message must be 2000 characters or fewer").optional(),
   ),
   // Supplied by the car finder when the customer got this far through it; an
   // id that doesn't exist is rejected by the service, not here.

@@ -1,11 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  DataTable,
-  StatusPill,
-  type DataTableColumn,
-} from "@/components/admin/DataTable";
+import { DataTable, StatusPill, type DataTableColumn } from "@/components/admin/DataTable";
 
 interface DemoProduct {
   id: string;
@@ -57,9 +53,7 @@ export function DataTableDemo() {
   const filtered = useMemo(
     () =>
       MOCK_PRODUCTS.filter((product) => {
-        const matchesSearch = product.name
-          .toLowerCase()
-          .includes(search.toLowerCase());
+        const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
         const matchesCategory = category === "" || product.category === category;
         return matchesSearch && matchesCategory;
       }),

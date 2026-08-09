@@ -34,17 +34,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   const product = await getActiveProductByIdOrSlug(slug);
   if (!product) {
-    return NextResponse.json(
-      { success: false, error: "Product not found" },
-      { status: 404 },
-    );
+    return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 });
   }
 
   const stockStatus = deriveStorefrontStockStatus(product.inventory?.stock ?? 0);
-  const notification = await createStockNotification(
-    product.id,
-    parsed.data.contact,
-  );
+  const notification = await createStockNotification(product.id, parsed.data.contact);
 
   return NextResponse.json(
     {

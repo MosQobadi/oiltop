@@ -51,7 +51,7 @@ itself. This avoids Persian-character URL encoding issues and keeps one canonica
 for SEO (with `hreflang` linking the two locale URLs — a storefront task, not admin).
 
 **3. Fitment hierarchy: Car Brand → Car Model → Car Engine, with year as a range on Engine.** You
-asked for Brand → Model → Year → Engine as the *lookup* flow, which is exactly what the future
+asked for Brand → Model → Year → Engine as the _lookup_ flow, which is exactly what the future
 storefront wizard does — but modeling "Year" as its own database row (one row per model per year)
 would mean re-entering identical engine data 10-15 times for cars whose engine didn't change across
 years. Instead, `CarEngine` carries `yearStart`/`yearEnd`, and the storefront wizard's "Year" dropdown

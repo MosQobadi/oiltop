@@ -8,17 +8,12 @@ export async function GET(request: NextRequest) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
 
-  const parsed = orderListQuerySchema.safeParse(
-    Object.fromEntries(request.nextUrl.searchParams),
-  );
+  const parsed = orderListQuerySchema.safeParse(Object.fromEntries(request.nextUrl.searchParams));
   if (!parsed.success) {
     return NextResponse.json(
       { success: false, error: parsed.error.issues[0]?.message ?? "Invalid query" },

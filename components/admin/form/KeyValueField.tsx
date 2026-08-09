@@ -98,7 +98,7 @@ export function KeyValueField<TFieldValues extends FieldValues>({
         + Add Attribute
       </Button>
       {error?.message && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {error.message}
         </p>
       )}

@@ -99,9 +99,7 @@ describe("GET /api/admin/brands", () => {
     expect(json.success).toBe(true);
     expect(Array.isArray(json.data.brands)).toBe(true);
     expect(typeof json.data.total).toBe("number");
-    const seeded = json.data.brands.find(
-      (b: { slug: string }) => b.slug === seededBrand.slug,
-    );
+    const seeded = json.data.brands.find((b: { slug: string }) => b.slug === seededBrand.slug);
     expect(seeded).toBeTruthy();
     expect(typeof seeded.productCount).toBe("number");
   });
@@ -111,23 +109,21 @@ describe("GET /api/admin/brands", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(
-      json.data.brands.every((b: { status: string }) => b.status === "ACTIVE"),
-    ).toBe(true);
+    expect(json.data.brands.every((b: { status: string }) => b.status === "ACTIVE")).toBe(true);
   });
 
   it("searches against both nameEn and nameFa", async () => {
     const enRes = await GET(getRequest({ search: "Castrol Test Seed" }));
     const enJson = await enRes.json();
-    expect(
-      enJson.data.brands.some((b: { slug: string }) => b.slug === seededBrand.slug),
-    ).toBe(true);
+    expect(enJson.data.brands.some((b: { slug: string }) => b.slug === seededBrand.slug)).toBe(
+      true,
+    );
 
     const faRes = await GET(getRequest({ search: "کاسترول آزمایشی" }));
     const faJson = await faRes.json();
-    expect(
-      faJson.data.brands.some((b: { slug: string }) => b.slug === seededBrand.slug),
-    ).toBe(true);
+    expect(faJson.data.brands.some((b: { slug: string }) => b.slug === seededBrand.slug)).toBe(
+      true,
+    );
   });
 });
 
@@ -152,9 +148,7 @@ describe("POST /api/admin/brands", () => {
   });
 
   it("auto-generates a slug from nameEn when not provided", async () => {
-    const res = await POST(
-      postRequest(validBrandPayload({ nameEn: `${SLUG_PREFIX} Auto Slug` })),
-    );
+    const res = await POST(postRequest(validBrandPayload({ nameEn: `${SLUG_PREFIX} Auto Slug` })));
     const json = await res.json();
 
     expect(res.status).toBe(201);
@@ -170,9 +164,7 @@ describe("POST /api/admin/brands", () => {
     expect(first.status).toBe(201);
 
     const second = await POST(
-      postRequest(
-        validBrandPayload({ slug, nameEn: `${SLUG_PREFIX} Dup Again` }),
-      ),
+      postRequest(validBrandPayload({ slug, nameEn: `${SLUG_PREFIX} Dup Again` })),
     );
     const json = await second.json();
 

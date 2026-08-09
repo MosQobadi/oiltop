@@ -71,10 +71,7 @@ export async function createCarEngine(input: CarEngineCreateInput) {
   return prisma.carEngine.create({ data: input });
 }
 
-export async function updateCarEngine(
-  id: string,
-  input: CarEngineUpdateInput,
-) {
+export async function updateCarEngine(id: string, input: CarEngineUpdateInput) {
   const existing = await prisma.carEngine.findUnique({ where: { id } });
   if (!existing) {
     throw new CarEngineNotFoundError(`Car engine "${id}" was not found`);
@@ -112,9 +109,7 @@ export async function listSearchableCarEngines(query: CarEngineSearchableQuery) 
       ...(query.yearFrom !== undefined
         ? [{ OR: [{ yearEnd: null }, { yearEnd: { gte: query.yearFrom } }] }]
         : []),
-      ...(query.yearTo !== undefined
-        ? [{ yearStart: { lte: query.yearTo } }]
-        : []),
+      ...(query.yearTo !== undefined ? [{ yearStart: { lte: query.yearTo } }] : []),
       ...(query.search
         ? [
             {

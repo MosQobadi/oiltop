@@ -1,11 +1,7 @@
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import type { Prisma } from "@/lib/generated/prisma/client";
-import type {
-  ProductCreateInput,
-  ProductListQuery,
-  ProductUpdateInput,
-} from "@/lib/validation";
+import type { ProductCreateInput, ProductListQuery, ProductUpdateInput } from "@/lib/validation";
 
 export class ProductNotFoundError extends Error {}
 export class DuplicateSkuError extends Error {}
@@ -89,9 +85,7 @@ export async function createProduct(input: ProductCreateInput) {
   const slug = input.slug ?? slugify(input.nameEn);
   const slugConflict = await prisma.product.findUnique({ where: { slug } });
   if (slugConflict) {
-    throw new DuplicateProductSlugError(
-      `A product with slug "${slug}" already exists`,
-    );
+    throw new DuplicateProductSlugError(`A product with slug "${slug}" already exists`);
   }
 
   const product = await prisma.product.create({
@@ -116,9 +110,7 @@ export async function updateProduct(id: string, input: ProductUpdateInput) {
       where: { sku: input.sku },
     });
     if (conflict) {
-      throw new DuplicateSkuError(
-        `A product with SKU "${input.sku}" already exists`,
-      );
+      throw new DuplicateSkuError(`A product with SKU "${input.sku}" already exists`);
     }
   }
 
@@ -129,9 +121,7 @@ export async function updateProduct(id: string, input: ProductUpdateInput) {
       where: { slug: input.slug },
     });
     if (conflict) {
-      throw new DuplicateProductSlugError(
-        `A product with slug "${input.slug}" already exists`,
-      );
+      throw new DuplicateProductSlugError(`A product with slug "${input.slug}" already exists`);
     }
   }
 
@@ -141,11 +131,9 @@ export async function updateProduct(id: string, input: ProductUpdateInput) {
   // tag leaves the history alone and every row still marks a real price change.
   // Products get no row at creation: "no row at or before this timestamp" is
   // already defined as "the current price applies".
-  const priceChanged =
-    input.price !== undefined && input.price !== Number(existing.price);
+  const priceChanged = input.price !== undefined && input.price !== Number(existing.price);
   const discountChanged =
-    input.discountPercent !== undefined &&
-    input.discountPercent !== existing.discountPercent;
+    input.discountPercent !== undefined && input.discountPercent !== existing.discountPercent;
 
   const updateProductOp = prisma.product.update({
     where: { id },
@@ -196,9 +184,7 @@ export async function deleteProduct(id: string) {
       reasons.push(`${orderItemCount} order item(s)`);
     }
     if (fitmentIds.length > 0) {
-      reasons.push(
-        `fitment profile item(s) [${fitmentIds.join(", ")}]`,
-      );
+      reasons.push(`fitment profile item(s) [${fitmentIds.join(", ")}]`);
     }
     throw new ProductDeleteBlockedError(
       `Cannot delete product — referenced by ${reasons.join(" and ")}. Deactivated instead.`,

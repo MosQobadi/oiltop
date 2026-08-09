@@ -49,9 +49,7 @@ function toFitmentInquiryListItem(
 // foreign-key 500 on a form the customer filled in correctly. An INACTIVE
 // engine or category is still accepted — the reference is context for the
 // admin, and deactivating a car model shouldn't start rejecting leads about it.
-export async function createFitmentInquiry(
-  input: StorefrontFitmentInquiryCreateInput,
-) {
+export async function createFitmentInquiry(input: StorefrontFitmentInquiryCreateInput) {
   if (input.carEngineId) {
     const carEngine = await prisma.carEngine.findUnique({
       where: { id: input.carEngineId },

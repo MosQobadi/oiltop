@@ -100,10 +100,7 @@ describe("GET /api/admin/car-brands/:id", () => {
 describe("PATCH /api/admin/car-brands/:id", () => {
   it("updates fields and returns the updated car brand", async () => {
     const carBrand = await createTestCarBrand();
-    const res = await PATCH(
-      requestWithBody("PATCH", { nameEn: "Updated Name" }),
-      ctx(carBrand.id),
-    );
+    const res = await PATCH(requestWithBody("PATCH", { nameEn: "Updated Name" }), ctx(carBrand.id));
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -122,10 +119,7 @@ describe("PATCH /api/admin/car-brands/:id", () => {
     const carBrandA = await createTestCarBrand();
     const carBrandB = await createTestCarBrand();
 
-    const res = await PATCH(
-      requestWithBody("PATCH", { slug: carBrandA.slug }),
-      ctx(carBrandB.id),
-    );
+    const res = await PATCH(requestWithBody("PATCH", { slug: carBrandA.slug }), ctx(carBrandB.id));
     const json = await res.json();
 
     expect(res.status).toBe(409);

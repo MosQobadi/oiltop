@@ -122,9 +122,7 @@ export default function BrandFormPage() {
       try {
         logoUrl = await uploadImage(values.logo);
       } catch (error) {
-        setSubmitError(
-          error instanceof Error ? error.message : "Failed to upload image",
-        );
+        setSubmitError(error instanceof Error ? error.message : "Failed to upload image");
         return;
       }
     } else {
@@ -139,14 +137,11 @@ export default function BrandFormPage() {
       logo: logoUrl,
     };
 
-    const response = await fetch(
-      isEdit ? `/api/admin/brands/${brandId}` : "/api/admin/brands",
-      {
-        method: isEdit ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      },
-    );
+    const response = await fetch(isEdit ? `/api/admin/brands/${brandId}` : "/api/admin/brands", {
+      method: isEdit ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
     const result = await response.json();
 
     if (!result.success) {
@@ -168,7 +163,7 @@ export default function BrandFormPage() {
   if (loadError) {
     return (
       <div className="p-8">
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       </div>
@@ -181,11 +176,7 @@ export default function BrandFormPage() {
         {isEdit ? "Edit Brand" : "Add Brand"}
       </h1>
 
-      <form
-        className="flex max-w-2xl flex-col gap-6"
-        noValidate
-        onSubmit={handleSubmit(onSubmit)}
-      >
+      <form className="flex max-w-2xl flex-col gap-6" noValidate onSubmit={handleSubmit(onSubmit)}>
         <BilingualTextField
           control={control}
           nameEn="nameEn"
@@ -201,15 +192,12 @@ export default function BrandFormPage() {
         <ToggleField control={control} name="isActive" label="Active" />
 
         {submitError && (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-danger text-sm">
             {submitError}
           </p>
         )}
 
-        <FormActions
-          onCancel={() => router.push("/admin/brands")}
-          isSubmitting={isSubmitting}
-        />
+        <FormActions onCancel={() => router.push("/admin/brands")} isSubmitting={isSubmitting} />
       </form>
     </div>
   );

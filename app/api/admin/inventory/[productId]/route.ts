@@ -11,10 +11,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -34,10 +31,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ success: true, data: { inventory } });
   } catch (error) {
     if (error instanceof ProductNotFoundError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 404 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 404 });
     }
     throw error;
   }

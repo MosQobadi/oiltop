@@ -19,10 +19,7 @@ async function ensureAdmin() {
     return null;
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -38,10 +35,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ success: true, data: { product } });
   } catch (error) {
     if (error instanceof ProductNotFoundError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 404 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 404 });
     }
     throw error;
   }
@@ -66,19 +60,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ success: true, data: { product } });
   } catch (error) {
     if (error instanceof ProductNotFoundError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 404 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 404 });
     }
-    if (
-      error instanceof DuplicateSkuError ||
-      error instanceof DuplicateProductSlugError
-    ) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 409 },
-      );
+    if (error instanceof DuplicateSkuError || error instanceof DuplicateProductSlugError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 409 });
     }
     throw error;
   }
@@ -94,16 +79,10 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
     if (error instanceof ProductNotFoundError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 404 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 404 });
     }
     if (error instanceof ProductDeleteBlockedError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 409 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 409 });
     }
     throw error;
   }

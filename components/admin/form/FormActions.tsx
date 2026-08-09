@@ -17,12 +17,7 @@ export function FormActions({
 }: FormActionsProps) {
   return (
     <div className="flex items-center justify-end gap-3">
-      <Button
-        type="button"
-        variant="outline"
-        onPress={onCancel}
-        isDisabled={isSubmitting}
-      >
+      <Button type="button" variant="outline" onPress={onCancel} isDisabled={isSubmitting}>
         {cancelLabel}
       </Button>
       <Button type="submit" isDisabled={isSubmitting}>

@@ -23,9 +23,7 @@ describe("GET /api/storefront/cars/brands", () => {
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
 
-    const slugs = json.data.carBrands.map(
-      (carBrand: { slug: string }) => carBrand.slug,
-    );
+    const slugs = json.data.carBrands.map((carBrand: { slug: string }) => carBrand.slug);
     expect(slugs).toEqual(expect.arrayContaining(["toyota", "peugeot", "hyundai"]));
   });
 
@@ -56,9 +54,7 @@ describe("GET /api/storefront/cars/brands", () => {
     const json = await res.json();
 
     expect(
-      json.data.carBrands.some(
-        (carBrand: { id: string }) => carBrand.id === inactive.id,
-      ),
+      json.data.carBrands.some((carBrand: { id: string }) => carBrand.id === inactive.id),
     ).toBe(false);
   });
 });

@@ -1,11 +1,7 @@
 import { z } from "zod";
 import { stripHtml } from "@/lib/sanitize";
 import { pageSchema, pageSizeSchema, slugSchema } from "./common";
-import {
-  categoryStatusSchema,
-  filterKindSchema,
-  partTypeSchema,
-} from "./enums";
+import { categoryStatusSchema, filterKindSchema, partTypeSchema } from "./enums";
 
 // Kept default-free here because `.partial()` does not unwrap a ZodDefault:
 // left as `.default([])` in the shared shape, a PATCH that omitted tags would
@@ -35,10 +31,7 @@ const categoryShape = {
 
 // filterKind is only meaningful (and only allowed) when partType is FILTER —
 // see Category.filterKind in CLAUDE.md.
-function checkFilterKind(
-  data: { partType?: string; filterKind?: string },
-  ctx: z.RefinementCtx,
-) {
+function checkFilterKind(data: { partType?: string; filterKind?: string }, ctx: z.RefinementCtx) {
   if (data.partType === undefined) return;
   if (data.partType === "FILTER" && !data.filterKind) {
     ctx.addIssue({
@@ -56,9 +49,7 @@ function checkFilterKind(
   }
 }
 
-export const categoryCreateSchema = z
-  .object(categoryShape)
-  .superRefine(checkFilterKind);
+export const categoryCreateSchema = z.object(categoryShape).superRefine(checkFilterKind);
 export const categoryUpdateSchema = z
   .object({ ...categoryShape, tags: tagsField })
   .partial()

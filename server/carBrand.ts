@@ -1,19 +1,13 @@
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import type { Prisma } from "@/lib/generated/prisma/client";
-import type {
-  CarBrandCreateInput,
-  CarBrandListQuery,
-  CarBrandUpdateInput,
-} from "@/lib/validation";
+import type { CarBrandCreateInput, CarBrandListQuery, CarBrandUpdateInput } from "@/lib/validation";
 
 export class CarBrandNotFoundError extends Error {}
 export class DuplicateSlugError extends Error {}
 export class CarBrandHasModelsError extends Error {}
 
-function withModelCount<T extends { _count: { models: number } }>(
-  carBrand: T,
-) {
+function withModelCount<T extends { _count: { models: number } }>(carBrand: T) {
   const { _count, ...rest } = carBrand;
   return { ...rest, modelCount: _count.models };
 }
@@ -69,9 +63,7 @@ export async function createCarBrand(input: CarBrandCreateInput) {
 
   const existing = await prisma.carBrand.findUnique({ where: { slug } });
   if (existing) {
-    throw new DuplicateSlugError(
-      `A car brand with slug "${slug}" already exists`,
-    );
+    throw new DuplicateSlugError(`A car brand with slug "${slug}" already exists`);
   }
 
   return prisma.carBrand.create({
@@ -91,9 +83,7 @@ export async function updateCarBrand(id: string, input: CarBrandUpdateInput) {
       where: { slug: input.slug },
     });
     if (conflict) {
-      throw new DuplicateSlugError(
-        `A car brand with slug "${input.slug}" already exists`,
-      );
+      throw new DuplicateSlugError(`A car brand with slug "${input.slug}" already exists`);
     }
     slug = input.slug;
   }

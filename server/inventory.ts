@@ -113,19 +113,13 @@ async function notifyRestockSubscribers(productId: string) {
         // A failed send must not fail the admin's restock — the stock update
         // is already committed by this point.
       }).catch((error: unknown) => {
-        console.error(
-          `[notify] back-in-stock alert failed for product ${productId}`,
-          error,
-        );
+        console.error(`[notify] back-in-stock alert failed for product ${productId}`, error);
       }),
     ),
   );
 }
 
-export async function addInventoryStock(
-  productId: string,
-  input: InventoryAddStockInput,
-) {
+export async function addInventoryStock(productId: string, input: InventoryAddStockInput) {
   const existing = await prisma.inventory.findUnique({ where: { productId } });
   if (!existing) {
     throw new ProductNotFoundError(`Product "${productId}" was not found`);

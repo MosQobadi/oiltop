@@ -31,9 +31,7 @@ async function signAdminToken(userId: string) {
 
 function requestWithQuery(query: Record<string, string> = {}) {
   const params = new URLSearchParams(query);
-  return new NextRequest(
-    `http://localhost/api/admin/car-engines/searchable?${params.toString()}`,
-  );
+  return new NextRequest(`http://localhost/api/admin/car-engines/searchable?${params.toString()}`);
 }
 
 let carBrand: { id: string };

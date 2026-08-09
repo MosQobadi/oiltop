@@ -9,9 +9,7 @@ describe("hashPassword / verifyPassword", () => {
 
   it("verifies a correct password against its hash", async () => {
     const hash = await hashPassword("correct-horse-battery-staple");
-    expect(await verifyPassword("correct-horse-battery-staple", hash)).toBe(
-      true,
-    );
+    expect(await verifyPassword("correct-horse-battery-staple", hash)).toBe(true);
   });
 
   it("rejects an incorrect password", async () => {

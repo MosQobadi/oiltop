@@ -8,10 +8,7 @@ export async function GET(request: NextRequest) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }

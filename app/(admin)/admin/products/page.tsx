@@ -124,7 +124,7 @@ export default function ProductsPage() {
       key: "image",
       label: "Image",
       render: (row) => (
-        <div className="flex size-10 items-center justify-center overflow-hidden rounded-field bg-field">
+        <div className="rounded-field bg-field flex size-10 items-center justify-center overflow-hidden">
           {row.image ? (
             // eslint-disable-next-line @next/next/no-img-element -- product image URL isn't a known static/remote-configured asset
             <img src={row.image} alt="" className="size-full object-cover" />
@@ -192,13 +192,11 @@ export default function ProductsPage() {
     <div className="flex flex-col gap-6 p-8">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-neutral-900">Products</h1>
-        <Button onPress={() => router.push("/admin/products/add")}>
-          + Add Product
-        </Button>
+        <Button onPress={() => router.push("/admin/products/add")}>+ Add Product</Button>
       </div>
 
       {loadError && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       )}
@@ -267,7 +265,7 @@ export default function ProductsPage() {
                   &rdquo;? This action cannot be undone.
                 </p>
                 {deleteError && (
-                  <p role="alert" className="mt-2 text-sm text-danger">
+                  <p role="alert" className="text-danger mt-2 text-sm">
                     {deleteError}
                   </p>
                 )}

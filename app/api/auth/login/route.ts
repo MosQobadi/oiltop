@@ -26,18 +26,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { user, token } = await authenticateAdmin(
-      parsed.data.email,
-      parsed.data.password,
-    );
+    const { user, token } = await authenticateAdmin(parsed.data.email, parsed.data.password);
     await setAuthCookie(token);
     return NextResponse.json({ success: true, data: { user } });
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }

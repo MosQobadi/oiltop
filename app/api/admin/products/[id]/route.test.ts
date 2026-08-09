@@ -132,10 +132,7 @@ describe("GET /api/admin/products/:id", () => {
 describe("PATCH /api/admin/products/:id", () => {
   it("updates fields and returns the updated product", async () => {
     const product = await createTestProduct();
-    const res = await PATCH(
-      requestWithBody("PATCH", { nameEn: "Updated Name" }),
-      ctx(product.id),
-    );
+    const res = await PATCH(requestWithBody("PATCH", { nameEn: "Updated Name" }), ctx(product.id));
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -154,10 +151,7 @@ describe("PATCH /api/admin/products/:id", () => {
     const productA = await createTestProduct();
     const productB = await createTestProduct();
 
-    const res = await PATCH(
-      requestWithBody("PATCH", { sku: productA.sku }),
-      ctx(productB.id),
-    );
+    const res = await PATCH(requestWithBody("PATCH", { sku: productA.sku }), ctx(productB.id));
     const json = await res.json();
 
     expect(res.status).toBe(409);
@@ -184,10 +178,7 @@ describe("PATCH /api/admin/products/:id", () => {
   it("logs a discount change, carrying the unchanged price", async () => {
     const product = await createTestProduct({ price: 1000, discountPercent: 0 });
 
-    const res = await PATCH(
-      requestWithBody("PATCH", { discountPercent: 25 }),
-      ctx(product.id),
-    );
+    const res = await PATCH(requestWithBody("PATCH", { discountPercent: 25 }), ctx(product.id));
     expect(res.status).toBe(200);
 
     const logs = await prisma.productPriceLog.findMany({
@@ -233,10 +224,7 @@ describe("PATCH /api/admin/products/:id", () => {
 
     await PATCH(requestWithBody("PATCH", { price: 1100 }), ctx(product.id));
     await PATCH(requestWithBody("PATCH", { price: 1100 }), ctx(product.id));
-    await PATCH(
-      requestWithBody("PATCH", { price: 1100, discountPercent: 5 }),
-      ctx(product.id),
-    );
+    await PATCH(requestWithBody("PATCH", { price: 1100, discountPercent: 5 }), ctx(product.id));
 
     const logs = await prisma.productPriceLog.findMany({
       where: { productId: product.id },
@@ -281,12 +269,8 @@ describe("DELETE /api/admin/products/:id", () => {
     const res = await DELETE(requestWithBody("DELETE"), ctx(product.id));
     expect(res.status).toBe(200);
 
-    expect(
-      await prisma.productPriceLog.count({ where: { productId: product.id } }),
-    ).toBe(0);
-    expect(
-      await prisma.stockNotification.count({ where: { productId: product.id } }),
-    ).toBe(0);
+    expect(await prisma.productPriceLog.count({ where: { productId: product.id } })).toBe(0);
+    expect(await prisma.stockNotification.count({ where: { productId: product.id } })).toBe(0);
   });
 
   it("deactivates instead of deleting when the product has order history", async () => {

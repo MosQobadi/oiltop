@@ -138,9 +138,7 @@ export default function CarModelFormPage() {
       try {
         imageUrl = await uploadImage(values.image);
       } catch (error) {
-        setSubmitError(
-          error instanceof Error ? error.message : "Failed to upload image",
-        );
+        setSubmitError(error instanceof Error ? error.message : "Failed to upload image");
         return;
       }
     } else {
@@ -189,7 +187,7 @@ export default function CarModelFormPage() {
   if (loadError) {
     return (
       <div className="p-8">
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       </div>
@@ -203,10 +201,7 @@ export default function CarModelFormPage() {
           Car Brands
         </Link>
         <span>/</span>
-        <Link
-          href={`/admin/cars/brands/${carBrandId}/models`}
-          className="hover:text-neutral-700"
-        >
+        <Link href={`/admin/cars/brands/${carBrandId}/models`} className="hover:text-neutral-700">
           Models
         </Link>
       </nav>
@@ -215,11 +210,7 @@ export default function CarModelFormPage() {
         {isEdit ? "Edit Car Model" : "Add Car Model"}
       </h1>
 
-      <form
-        className="flex max-w-2xl flex-col gap-6"
-        noValidate
-        onSubmit={handleSubmit(onSubmit)}
-      >
+      <form className="flex max-w-2xl flex-col gap-6" noValidate onSubmit={handleSubmit(onSubmit)}>
         <BilingualTextField
           control={control}
           nameEn="nameEn"
@@ -261,7 +252,7 @@ export default function CarModelFormPage() {
         <ToggleField control={control} name="isActive" label="Active" />
 
         {submitError && (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-danger text-sm">
             {submitError}
           </p>
         )}

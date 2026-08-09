@@ -1,19 +1,13 @@
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import type { Prisma } from "@/lib/generated/prisma/client";
-import type {
-  CarModelCreateInput,
-  CarModelListQuery,
-  CarModelUpdateInput,
-} from "@/lib/validation";
+import type { CarModelCreateInput, CarModelListQuery, CarModelUpdateInput } from "@/lib/validation";
 
 export class CarModelNotFoundError extends Error {}
 export class DuplicateSlugError extends Error {}
 export class CarModelHasEnginesError extends Error {}
 
-function withEngineCount<T extends { _count: { engines: number } }>(
-  carModel: T,
-) {
+function withEngineCount<T extends { _count: { engines: number } }>(carModel: T) {
   const { _count, ...rest } = carModel;
   return { ...rest, engineCount: _count.engines };
 }

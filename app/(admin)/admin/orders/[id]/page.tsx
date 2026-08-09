@@ -236,7 +236,7 @@ export default function OrderDetailPage() {
   if (loadError || !order) {
     return (
       <div className="p-8">
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError ?? "Order not found"}
         </p>
       </div>
@@ -258,9 +258,7 @@ export default function OrderDetailPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-lg font-semibold text-neutral-900">
-            Order {orderNumber}
-          </h1>
+          <h1 className="text-lg font-semibold text-neutral-900">Order {orderNumber}</h1>
           <p className="text-sm text-neutral-500">
             Placed on {new Date(order.createdAt).toLocaleDateString()}
           </p>
@@ -285,7 +283,7 @@ export default function OrderDetailPage() {
           {nextStatus && (
             <div className="flex flex-wrap items-center justify-end gap-3">
               {statusError && (
-                <p role="alert" className="text-sm text-danger">
+                <p role="alert" className="text-danger text-sm">
                   {statusError}
                 </p>
               )}
@@ -390,15 +388,11 @@ export default function OrderDetailPage() {
           <CardTitle>Admin Note</CardTitle>
         </CardHeader>
         <CardContent>
-          <form
-            className="flex flex-col gap-4"
-            noValidate
-            onSubmit={handleSubmit(onSaveNote)}
-          >
+          <form className="flex flex-col gap-4" noValidate onSubmit={handleSubmit(onSaveNote)}>
             <TextareaField control={control} name="adminNote" label="Note" rows={4} />
 
             {noteError && (
-              <p role="alert" className="text-sm text-danger">
+              <p role="alert" className="text-danger text-sm">
                 {noteError}
               </p>
             )}

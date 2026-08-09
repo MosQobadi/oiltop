@@ -106,10 +106,7 @@ describe("GET /api/admin/categories/:id", () => {
 describe("PATCH /api/admin/categories/:id", () => {
   it("updates fields and returns the updated category", async () => {
     const category = await createTestCategory();
-    const res = await PATCH(
-      requestWithBody("PATCH", { nameEn: "Updated Name" }),
-      ctx(category.id),
-    );
+    const res = await PATCH(requestWithBody("PATCH", { nameEn: "Updated Name" }), ctx(category.id));
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -128,10 +125,7 @@ describe("PATCH /api/admin/categories/:id", () => {
     const categoryA = await createTestCategory();
     const categoryB = await createTestCategory();
 
-    const res = await PATCH(
-      requestWithBody("PATCH", { slug: categoryA.slug }),
-      ctx(categoryB.id),
-    );
+    const res = await PATCH(requestWithBody("PATCH", { slug: categoryA.slug }), ctx(categoryB.id));
     const json = await res.json();
 
     expect(res.status).toBe(409);
@@ -144,10 +138,7 @@ describe("PATCH /api/admin/categories/:id", () => {
       filterKind: "OIL_FILTER",
     });
 
-    const res = await PATCH(
-      requestWithBody("PATCH", { partType: "ACCESSORY" }),
-      ctx(category.id),
-    );
+    const res = await PATCH(requestWithBody("PATCH", { partType: "ACCESSORY" }), ctx(category.id));
     const json = await res.json();
 
     expect(res.status).toBe(200);

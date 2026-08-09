@@ -35,9 +35,7 @@ beforeEach(() => {
 
 describe("POST /api/auth/login", () => {
   it("logs in a valid admin and sets the auth cookie", async () => {
-    const res = await POST(
-      loginRequest({ email: "admin@topoil.com", password: "Admin123!" }),
-    );
+    const res = await POST(loginRequest({ email: "admin@topoil.com", password: "Admin123!" }));
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -48,9 +46,7 @@ describe("POST /api/auth/login", () => {
   });
 
   it("rejects a wrong password", async () => {
-    const res = await POST(
-      loginRequest({ email: "admin@topoil.com", password: "wrong-password" }),
-    );
+    const res = await POST(loginRequest({ email: "admin@topoil.com", password: "wrong-password" }));
     const json = await res.json();
 
     expect(res.status).toBe(401);

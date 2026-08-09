@@ -1,0 +1,11 @@
+# Line endings are LF everywhere, in the index and in the working tree.
+# Without this, core.autocrlf=true on Windows checks files out as CRLF, which
+# makes Prettier (endOfLine: "lf") report every line of those files as changed.
+* text=auto eol=lf
+
+# Binary/opaque files git should never touch.
+*.ico binary
+*.png binary
+*.jpg binary
+*.webp binary
+*.excalidraw -text

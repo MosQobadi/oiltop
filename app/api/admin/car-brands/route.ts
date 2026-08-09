@@ -1,21 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { carBrandCreateSchema, carBrandListQuerySchema } from "@/lib/validation";
 import { AuthError, requireAdmin } from "@/server/auth";
-import {
-  createCarBrand,
-  DuplicateSlugError,
-  listCarBrands,
-} from "@/server/carBrand";
+import { createCarBrand, DuplicateSlugError, listCarBrands } from "@/server/carBrand";
 
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -47,10 +40,7 @@ export async function POST(request: NextRequest) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -66,16 +56,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const carBrand = await createCarBrand(parsed.data);
-    return NextResponse.json(
-      { success: true, data: { carBrand } },
-      { status: 201 },
-    );
+    return NextResponse.json({ success: true, data: { carBrand } }, { status: 201 });
   } catch (error) {
     if (error instanceof DuplicateSlugError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 409 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 409 });
     }
     throw error;
   }

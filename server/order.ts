@@ -1,10 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { OrderStatus, Prisma } from "@/lib/generated/prisma/client";
-import type {
-  OrderListQuery,
-  OrderNoteInput,
-  OrderStatusUpdateInput,
-} from "@/lib/validation";
+import type { OrderListQuery, OrderNoteInput, OrderStatusUpdateInput } from "@/lib/validation";
 
 // Storefront Design Decision 6 — RESOLVED (2026-08-09, Storefront Task 0.5):
 // guest checkout stores a guest order, not a silently-created account.

@@ -24,8 +24,6 @@ describe("carBrandCreateSchema", () => {
 
 describe("carBrandUpdateSchema", () => {
   it("accepts a partial update", () => {
-    expect(
-      carBrandUpdateSchema.safeParse({ nameEn: "Toyota Motor" }).success,
-    ).toBe(true);
+    expect(carBrandUpdateSchema.safeParse({ nameEn: "Toyota Motor" }).success).toBe(true);
   });
 });

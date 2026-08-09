@@ -73,13 +73,9 @@ describe("GET /api/storefront/cars/models/:modelId/years", () => {
     // share the working database with the admin panel, where engines can be
     // added over time.
     expect(json.data.years).toEqual(
-      expect.arrayContaining([
-        2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015,
-      ]),
+      expect.arrayContaining([2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015]),
     );
-    expect(json.data.years).toEqual(
-      [...json.data.years].sort((a: number, b: number) => b - a),
-    );
+    expect(json.data.years).toEqual([...json.data.years].sort((a: number, b: number) => b - a));
   });
 
   it("returns 404 for an unknown model id", async () => {

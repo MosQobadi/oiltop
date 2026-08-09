@@ -17,16 +17,12 @@ export function AdminTopbar() {
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-200 bg-white px-6">
-      <h1 className="text-base font-semibold text-neutral-900">
-        {getPageTitle(pathname)}
-      </h1>
+      <h1 className="text-base font-semibold text-neutral-900">{getPageTitle(pathname)}</h1>
 
       {user && (
         <div className="flex items-center gap-3">
           <Avatar>
-            <Avatar.Fallback>
-              {initials(user.firstName, user.lastName)}
-            </Avatar.Fallback>
+            <Avatar.Fallback>{initials(user.firstName, user.lastName)}</Avatar.Fallback>
           </Avatar>
           <span className="text-sm font-medium text-neutral-700">
             {user.firstName} {user.lastName}

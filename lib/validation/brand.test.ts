@@ -38,9 +38,7 @@ describe("brandCreateSchema", () => {
 
 describe("brandUpdateSchema", () => {
   it("accepts a partial update", () => {
-    expect(brandUpdateSchema.safeParse({ status: "INACTIVE" }).success).toBe(
-      true,
-    );
+    expect(brandUpdateSchema.safeParse({ status: "INACTIVE" }).success).toBe(true);
   });
 
   it("rejects an invalid slug", () => {

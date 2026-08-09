@@ -226,9 +226,7 @@ describe("GET /api/admin/products", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(
-      json.data.products.every((p: { status: string }) => p.status === "INACTIVE"),
-    ).toBe(true);
+    expect(json.data.products.every((p: { status: string }) => p.status === "INACTIVE")).toBe(true);
     expect(
       json.data.products.some((p: { id: string }) => p.id === productInactiveOilFilterBosch.id),
     ).toBe(true);
@@ -260,9 +258,7 @@ describe("GET /api/admin/products", () => {
     const byName = await GET(getRequest({ search: `${SKU_PREFIX} Mobil Engine Oil` }));
     const byNameJson = await byName.json();
     expect(
-      byNameJson.data.products.some(
-        (p: { id: string }) => p.id === productActiveEngineOilMobil.id,
-      ),
+      byNameJson.data.products.some((p: { id: string }) => p.id === productActiveEngineOilMobil.id),
     ).toBe(true);
 
     const byNameFa = await GET(getRequest({ search: "روغن موتور آزمایشی" }));
@@ -276,9 +272,7 @@ describe("GET /api/admin/products", () => {
     const bySku = await GET(getRequest({ search: productActiveEngineOilMobil.sku }));
     const bySkuJson = await bySku.json();
     expect(
-      bySkuJson.data.products.some(
-        (p: { id: string }) => p.id === productActiveEngineOilMobil.id,
-      ),
+      bySkuJson.data.products.some((p: { id: string }) => p.id === productActiveEngineOilMobil.id),
     ).toBe(true);
   });
 

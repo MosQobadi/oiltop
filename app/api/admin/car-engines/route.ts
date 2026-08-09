@@ -8,10 +8,7 @@ export async function GET(request: NextRequest) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -43,10 +40,7 @@ export async function POST(request: NextRequest) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -61,8 +55,5 @@ export async function POST(request: NextRequest) {
   }
 
   const carEngine = await createCarEngine(parsed.data);
-  return NextResponse.json(
-    { success: true, data: { carEngine } },
-    { status: 201 },
-  );
+  return NextResponse.json({ success: true, data: { carEngine } }, { status: 201 });
 }

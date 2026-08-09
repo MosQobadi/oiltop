@@ -17,22 +17,16 @@ describe("customerListQuerySchema", () => {
   });
 
   it("rejects an invalid status", () => {
-    expect(
-      customerListQuerySchema.safeParse({ status: "BANNED" }).success,
-    ).toBe(false);
+    expect(customerListQuerySchema.safeParse({ status: "BANNED" }).success).toBe(false);
   });
 });
 
 describe("customerStatusSchema", () => {
   it("accepts a valid status", () => {
-    expect(customerStatusSchema.safeParse({ status: "ACTIVE" }).success).toBe(
-      true,
-    );
+    expect(customerStatusSchema.safeParse({ status: "ACTIVE" }).success).toBe(true);
   });
 
   it("rejects an invalid status", () => {
-    expect(customerStatusSchema.safeParse({ status: "BANNED" }).success).toBe(
-      false,
-    );
+    expect(customerStatusSchema.safeParse({ status: "BANNED" }).success).toBe(false);
   });
 });

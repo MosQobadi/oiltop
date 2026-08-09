@@ -141,7 +141,10 @@ describe("PATCH /api/admin/orders/:id/note", () => {
   });
 
   it("updates the admin note", async () => {
-    const res = await PATCH(patchRequest({ adminNote: "Called customer, confirmed address" }), ctx(order.id));
+    const res = await PATCH(
+      patchRequest({ adminNote: "Called customer, confirmed address" }),
+      ctx(order.id),
+    );
     const json = await res.json();
 
     expect(res.status).toBe(200);

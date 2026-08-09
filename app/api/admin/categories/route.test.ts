@@ -94,9 +94,7 @@ describe("GET /api/admin/categories", () => {
     expect(json.success).toBe(true);
     expect(Array.isArray(json.data.categories)).toBe(true);
     expect(typeof json.data.total).toBe("number");
-    const engineOil = json.data.categories.find(
-      (c: { slug: string }) => c.slug === "engine-oil",
-    );
+    const engineOil = json.data.categories.find((c: { slug: string }) => c.slug === "engine-oil");
     expect(engineOil).toBeTruthy();
     expect(typeof engineOil.productCount).toBe("number");
     expect(engineOil.productCount).toBeGreaterThan(0);
@@ -107,25 +105,23 @@ describe("GET /api/admin/categories", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(
-      json.data.categories.every(
-        (c: { partType: string }) => c.partType === "FILTER",
-      ),
-    ).toBe(true);
+    expect(json.data.categories.every((c: { partType: string }) => c.partType === "FILTER")).toBe(
+      true,
+    );
   });
 
   it("searches against both nameEn and nameFa", async () => {
     const enRes = await GET(getRequest({ search: "Engine Oil" }));
     const enJson = await enRes.json();
-    expect(
-      enJson.data.categories.some((c: { slug: string }) => c.slug === "engine-oil"),
-    ).toBe(true);
+    expect(enJson.data.categories.some((c: { slug: string }) => c.slug === "engine-oil")).toBe(
+      true,
+    );
 
     const faRes = await GET(getRequest({ search: "روغن موتور" }));
     const faJson = await faRes.json();
-    expect(
-      faJson.data.categories.some((c: { slug: string }) => c.slug === "engine-oil"),
-    ).toBe(true);
+    expect(faJson.data.categories.some((c: { slug: string }) => c.slug === "engine-oil")).toBe(
+      true,
+    );
   });
 });
 
@@ -151,9 +147,7 @@ describe("POST /api/admin/categories", () => {
 
   it("auto-generates a slug from nameEn when not provided", async () => {
     const res = await POST(
-      postRequest(
-        validCategoryPayload({ nameEn: `${SLUG_PREFIX} Auto Slug` }),
-      ),
+      postRequest(validCategoryPayload({ nameEn: `${SLUG_PREFIX} Auto Slug` })),
     );
     const json = await res.json();
 
@@ -170,9 +164,7 @@ describe("POST /api/admin/categories", () => {
     expect(first.status).toBe(201);
 
     const second = await POST(
-      postRequest(
-        validCategoryPayload({ slug, nameEn: `${SLUG_PREFIX} Dup Again` }),
-      ),
+      postRequest(validCategoryPayload({ slug, nameEn: `${SLUG_PREFIX} Dup Again` })),
     );
     const json = await second.json();
 

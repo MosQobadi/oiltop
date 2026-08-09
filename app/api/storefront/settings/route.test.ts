@@ -41,10 +41,7 @@ describe("GET /api/storefront/settings", () => {
       JSON.stringify({ instagram: "https://instagram.com/topoil" }),
     );
     await setSetting(SETTINGS_KEYS.localization.defaultLocale, "FA");
-    await setSetting(
-      SETTINGS_KEYS.localization.supportedLocales,
-      JSON.stringify(["EN", "FA"]),
-    );
+    await setSetting(SETTINGS_KEYS.localization.supportedLocales, JSON.stringify(["EN", "FA"]));
 
     const res = await GET();
     const json = await res.json();
@@ -63,10 +60,7 @@ describe("GET /api/storefront/settings", () => {
 
   it("never exposes shipping, payment, or SEO settings", async () => {
     await setSetting(SETTINGS_KEYS.shipping.flatRateFee, "50000");
-    await setSetting(
-      SETTINGS_KEYS.payment.enabledMethods,
-      JSON.stringify(["COD", "CARD"]),
-    );
+    await setSetting(SETTINGS_KEYS.payment.enabledMethods, JSON.stringify(["COD", "CARD"]));
     await setSetting(SETTINGS_KEYS.seo.googleSearchConsoleCode, "secret-code");
 
     const res = await GET();

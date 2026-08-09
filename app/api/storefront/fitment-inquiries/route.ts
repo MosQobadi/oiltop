@@ -1,9 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { storefrontFitmentInquiryCreateSchema } from "@/lib/validation";
-import {
-  createFitmentInquiry,
-  UnknownFitmentInquiryReferenceError,
-} from "@/server/fitmentInquiry";
+import { createFitmentInquiry, UnknownFitmentInquiryReferenceError } from "@/server/fitmentInquiry";
 import { checkFitmentInquiryRateLimit, getClientIp } from "@/server/rateLimit";
 
 // Lead capture for the car finder's no-match fallback. Public and
@@ -38,10 +35,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, data: inquiry }, { status: 201 });
   } catch (error) {
     if (error instanceof UnknownFitmentInquiryReferenceError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 400 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
     throw error;
   }

@@ -217,12 +217,12 @@ export default function FitmentPreviewPage() {
       <div>
         <h1 className="text-lg font-semibold text-neutral-900">Fitment Preview</h1>
         <p className="text-sm text-neutral-500">
-          Walk the Brand → Model → Year → Engine flow a customer will eventually use, and
-          see exactly what fitment recommendations would be shown.
+          Walk the Brand → Model → Year → Engine flow a customer will eventually use, and see
+          exactly what fitment recommendations would be shown.
         </p>
       </div>
 
-      <div className="grid max-w-3xl grid-cols-1 gap-4 rounded-field bg-field p-4 sm:grid-cols-2">
+      <div className="rounded-field bg-field grid max-w-3xl grid-cols-1 gap-4 p-4 sm:grid-cols-2">
         <SelectField
           control={control}
           name="carBrandId"
@@ -264,7 +264,7 @@ export default function FitmentPreviewPage() {
       </div>
 
       {loadError && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       )}
@@ -275,9 +275,7 @@ export default function FitmentPreviewPage() {
         </p>
       )}
 
-      {carEngineId && isLoadingItems && (
-        <p className="text-sm text-neutral-500">Loading...</p>
-      )}
+      {carEngineId && isLoadingItems && <p className="text-sm text-neutral-500">Loading...</p>}
 
       {carEngineId && !isLoadingItems && categoryGroups.length === 0 && !loadError && (
         <p className="text-sm text-neutral-500">
@@ -289,18 +287,13 @@ export default function FitmentPreviewPage() {
         <div className="flex max-w-3xl flex-col gap-6">
           {categoryGroups.map((group) => (
             <div key={group.category.id} className="flex flex-col gap-3">
-              <h2 className="text-sm font-semibold text-neutral-900">
-                {group.category.nameEn}
-              </h2>
+              <h2 className="text-sm font-semibold text-neutral-900">{group.category.nameEn}</h2>
               <div className="flex flex-col gap-2">
                 {group.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-3 rounded-field bg-field p-3"
-                  >
+                  <div key={item.id} className="rounded-field bg-field flex items-center gap-3 p-3">
                     {item.product ? (
                       <>
-                        <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-field bg-white">
+                        <div className="rounded-field flex size-10 shrink-0 items-center justify-center overflow-hidden bg-white">
                           {item.product.image ? (
                             // eslint-disable-next-line @next/next/no-img-element -- product image URL isn't a known static/remote-configured asset
                             <img

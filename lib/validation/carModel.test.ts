@@ -24,8 +24,6 @@ describe("carModelCreateSchema", () => {
 
 describe("carModelUpdateSchema", () => {
   it("accepts a partial update", () => {
-    expect(
-      carModelUpdateSchema.safeParse({ nameEn: "Corolla Cross" }).success,
-    ).toBe(true);
+    expect(carModelUpdateSchema.safeParse({ nameEn: "Corolla Cross" }).success).toBe(true);
   });
 });

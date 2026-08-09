@@ -47,10 +47,7 @@ const itemFormSchema = z
     priority: z
       .string()
       .min(1, "Priority is required")
-      .refine(
-        (v) => Number.isInteger(Number(v)),
-        "Priority must be a whole number",
-      ),
+      .refine((v) => Number.isInteger(Number(v)), "Priority must be a whole number"),
     adminNote: z.string().max(2000),
   })
   .superRefine((data, ctx) => {
@@ -131,9 +128,7 @@ export function ItemFormModal({
         priority: String(item.priority),
         adminNote: item.adminNote ?? "",
       });
-      setProductOption(
-        item.product ? { id: item.product.id, label: item.product.nameEn } : null,
-      );
+      setProductOption(item.product ? { id: item.product.id, label: item.product.nameEn } : null);
     } else {
       reset(emptyDefaults);
       setProductOption(null);
@@ -221,11 +216,7 @@ export function ItemFormModal({
                     placeholder="Shown to customers when no exact product match exists yet"
                   />
 
-                  <KeyValueField
-                    control={control}
-                    name="specAttributes"
-                    label="Spec Attributes"
-                  />
+                  <KeyValueField control={control} name="specAttributes" label="Spec Attributes" />
 
                   <TextField
                     control={control}
@@ -244,25 +235,20 @@ export function ItemFormModal({
 
                   {!productId && (
                     <p className="text-xs text-neutral-500">
-                      No product selected — the Spec Note above is shown to customers
-                      when no exact product match exists yet.
+                      No product selected — the Spec Note above is shown to customers when no exact
+                      product match exists yet.
                     </p>
                   )}
 
                   {submitError && (
-                    <p role="alert" className="text-sm text-danger">
+                    <p role="alert" className="text-danger text-sm">
                       {submitError}
                     </p>
                   )}
                 </div>
               </Modal.Body>
               <Modal.Footer>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onPress={onClose}
-                  isDisabled={isSubmitting}
-                >
+                <Button type="button" variant="outline" onPress={onClose} isDisabled={isSubmitting}>
                   Cancel
                 </Button>
                 <Button type="submit" isDisabled={isSubmitting}>

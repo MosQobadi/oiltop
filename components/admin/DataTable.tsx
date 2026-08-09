@@ -1,14 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import {
-  Chip,
-  ListBox,
-  Pagination,
-  SearchField,
-  Select,
-  Table,
-} from "@heroui/react";
+import { Chip, ListBox, Pagination, SearchField, Select, Table } from "@heroui/react";
 
 type ChipColor = "default" | "accent" | "danger" | "success" | "warning";
 
@@ -84,10 +77,7 @@ function getPageNumbers(page: number, totalPages: number): (number | "ellipsis")
 }
 
 function DataTableFilterSelect({ filter }: { filter: DataTableFilter }) {
-  const items = [
-    { label: filter.label, value: "" },
-    ...filter.options,
-  ];
+  const items = [{ label: filter.label, value: "" }, ...filter.options];
 
   return (
     <Select
@@ -175,10 +165,7 @@ export function DataTable<T extends { id: string }>({
           <Table.Content aria-label={ariaLabel}>
             <Table.Header columns={columns}>
               {(column) => (
-                <Table.Column
-                  id={column.key}
-                  isRowHeader={column.key === columns[0]?.key}
-                >
+                <Table.Column id={column.key} isRowHeader={column.key === columns[0]?.key}>
                   {column.label}
                 </Table.Column>
               )}
@@ -186,18 +173,14 @@ export function DataTable<T extends { id: string }>({
             <Table.Body
               items={rows}
               renderEmptyState={() => (
-                <div className="py-10 text-center text-sm text-neutral-500">
-                  {emptyMessage}
-                </div>
+                <div className="py-10 text-center text-sm text-neutral-500">{emptyMessage}</div>
               )}
             >
               {(row) => (
                 <Table.Row id={row.id} columns={columns}>
                   {(column) => (
                     <Table.Cell>
-                      {column.render
-                        ? column.render(row)
-                        : String(row[column.key] ?? "")}
+                      {column.render ? column.render(row) : String(row[column.key] ?? "")}
                     </Table.Cell>
                   )}
                 </Table.Row>
@@ -214,10 +197,7 @@ export function DataTable<T extends { id: string }>({
           </Pagination.Summary>
           <Pagination.Content>
             <Pagination.Item>
-              <Pagination.Previous
-                isDisabled={page <= 1}
-                onPress={() => onPageChange(page - 1)}
-              >
+              <Pagination.Previous isDisabled={page <= 1} onPress={() => onPageChange(page - 1)}>
                 <Pagination.PreviousIcon />
                 Previous
               </Pagination.Previous>
@@ -229,10 +209,7 @@ export function DataTable<T extends { id: string }>({
                 </Pagination.Item>
               ) : (
                 <Pagination.Item key={p}>
-                  <Pagination.Link
-                    isActive={p === page}
-                    onPress={() => onPageChange(p)}
-                  >
+                  <Pagination.Link isActive={p === page} onPress={() => onPageChange(p)}>
                     {p}
                   </Pagination.Link>
                 </Pagination.Item>

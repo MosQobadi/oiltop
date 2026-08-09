@@ -8,10 +8,7 @@ export async function GET(request: NextRequest) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -43,10 +40,7 @@ export async function POST(request: NextRequest) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -62,16 +56,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const category = await createCategory(parsed.data);
-    return NextResponse.json(
-      { success: true, data: { category } },
-      { status: 201 },
-    );
+    return NextResponse.json({ success: true, data: { category } }, { status: 201 });
   } catch (error) {
     if (error instanceof DuplicateSlugError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 409 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 409 });
     }
     throw error;
   }

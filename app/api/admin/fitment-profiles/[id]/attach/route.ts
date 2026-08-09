@@ -1,10 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { fitmentProfileAttachSchema } from "@/lib/validation";
 import { AuthError, requireAdmin } from "@/server/auth";
-import {
-  FitmentProfileNotFoundError,
-  attachCarEnginesToProfile,
-} from "@/server/fitmentProfile";
+import { FitmentProfileNotFoundError, attachCarEnginesToProfile } from "@/server/fitmentProfile";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -13,10 +10,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -36,10 +30,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
     if (error instanceof FitmentProfileNotFoundError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 404 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 404 });
     }
     throw error;
   }

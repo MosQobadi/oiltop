@@ -224,11 +224,7 @@ describe("GET /api/storefront/products", () => {
   it("hides inactive products and products behind an inactive category or brand", async () => {
     const slugs = await listSlugs({});
 
-    expect(slugs.sort()).toEqual([
-      `${PREFIX}-filter-a`,
-      `${PREFIX}-filter-b`,
-      `${PREFIX}-oil-a`,
-    ]);
+    expect(slugs.sort()).toEqual([`${PREFIX}-filter-a`, `${PREFIX}-filter-b`, `${PREFIX}-oil-a`]);
   });
 
   it("computes finalPrice from price and discountPercent", async () => {
@@ -279,15 +275,11 @@ describe("GET /api/storefront/products", () => {
       `${PREFIX}-filter-a`,
       `${PREFIX}-oil-a`,
     ]);
-    expect(await listSlugs({ brand: `${PREFIX}-brand-b` })).toEqual([
-      `${PREFIX}-filter-b`,
-    ]);
+    expect(await listSlugs({ brand: `${PREFIX}-brand-b` })).toEqual([`${PREFIX}-filter-b`]);
   });
 
   it("filters by partType and filterKind", async () => {
-    expect(await listSlugs({ partType: "ENGINE_OIL" })).toEqual([
-      `${PREFIX}-oil-a`,
-    ]);
+    expect(await listSlugs({ partType: "ENGINE_OIL" })).toEqual([`${PREFIX}-oil-a`]);
     expect((await listSlugs({ partType: "FILTER" })).sort()).toEqual([
       `${PREFIX}-filter-a`,
       `${PREFIX}-filter-b`,
@@ -300,25 +292,21 @@ describe("GET /api/storefront/products", () => {
   });
 
   it("combines category and brand filters", async () => {
-    expect(
-      await listSlugs({ category: `${PREFIX}-air-filter`, brand: brandAId }),
-    ).toEqual([`${PREFIX}-filter-a`]);
+    expect(await listSlugs({ category: `${PREFIX}-air-filter`, brand: brandAId })).toEqual([
+      `${PREFIX}-filter-a`,
+    ]);
 
-    expect(
-      await listSlugs({ category: oilCategoryId, brand: `${PREFIX}-brand-b` }),
-    ).toEqual([]);
+    expect(await listSlugs({ category: oilCategoryId, brand: `${PREFIX}-brand-b` })).toEqual([]);
   });
 
   it("searches nameEn, nameFa, and exact OEM part numbers", async () => {
-    expect(await listSlugs({ search: `${NAME_TOKEN} oil-a` })).toEqual([
-      `${PREFIX}-oil-a`,
-    ]);
+    expect(await listSlugs({ search: `${NAME_TOKEN} oil-a` })).toEqual([`${PREFIX}-oil-a`]);
 
     const byNameFa = await GET(getRequest({ search: "محصول oil-a" }));
     const byNameFaJson = await byNameFa.json();
-    expect(
-      byNameFaJson.data.products.map((p: { slug: string }) => p.slug),
-    ).toEqual([`${PREFIX}-oil-a`]);
+    expect(byNameFaJson.data.products.map((p: { slug: string }) => p.slug)).toEqual([
+      `${PREFIX}-oil-a`,
+    ]);
 
     const byOem = await GET(getRequest({ search: `${PREFIX}-OEM-1` }));
     const byOemJson = await byOem.json();

@@ -102,11 +102,7 @@ export default function InquiriesPage() {
       key: "id",
       label: "Actions",
       render: (row) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onPress={() => router.push(`/admin/inquiries/${row.id}`)}
-        >
+        <Button variant="ghost" size="sm" onPress={() => router.push(`/admin/inquiries/${row.id}`)}>
           View
         </Button>
       ),
@@ -118,7 +114,7 @@ export default function InquiriesPage() {
       <h1 className="text-lg font-semibold text-neutral-900">Fitment Inquiries</h1>
 
       {loadError && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       )}

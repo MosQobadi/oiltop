@@ -50,10 +50,7 @@ async function signExpiredToken(userId: string) {
 
 describe("GET /api/auth/me", () => {
   it("returns the current user for a valid token", async () => {
-    cookieJar.set(
-      process.env.COOKIE_NAME!,
-      await signValidToken(adminUserId),
-    );
+    cookieJar.set(process.env.COOKIE_NAME!, await signValidToken(adminUserId));
 
     const res = await GET();
     const json = await res.json();
@@ -73,10 +70,7 @@ describe("GET /api/auth/me", () => {
   });
 
   it("returns 401 for an expired token", async () => {
-    cookieJar.set(
-      process.env.COOKIE_NAME!,
-      await signExpiredToken(adminUserId),
-    );
+    cookieJar.set(process.env.COOKIE_NAME!, await signExpiredToken(adminUserId));
 
     const res = await GET();
     const json = await res.json();

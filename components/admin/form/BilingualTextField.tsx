@@ -28,7 +28,7 @@ export function BilingualTextField<TFieldValues extends FieldValues>({
     <div className={`flex flex-col gap-2 ${className ?? ""}`}>
       <span className="text-sm font-medium text-neutral-700">
         {label}
-        {isRequired && <span className="ms-0.5 text-danger">*</span>}
+        {isRequired && <span className="text-danger ms-0.5">*</span>}
       </span>
       <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
         <TextField
@@ -46,7 +46,7 @@ export function BilingualTextField<TFieldValues extends FieldValues>({
           placeholder={placeholderFa}
           isRequired={isRequired}
           dir="rtl"
-          className="flex-1 font-farsi"
+          className="font-farsi flex-1"
         />
       </div>
     </div>

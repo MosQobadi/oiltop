@@ -16,14 +16,10 @@ export class FitmentProfileLinkedError extends Error {}
 // Prisma returns Product.price as a Decimal; consumers render it with
 // Number.prototype.toLocaleString(), so convert it here rather than pushing
 // the Decimal-to-number concern onto every caller.
-function serializeItem<T extends { product: { price: Prisma.Decimal } | null }>(
-  item: T,
-) {
+function serializeItem<T extends { product: { price: Prisma.Decimal } | null }>(item: T) {
   return {
     ...item,
-    product: item.product
-      ? { ...item.product, price: Number(item.product.price) }
-      : null,
+    product: item.product ? { ...item.product, price: Number(item.product.price) } : null,
   };
 }
 
@@ -47,9 +43,7 @@ export async function getCategoryPartType(categoryId: string) {
   return category?.partType;
 }
 
-function withCounts<T extends { _count: { items: number; carEngineLinks: number } }>(
-  profile: T,
-) {
+function withCounts<T extends { _count: { items: number; carEngineLinks: number } }>(profile: T) {
   const { _count, ...rest } = profile;
   return { ...rest, itemCount: _count.items, linkedEngineCount: _count.carEngineLinks };
 }
@@ -59,18 +53,14 @@ async function ensureProfileExists(profileId: string) {
     where: { id: profileId },
   });
   if (!profile) {
-    throw new FitmentProfileNotFoundError(
-      `Fitment profile "${profileId}" was not found`,
-    );
+    throw new FitmentProfileNotFoundError(`Fitment profile "${profileId}" was not found`);
   }
   return profile;
 }
 
 export async function listFitmentProfiles(query: FitmentProfileListQuery) {
   const where: Prisma.FitmentProfileWhereInput = {
-    ...(query.search
-      ? { label: { contains: query.search, mode: "insensitive" } }
-      : {}),
+    ...(query.search ? { label: { contains: query.search, mode: "insensitive" } } : {}),
   };
 
   const [fitmentProfiles, total] = await Promise.all([
@@ -145,10 +135,7 @@ export async function getFitmentProfileById(id: string) {
   };
 }
 
-export async function updateFitmentProfile(
-  id: string,
-  input: FitmentProfileUpdateInput,
-) {
+export async function updateFitmentProfile(id: string, input: FitmentProfileUpdateInput) {
   await ensureProfileExists(id);
   return prisma.fitmentProfile.update({ where: { id }, data: input });
 }
@@ -251,10 +238,7 @@ export async function attachCarEnginesToProfile(
   });
 }
 
-export async function detachCarEngineFromProfile(
-  profileId: string,
-  carEngineId: string,
-) {
+export async function detachCarEngineFromProfile(profileId: string, carEngineId: string) {
   await prisma.carEngineFitmentProfile.deleteMany({
     where: { profileId, carEngineId },
   });

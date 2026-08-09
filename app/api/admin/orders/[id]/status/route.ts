@@ -1,11 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { orderStatusUpdateSchema } from "@/lib/validation";
 import { AuthError, requireAdmin } from "@/server/auth";
-import {
-  InvalidOrderTransitionError,
-  OrderNotFoundError,
-  updateOrderStatus,
-} from "@/server/order";
+import { InvalidOrderTransitionError, OrderNotFoundError, updateOrderStatus } from "@/server/order";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -14,10 +10,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -37,16 +30,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ success: true, data: { order } });
   } catch (error) {
     if (error instanceof OrderNotFoundError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 404 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 404 });
     }
     if (error instanceof InvalidOrderTransitionError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 400 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
     throw error;
   }

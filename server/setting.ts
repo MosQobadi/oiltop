@@ -100,10 +100,7 @@ export async function getAllSettings(): Promise<SettingsData> {
       ),
     },
     payment: {
-      enabledMethods: parseJson(
-        map.get(K.payment.enabledMethods),
-        DEFAULTS.payment.enabledMethods,
-      ),
+      enabledMethods: parseJson(map.get(K.payment.enabledMethods), DEFAULTS.payment.enabledMethods),
     },
   };
 }

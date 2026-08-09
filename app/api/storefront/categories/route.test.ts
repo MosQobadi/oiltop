@@ -23,18 +23,14 @@ describe("GET /api/storefront/categories", () => {
     expect(json.success).toBe(true);
 
     const slugs = json.data.categories.map((c: { slug: string }) => c.slug);
-    expect(slugs).toEqual(
-      expect.arrayContaining(["engine-oil", "oil-filter", "air-filter"]),
-    );
+    expect(slugs).toEqual(expect.arrayContaining(["engine-oil", "oil-filter", "air-filter"]));
   });
 
   it("exposes partType and filterKind but no admin-only fields", async () => {
     const res = await GET();
     const json = await res.json();
 
-    const airFilter = json.data.categories.find(
-      (c: { slug: string }) => c.slug === "air-filter",
-    );
+    const airFilter = json.data.categories.find((c: { slug: string }) => c.slug === "air-filter");
     expect(airFilter.partType).toBe("FILTER");
     expect(airFilter.filterKind).toBe("AIR_FILTER");
 
@@ -67,8 +63,6 @@ describe("GET /api/storefront/categories", () => {
     const res = await GET();
     const json = await res.json();
 
-    expect(
-      json.data.categories.some((c: { id: string }) => c.id === inactive.id),
-    ).toBe(false);
+    expect(json.data.categories.some((c: { id: string }) => c.id === inactive.id)).toBe(false);
   });
 });

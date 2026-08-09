@@ -9,13 +9,7 @@ export interface DashboardSummary {
 }
 
 export async function getDashboardSummary(): Promise<DashboardSummary> {
-  const [
-    totalOrders,
-    revenue,
-    activeProducts,
-    lowStockCount,
-    openInquiries,
-  ] = await Promise.all([
+  const [totalOrders, revenue, activeProducts, lowStockCount, openInquiries] = await Promise.all([
     prisma.order.count(),
     prisma.order.aggregate({
       where: { status: "DELIVERED" },

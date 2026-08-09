@@ -111,10 +111,7 @@ describe("GET /api/admin/car-models/:id", () => {
 describe("PATCH /api/admin/car-models/:id", () => {
   it("updates fields and returns the updated car model", async () => {
     const carModel = await createTestCarModel();
-    const res = await PATCH(
-      requestWithBody("PATCH", { nameEn: "Updated Name" }),
-      ctx(carModel.id),
-    );
+    const res = await PATCH(requestWithBody("PATCH", { nameEn: "Updated Name" }), ctx(carModel.id));
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -133,10 +130,7 @@ describe("PATCH /api/admin/car-models/:id", () => {
     const carModelA = await createTestCarModel();
     const carModelB = await createTestCarModel();
 
-    const res = await PATCH(
-      requestWithBody("PATCH", { slug: carModelA.slug }),
-      ctx(carModelB.id),
-    );
+    const res = await PATCH(requestWithBody("PATCH", { slug: carModelA.slug }), ctx(carModelB.id));
     const json = await res.json();
 
     expect(res.status).toBe(409);

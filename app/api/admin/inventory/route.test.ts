@@ -126,18 +126,12 @@ describe("GET /api/admin/inventory", () => {
   });
 
   it("filters by derived status", async () => {
-    const res = await GET(
-      getRequest({ search: SKU_PREFIX, status: "LOW_STOCK", pageSize: "100" }),
-    );
+    const res = await GET(getRequest({ search: SKU_PREFIX, status: "LOW_STOCK", pageSize: "100" }));
     const json = await res.json();
 
-    expect(
-      json.data.items.every((i: { status: string }) => i.status === "LOW_STOCK"),
-    ).toBe(true);
+    expect(json.data.items.every((i: { status: string }) => i.status === "LOW_STOCK")).toBe(true);
     expect(json.data.items.some((i: { id: string }) => i.id === productLowStock.id)).toBe(true);
-    expect(json.data.items.some((i: { id: string }) => i.id === productOutOfStock.id)).toBe(
-      false,
-    );
+    expect(json.data.items.some((i: { id: string }) => i.id === productOutOfStock.id)).toBe(false);
   });
 
   it("filters by category and brand", async () => {

@@ -3,23 +3,17 @@ import { orderNoteSchema, orderStatusUpdateSchema } from "./order";
 
 describe("orderStatusUpdateSchema", () => {
   it("accepts a valid status", () => {
-    expect(orderStatusUpdateSchema.safeParse({ status: "SENT" }).success).toBe(
-      true,
-    );
+    expect(orderStatusUpdateSchema.safeParse({ status: "SENT" }).success).toBe(true);
   });
 
   it("rejects an invalid status", () => {
-    expect(
-      orderStatusUpdateSchema.safeParse({ status: "SHIPPED" }).success,
-    ).toBe(false);
+    expect(orderStatusUpdateSchema.safeParse({ status: "SHIPPED" }).success).toBe(false);
   });
 });
 
 describe("orderNoteSchema", () => {
   it("accepts a valid note", () => {
-    expect(
-      orderNoteSchema.safeParse({ adminNote: "Called customer" }).success,
-    ).toBe(true);
+    expect(orderNoteSchema.safeParse({ adminNote: "Called customer" }).success).toBe(true);
   });
 
   it("rejects an empty note", () => {

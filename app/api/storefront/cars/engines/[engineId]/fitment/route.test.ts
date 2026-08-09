@@ -20,9 +20,7 @@ type Group = {
 };
 
 function request() {
-  return new NextRequest(
-    "http://localhost/api/storefront/cars/engines/x/fitment",
-  );
+  return new NextRequest("http://localhost/api/storefront/cars/engines/x/fitment");
 }
 
 function ctx(engineId: string) {
@@ -87,9 +85,7 @@ describe("GET /api/storefront/cars/engines/:engineId/fitment", () => {
     );
     // Matched by content, not position: these tests share the working database
     // with the admin panel, so an engine can pick up extra profiles over time.
-    const specOnly = oilGroup.items.find(
-      (item: ResolvedItem) => item.product === null,
-    );
+    const specOnly = oilGroup.items.find((item: ResolvedItem) => item.product === null);
     expect(specOnly).toBeDefined();
     expect(specOnly.specNote).toMatch(/No catalog match yet/i);
     expect(specOnly.specAttributes).toMatchObject({
@@ -101,18 +97,11 @@ describe("GET /api/storefront/cars/engines/:engineId/fitment", () => {
     const res = await GET(request(), ctx(peugeot206EngineId));
     const json = await res.json();
 
-    const filterKinds = json.data.groups.map(
-      (group: Group) => group.category.filterKind,
-    );
+    const filterKinds = json.data.groups.map((group: Group) => group.category.filterKind);
     expect(filterKinds[0]).toBeNull();
     expect(json.data.groups[0].category.partType).toBe("ENGINE_OIL");
     expect(filterKinds).toEqual(
-      expect.arrayContaining([
-        "OIL_FILTER",
-        "AIR_FILTER",
-        "CABIN_FILTER",
-        "FUEL_FILTER",
-      ]),
+      expect.arrayContaining(["OIL_FILTER", "AIR_FILTER", "CABIN_FILTER", "FUEL_FILTER"]),
     );
   });
 
@@ -127,9 +116,7 @@ describe("GET /api/storefront/cars/engines/:engineId/fitment", () => {
     expect(climates).toEqual(expect.arrayContaining(["HOT", "COLD"]));
 
     for (const climate of ["HOT", "COLD"]) {
-      const item = oilGroup.items.find(
-        (candidate: ResolvedItem) => candidate.climate === climate,
-      );
+      const item = oilGroup.items.find((candidate: ResolvedItem) => candidate.climate === climate);
       expect(item.product).not.toBeNull();
       expect(typeof item.product.finalPrice).toBe("number");
     }

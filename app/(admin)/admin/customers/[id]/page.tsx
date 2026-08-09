@@ -102,7 +102,7 @@ export default function CustomerDetailPage() {
   if (loadError || !customer) {
     return (
       <div className="p-8">
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError ?? "Customer not found"}
         </p>
       </div>
@@ -149,11 +149,7 @@ export default function CustomerDetailPage() {
       key: "id",
       label: "Actions",
       render: (row) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onPress={() => router.push(`/admin/orders/${row.id}`)}
-        >
+        <Button variant="ghost" size="sm" onPress={() => router.push(`/admin/orders/${row.id}`)}>
           View
         </Button>
       ),

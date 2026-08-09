@@ -101,11 +101,7 @@ export default function CustomersPage() {
       key: "id",
       label: "Actions",
       render: (row) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onPress={() => router.push(`/admin/customers/${row.id}`)}
-        >
+        <Button variant="ghost" size="sm" onPress={() => router.push(`/admin/customers/${row.id}`)}>
           View
         </Button>
       ),
@@ -117,7 +113,7 @@ export default function CustomersPage() {
       <h1 className="text-lg font-semibold text-neutral-900">Customers</h1>
 
       {loadError && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       )}

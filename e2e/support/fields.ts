@@ -16,12 +16,7 @@ export function bilingualFa(page: Page, index: number): Locator {
   return page.getByLabel("فارسی", { exact: true }).nth(index);
 }
 
-export async function fillBilingual(
-  page: Page,
-  index: number,
-  en: string,
-  fa: string,
-) {
+export async function fillBilingual(page: Page, index: number, en: string, fa: string) {
   await bilingualEn(page, index).fill(en);
   await bilingualFa(page, index).fill(fa);
 }

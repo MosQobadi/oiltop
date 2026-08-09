@@ -14,9 +14,7 @@ export interface NotificationMessage {
   body: string;
 }
 
-export async function sendNotification(
-  message: NotificationMessage,
-): Promise<void> {
+export async function sendNotification(message: NotificationMessage): Promise<void> {
   // TODO: send through a real email/SMS provider once one is configured.
   console.info(
     `[notify] (not sent — no provider configured) to=${message.to} subject=${message.subject}`,

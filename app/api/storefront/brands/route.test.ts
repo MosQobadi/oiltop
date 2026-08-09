@@ -23,9 +23,7 @@ describe("GET /api/storefront/brands", () => {
     expect(json.success).toBe(true);
 
     const slugs = json.data.brands.map((b: { slug: string }) => b.slug);
-    expect(slugs).toEqual(
-      expect.arrayContaining(["mobil-1", "castrol", "bosch", "mann-filter"]),
-    );
+    expect(slugs).toEqual(expect.arrayContaining(["mobil-1", "castrol", "bosch", "mann-filter"]));
   });
 
   it("exposes only the public brand fields", async () => {
@@ -54,8 +52,6 @@ describe("GET /api/storefront/brands", () => {
     const res = await GET();
     const json = await res.json();
 
-    expect(json.data.brands.some((b: { id: string }) => b.id === inactive.id)).toBe(
-      false,
-    );
+    expect(json.data.brands.some((b: { id: string }) => b.id === inactive.id)).toBe(false);
   });
 });

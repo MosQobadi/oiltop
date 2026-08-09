@@ -134,9 +134,7 @@ export async function getActiveCarBrands(): Promise<CarBrandOption[]> {
   });
 }
 
-export async function getActiveCarBrandBySlug(
-  slug: string,
-): Promise<CarBrandOption | null> {
+export async function getActiveCarBrandBySlug(slug: string): Promise<CarBrandOption | null> {
   return prisma.carBrand.findFirst({
     where: { slug, status: "ACTIVE" },
     select: carBrandSelect,
@@ -146,9 +144,7 @@ export async function getActiveCarBrandBySlug(
 // Deactivating a car brand has to hide its models too, so every lookup below
 // walks up the chain and requires the whole brand → model → engine path to be
 // ACTIVE — not just the row being asked for.
-export async function getActiveCarModelById(
-  carModelId: string,
-): Promise<CarModelOption | null> {
+export async function getActiveCarModelById(carModelId: string): Promise<CarModelOption | null> {
   return prisma.carModel.findFirst({
     where: {
       id: carModelId,
@@ -182,9 +178,7 @@ export async function getActiveCarEngineContext(
   return { carEngine: engine, carModel: model, carBrand };
 }
 
-export async function getCarModelsForBrand(
-  carBrandId: string,
-): Promise<CarModelOption[]> {
+export async function getCarModelsForBrand(carBrandId: string): Promise<CarModelOption[]> {
   return prisma.carModel.findMany({
     where: { carBrandId, status: "ACTIVE" },
     select: carModelSelect,
@@ -266,8 +260,10 @@ function toResolvedItem(item: FitmentItemWithRelations): FitmentResolvedItem {
 export function groupFitmentItemsByCategory(
   items: FitmentItemWithRelations[],
 ): FitmentCategoryGroup[] {
-  const groups: { category: FitmentCategoryGroup["category"]; items: FitmentItemWithRelations[] }[] =
-    [];
+  const groups: {
+    category: FitmentCategoryGroup["category"];
+    items: FitmentItemWithRelations[];
+  }[] = [];
   const groupByCategoryId = new Map<string, (typeof groups)[number]>();
 
   for (const item of items) {
@@ -282,9 +278,7 @@ export function groupFitmentItemsByCategory(
 
   return groups.map((group) => ({
     category: group.category,
-    items: [...group.items]
-      .sort((a, b) => a.priority - b.priority)
-      .map(toResolvedItem),
+    items: [...group.items].sort((a, b) => a.priority - b.priority).map(toResolvedItem),
   }));
 }
 

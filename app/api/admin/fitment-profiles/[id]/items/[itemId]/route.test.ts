@@ -89,10 +89,7 @@ afterAll(async () => {
 describe("PATCH /api/admin/fitment-profiles/:id/items/:itemId", () => {
   it("updates fields and returns the updated item", async () => {
     const item = await createTestItem();
-    const res = await PATCH(
-      requestWithBody("PATCH", { priority: 5 }),
-      ctx(profile.id, item.id),
-    );
+    const res = await PATCH(requestWithBody("PATCH", { priority: 5 }), ctx(profile.id, item.id));
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -118,10 +115,7 @@ describe("PATCH /api/admin/fitment-profiles/:id/items/:itemId", () => {
       climate: "STANDARD",
     });
 
-    const res = await PATCH(
-      requestWithBody("PATCH", { climate: "HOT" }),
-      ctx(profile.id, item.id),
-    );
+    const res = await PATCH(requestWithBody("PATCH", { climate: "HOT" }), ctx(profile.id, item.id));
     const json = await res.json();
 
     expect(res.status).toBe(400);

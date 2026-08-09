@@ -185,9 +185,7 @@ export default function CarEnginesPage() {
             variant="ghost"
             size="sm"
             onPress={() =>
-              router.push(
-                `/admin/cars/brands/${carBrandId}/models/${carModelId}/engines/${row.id}`,
-              )
+              router.push(`/admin/cars/brands/${carBrandId}/models/${carModelId}/engines/${row.id}`)
             }
           >
             Edit
@@ -214,17 +212,11 @@ export default function CarEnginesPage() {
           Car Brands
         </Link>
         <span>/</span>
-        <Link
-          href={`/admin/cars/brands/${carBrandId}`}
-          className="hover:text-neutral-700"
-        >
+        <Link href={`/admin/cars/brands/${carBrandId}`} className="hover:text-neutral-700">
           {carBrand?.nameEn ?? "…"}
         </Link>
         <span>/</span>
-        <Link
-          href={`/admin/cars/brands/${carBrandId}/models`}
-          className="hover:text-neutral-700"
-        >
+        <Link href={`/admin/cars/brands/${carBrandId}/models`} className="hover:text-neutral-700">
           Models
         </Link>
         <span>/</span>
@@ -237,9 +229,7 @@ export default function CarEnginesPage() {
         </h1>
         <Button
           onPress={() =>
-            router.push(
-              `/admin/cars/brands/${carBrandId}/models/${carModelId}/engines/add`,
-            )
+            router.push(`/admin/cars/brands/${carBrandId}/models/${carModelId}/engines/add`)
           }
         >
           + Add Engine
@@ -247,7 +237,7 @@ export default function CarEnginesPage() {
       </div>
 
       {loadError && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       )}
@@ -298,7 +288,7 @@ export default function CarEnginesPage() {
                   &rdquo;? This action cannot be undone.
                 </p>
                 {deleteError && (
-                  <p role="alert" className="mt-2 text-sm text-danger">
+                  <p role="alert" className="text-danger mt-2 text-sm">
                     {deleteError}
                   </p>
                 )}

@@ -121,10 +121,7 @@ describe("POST /api/storefront/fitment-inquiries", () => {
 
   it("accepts name and phone alone", async () => {
     const res = await POST(
-      postRequest(
-        { customerName: `${PREFIX} Minimal`, phone: "02112345678" },
-        "10.0.0.2",
-      ),
+      postRequest({ customerName: `${PREFIX} Minimal`, phone: "02112345678" }, "10.0.0.2"),
     );
     const json = await res.json();
 
@@ -194,26 +191,16 @@ describe("POST /api/storefront/fitment-inquiries", () => {
   });
 
   it("returns 400 when phone is missing", async () => {
-    const res = await POST(
-      postRequest({ customerName: `${PREFIX} No Phone` }, "10.0.0.6"),
-    );
+    const res = await POST(postRequest({ customerName: `${PREFIX} No Phone` }, "10.0.0.6"));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 for a blank name, a too-short phone, and a bad email", async () => {
     expect(
-      (
-        await POST(
-          postRequest({ customerName: "   ", phone: "02112345678" }, "10.0.0.7"),
-        )
-      ).status,
+      (await POST(postRequest({ customerName: "   ", phone: "02112345678" }, "10.0.0.7"))).status,
     ).toBe(400);
     expect(
-      (
-        await POST(
-          postRequest({ customerName: `${PREFIX} X`, phone: "123" }, "10.0.0.8"),
-        )
-      ).status,
+      (await POST(postRequest({ customerName: `${PREFIX} X`, phone: "123" }, "10.0.0.8"))).status,
     ).toBe(400);
     expect(
       (
@@ -301,10 +288,7 @@ describe("POST /api/storefront/fitment-inquiries", () => {
 
   it("does not penalize a different IP", async () => {
     const res = await POST(
-      postRequest(
-        { customerName: `${PREFIX} Innocent`, phone: "02112345678" },
-        "10.0.0.100",
-      ),
+      postRequest({ customerName: `${PREFIX} Innocent`, phone: "02112345678" }, "10.0.0.100"),
     );
     expect(res.status).toBe(201);
   });

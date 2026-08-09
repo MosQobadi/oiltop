@@ -32,22 +32,10 @@ const productFormSchema = z.object({
   brandId: z.string().min(1, "Brand is required"),
   oemPartNumbers: z.array(z.string()),
   tags: z.array(z.string()),
-  shortDescriptionEn: z
-    .string()
-    .min(1, "English short description is required")
-    .max(500),
-  shortDescriptionFa: z
-    .string()
-    .min(1, "Persian short description is required")
-    .max(500),
-  longDescriptionEn: z
-    .string()
-    .min(1, "English long description is required")
-    .max(5000),
-  longDescriptionFa: z
-    .string()
-    .min(1, "Persian long description is required")
-    .max(5000),
+  shortDescriptionEn: z.string().min(1, "English short description is required").max(500),
+  shortDescriptionFa: z.string().min(1, "Persian short description is required").max(500),
+  longDescriptionEn: z.string().min(1, "English long description is required").max(5000),
+  longDescriptionFa: z.string().min(1, "Persian long description is required").max(5000),
   price: z
     .string()
     .min(1, "Price is required")
@@ -226,9 +214,7 @@ export default function ProductFormPage() {
       try {
         imageUrl = await uploadImage(values.image);
       } catch (error) {
-        setSubmitError(
-          error instanceof Error ? error.message : "Failed to upload image",
-        );
+        setSubmitError(error instanceof Error ? error.message : "Failed to upload image");
         return;
       }
     } else {
@@ -287,7 +273,7 @@ export default function ProductFormPage() {
   if (loadError) {
     return (
       <div className="p-8">
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       </div>
@@ -300,11 +286,7 @@ export default function ProductFormPage() {
         {isEdit ? "Edit Product" : "Add Product"}
       </h1>
 
-      <form
-        className="flex max-w-2xl flex-col gap-6"
-        noValidate
-        onSubmit={handleSubmit(onSubmit)}
-      >
+      <form className="flex max-w-2xl flex-col gap-6" noValidate onSubmit={handleSubmit(onSubmit)}>
         <BilingualTextField
           control={control}
           nameEn="nameEn"
@@ -333,11 +315,7 @@ export default function ProductFormPage() {
           isRequired
         />
 
-        <TagsInput
-          control={control}
-          name="oemPartNumbers"
-          label="OEM Part Numbers"
-        />
+        <TagsInput control={control} name="oemPartNumbers" label="OEM Part Numbers" />
 
         <TagsInput control={control} name="tags" label="Tags" />
 
@@ -378,10 +356,8 @@ export default function ProductFormPage() {
           />
         </div>
 
-        <div className="flex flex-col gap-1 rounded-field bg-field p-4">
-          <span className="text-sm font-medium text-neutral-700">
-            Final Price
-          </span>
+        <div className="rounded-field bg-field flex flex-col gap-1 p-4">
+          <span className="text-sm font-medium text-neutral-700">Final Price</span>
           <span className="text-lg font-semibold text-neutral-900">
             {finalPrice.toLocaleString(undefined, {
               maximumFractionDigits: 2,
@@ -390,8 +366,8 @@ export default function ProductFormPage() {
         </div>
 
         <p className="text-sm text-neutral-500">
-          Stock{isEdit && stock !== null ? `: ${stock}` : ""} is managed from
-          the Inventory screen, not here.
+          Stock{isEdit && stock !== null ? `: ${stock}` : ""} is managed from the Inventory screen,
+          not here.
         </p>
 
         <Disclosure>
@@ -425,15 +401,12 @@ export default function ProductFormPage() {
         <ToggleField control={control} name="isActive" label="Active" />
 
         {submitError && (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-danger text-sm">
             {submitError}
           </p>
         )}
 
-        <FormActions
-          onCancel={() => router.push("/admin/products")}
-          isSubmitting={isSubmitting}
-        />
+        <FormActions onCancel={() => router.push("/admin/products")} isSubmitting={isSubmitting} />
       </form>
     </div>
   );

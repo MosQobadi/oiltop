@@ -32,12 +32,7 @@ export interface StockEditModalProps {
   onSaved: () => void;
 }
 
-export function StockEditModal({
-  isOpen,
-  onClose,
-  product,
-  onSaved,
-}: StockEditModalProps) {
+export function StockEditModal({ isOpen, onClose, product, onSaved }: StockEditModalProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
@@ -102,16 +97,12 @@ export function StockEditModal({
                 <div className="flex flex-col gap-6">
                   <div>
                     <p className="text-sm text-neutral-500">Product</p>
-                    <p className="text-sm font-medium text-neutral-900">
-                      {product?.nameEn}
-                    </p>
+                    <p className="text-sm font-medium text-neutral-900">{product?.nameEn}</p>
                   </div>
 
                   <div>
                     <p className="text-sm text-neutral-500">Current Stock</p>
-                    <p className="text-sm font-medium text-neutral-900">
-                      {product?.stock}
-                    </p>
+                    <p className="text-sm font-medium text-neutral-900">{product?.stock}</p>
                   </div>
 
                   <TextField
@@ -124,25 +115,18 @@ export function StockEditModal({
 
                   <div>
                     <p className="text-sm text-neutral-500">New Total</p>
-                    <p className="text-sm font-medium text-neutral-900">
-                      {newTotal}
-                    </p>
+                    <p className="text-sm font-medium text-neutral-900">{newTotal}</p>
                   </div>
 
                   {submitError && (
-                    <p role="alert" className="text-sm text-danger">
+                    <p role="alert" className="text-danger text-sm">
                       {submitError}
                     </p>
                   )}
                 </div>
               </Modal.Body>
               <Modal.Footer>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onPress={onClose}
-                  isDisabled={isSubmitting}
-                >
+                <Button type="button" variant="outline" onPress={onClose} isDisabled={isSubmitting}>
                   Cancel
                 </Button>
                 <Button type="submit" isDisabled={isSubmitting}>

@@ -42,9 +42,7 @@ describe("carEngineCreateSchema", () => {
 
 describe("carEngineUpdateSchema", () => {
   it("accepts a partial update", () => {
-    expect(
-      carEngineUpdateSchema.safeParse({ engineCode: "2ZR-FE" }).success,
-    ).toBe(true);
+    expect(carEngineUpdateSchema.safeParse({ engineCode: "2ZR-FE" }).success).toBe(true);
   });
 
   it("rejects yearStart greater than yearEnd on partial update", () => {

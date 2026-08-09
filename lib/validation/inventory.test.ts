@@ -26,14 +26,10 @@ describe("inventoryListQuerySchema", () => {
   });
 
   it("accepts a valid status filter", () => {
-    expect(
-      inventoryListQuerySchema.safeParse({ status: "LOW_STOCK" }).success,
-    ).toBe(true);
+    expect(inventoryListQuerySchema.safeParse({ status: "LOW_STOCK" }).success).toBe(true);
   });
 
   it("rejects an invalid status filter", () => {
-    expect(
-      inventoryListQuerySchema.safeParse({ status: "NOT_A_STATUS" }).success,
-    ).toBe(false);
+    expect(inventoryListQuerySchema.safeParse({ status: "NOT_A_STATUS" }).success).toBe(false);
   });
 });

@@ -119,7 +119,7 @@ export default function FitmentProfilesPage() {
       </div>
 
       {loadError && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       )}
@@ -159,7 +159,7 @@ export default function FitmentProfilesPage() {
                   &rdquo;? This action cannot be undone.
                 </p>
                 {deleteError && (
-                  <p role="alert" className="mt-2 text-sm text-danger">
+                  <p role="alert" className="text-danger mt-2 text-sm">
                     {deleteError}
                   </p>
                 )}

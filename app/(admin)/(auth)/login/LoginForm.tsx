@@ -59,11 +59,7 @@ export default function LoginForm() {
         <CardDescription>Sign in to manage your store.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form
-          className="flex flex-col gap-4"
-          noValidate
-          onSubmit={handleSubmit(onSubmit)}
-        >
+        <form className="flex flex-col gap-4" noValidate onSubmit={handleSubmit(onSubmit)}>
           <TextField isInvalid={!!errors.email} fullWidth>
             <Label>Email</Label>
             <Input type="email" autoComplete="email" {...register("email")} />
@@ -72,16 +68,12 @@ export default function LoginForm() {
 
           <TextField isInvalid={!!errors.password} fullWidth>
             <Label>Password</Label>
-            <Input
-              type="password"
-              autoComplete="current-password"
-              {...register("password")}
-            />
+            <Input type="password" autoComplete="current-password" {...register("password")} />
             <FieldError>{errors.password?.message}</FieldError>
           </TextField>
 
           {formError && (
-            <p role="alert" className="text-sm text-danger">
+            <p role="alert" className="text-danger text-sm">
               {formError}
             </p>
           )}

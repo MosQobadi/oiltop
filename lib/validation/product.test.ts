@@ -65,8 +65,6 @@ describe("productUpdateSchema", () => {
   });
 
   it("still validates the defaulted fields when they are supplied", () => {
-    expect(
-      productUpdateSchema.safeParse({ discountPercent: 150 }).success,
-    ).toBe(false);
+    expect(productUpdateSchema.safeParse({ discountPercent: 150 }).success).toBe(false);
   });
 });

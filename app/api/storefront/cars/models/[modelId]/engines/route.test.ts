@@ -9,9 +9,7 @@ import { GET } from "./route";
 const SLUG_PREFIX = "test-storefront-engines";
 
 function request(query = "") {
-  return new NextRequest(
-    `http://localhost/api/storefront/cars/models/x/engines${query}`,
-  );
+  return new NextRequest(`http://localhost/api/storefront/cars/models/x/engines${query}`);
 }
 
 function ctx(modelId: string) {
@@ -100,9 +98,7 @@ describe("GET /api/storefront/cars/models/:modelId/engines", () => {
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
     // Corolla's 1.8L covers 2015-2017; its 1.6L only starts in 2018.
-    const labels = json.data.carEngines.map(
-      (engine: { labelEn: string }) => engine.labelEn,
-    );
+    const labels = json.data.carEngines.map((engine: { labelEn: string }) => engine.labelEn);
     expect(labels).toContain("1.8L VVT-i Petrol");
     expect(labels).not.toContain("1.6L Dual VVT-i Petrol");
     expect(Object.keys(json.data.carEngines[0]).sort()).toEqual([
@@ -137,9 +133,9 @@ describe("GET /api/storefront/cars/models/:modelId/engines", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(
-      json.data.carEngines.map((engine: { labelEn: string }) => engine.labelEn),
-    ).toContain("1.4L TU3 Petrol");
+    expect(json.data.carEngines.map((engine: { labelEn: string }) => engine.labelEn)).toContain(
+      "1.4L TU3 Petrol",
+    );
   });
 
   it("returns an empty array for a year no engine covers", async () => {

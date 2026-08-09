@@ -1,12 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  getActiveCarModelById,
-  getEnginesForModelYear,
-} from "@/lib/services/fitment";
-import {
-  carFinderEngineQuerySchema,
-  storefrontIdParamSchema,
-} from "@/lib/validation";
+import { getActiveCarModelById, getEnginesForModelYear } from "@/lib/services/fitment";
+import { carFinderEngineQuerySchema, storefrontIdParamSchema } from "@/lib/validation";
 
 type RouteContext = { params: Promise<{ modelId: string }> };
 
@@ -15,14 +9,9 @@ type RouteContext = { params: Promise<{ modelId: string }> };
 // call, not something the API bakes into its response shape.
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const parsedId = storefrontIdParamSchema.safeParse((await params).modelId);
-  const carModel = parsedId.success
-    ? await getActiveCarModelById(parsedId.data)
-    : null;
+  const carModel = parsedId.success ? await getActiveCarModelById(parsedId.data) : null;
   if (!carModel) {
-    return NextResponse.json(
-      { success: false, error: "Car model not found" },
-      { status: 404 },
-    );
+    return NextResponse.json({ success: false, error: "Car model not found" }, { status: 404 });
   }
 
   const parsedQuery = carFinderEngineQuerySchema.safeParse(
@@ -38,9 +27,6 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     );
   }
 
-  const carEngines = await getEnginesForModelYear(
-    carModel.id,
-    parsedQuery.data.year,
-  );
+  const carEngines = await getEnginesForModelYear(carModel.id, parsedQuery.data.year);
   return NextResponse.json({ success: true, data: { carEngines } });
 }

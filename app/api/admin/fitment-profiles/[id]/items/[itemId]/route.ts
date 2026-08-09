@@ -25,10 +25,7 @@ async function ensureAdmin() {
     return null;
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -45,10 +42,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     existing = await getFitmentProfileItemById(id, itemId);
   } catch (error) {
     if (error instanceof FitmentProfileItemNotFoundError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 404 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 404 });
     }
     throw error;
   }
@@ -81,10 +75,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ success: true, data: { item } });
   } catch (error) {
     if (error instanceof FitmentProfileItemNotFoundError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 404 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 404 });
     }
     throw error;
   }
@@ -100,10 +91,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
     if (error instanceof FitmentProfileItemNotFoundError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 404 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 404 });
     }
     throw error;
   }

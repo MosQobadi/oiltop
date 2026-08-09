@@ -126,7 +126,7 @@ export default function InquiryDetailPage() {
   if (loadError || !inquiry) {
     return (
       <div className="p-8">
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError ?? "Inquiry not found"}
         </p>
       </div>
@@ -187,7 +187,7 @@ export default function InquiryDetailPage() {
           <CardTitle>Message</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="whitespace-pre-wrap text-sm text-neutral-700">
+          <p className="text-sm whitespace-pre-wrap text-neutral-700">
             {inquiry.message ?? "No message provided."}
           </p>
         </CardContent>
@@ -203,7 +203,7 @@ export default function InquiryDetailPage() {
             <TextareaField control={control} name="adminNote" label="Admin Note" rows={4} />
 
             {saveError && (
-              <p role="alert" className="text-sm text-danger">
+              <p role="alert" className="text-danger text-sm">
                 {saveError}
               </p>
             )}

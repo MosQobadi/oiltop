@@ -104,10 +104,7 @@ describe("POST /api/admin/fitment-profiles/:id/items", () => {
   });
 
   it("rejects an item with neither productId nor specNote", async () => {
-    const res = await POST(
-      requestWithBody({ categoryId: engineOilCategory.id }),
-      ctx(profile.id),
-    );
+    const res = await POST(requestWithBody({ categoryId: engineOilCategory.id }), ctx(profile.id));
     const json = await res.json();
 
     expect(res.status).toBe(400);

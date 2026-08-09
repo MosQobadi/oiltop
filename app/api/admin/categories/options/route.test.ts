@@ -52,9 +52,7 @@ describe("GET /api/admin/categories/options", () => {
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
     expect(Array.isArray(json.data.categories)).toBe(true);
-    expect(
-      json.data.categories.some((c: { id: string }) => c.id === undefined),
-    ).toBe(false);
+    expect(json.data.categories.some((c: { id: string }) => c.id === undefined)).toBe(false);
     for (const category of json.data.categories) {
       expect(Object.keys(category).sort()).toEqual(["id", "nameEn"]);
     }

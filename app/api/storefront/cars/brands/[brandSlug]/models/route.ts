@@ -1,8 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  getActiveCarBrandBySlug,
-  getCarModelsForBrand,
-} from "@/lib/services/fitment";
+import { getActiveCarBrandBySlug, getCarModelsForBrand } from "@/lib/services/fitment";
 import { carBrandSlugParamSchema } from "@/lib/validation";
 
 type RouteContext = { params: Promise<{ brandSlug: string }> };
@@ -13,18 +10,12 @@ type RouteContext = { params: Promise<{ brandSlug: string }> };
 export async function GET(_request: NextRequest, { params }: RouteContext) {
   const parsed = carBrandSlugParamSchema.safeParse((await params).brandSlug);
   if (!parsed.success) {
-    return NextResponse.json(
-      { success: false, error: "Car brand not found" },
-      { status: 404 },
-    );
+    return NextResponse.json({ success: false, error: "Car brand not found" }, { status: 404 });
   }
 
   const carBrand = await getActiveCarBrandBySlug(parsed.data);
   if (!carBrand) {
-    return NextResponse.json(
-      { success: false, error: "Car brand not found" },
-      { status: 404 },
-    );
+    return NextResponse.json({ success: false, error: "Car brand not found" }, { status: 404 });
   }
 
   const carModels = await getCarModelsForBrand(carBrand.id);

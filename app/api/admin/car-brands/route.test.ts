@@ -111,9 +111,7 @@ describe("GET /api/admin/car-brands", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(
-      json.data.carBrands.every((b: { status: string }) => b.status === "ACTIVE"),
-    ).toBe(true);
+    expect(json.data.carBrands.every((b: { status: string }) => b.status === "ACTIVE")).toBe(true);
   });
 
   it("searches against both nameEn and nameFa", async () => {
@@ -170,9 +168,7 @@ describe("POST /api/admin/car-brands", () => {
     expect(first.status).toBe(201);
 
     const second = await POST(
-      postRequest(
-        validCarBrandPayload({ slug, nameEn: `${SLUG_PREFIX} Dup Again` }),
-      ),
+      postRequest(validCarBrandPayload({ slug, nameEn: `${SLUG_PREFIX} Dup Again` })),
     );
     const json = await second.json();
 

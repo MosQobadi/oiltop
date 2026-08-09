@@ -129,9 +129,7 @@ describe("GET /api/admin/fitment-profiles/:id", () => {
     expect(json.success).toBe(true);
     expect(json.data.fitmentProfile.items).toHaveLength(1);
     expect(json.data.fitmentProfile.carEngineLinks).toHaveLength(1);
-    expect(json.data.fitmentProfile.carEngineLinks[0].carEngine.id).toBe(
-      seededCarEngine.id,
-    );
+    expect(json.data.fitmentProfile.carEngineLinks[0].carEngine.id).toBe(seededCarEngine.id);
 
     await prisma.carEngineFitmentProfile.deleteMany({ where: { profileId: profile.id } });
     await prisma.fitmentProfileItem.deleteMany({ where: { profileId: profile.id } });

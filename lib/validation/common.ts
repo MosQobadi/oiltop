@@ -5,10 +5,7 @@ export const slugSchema = z
   .string()
   .min(1, "Slug is required")
   .max(160)
-  .regex(
-    /^[a-z0-9]+(-[a-z0-9]+)*$/,
-    "Slug must be lowercase letters, numbers, and hyphens only",
-  );
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Slug must be lowercase letters, numbers, and hyphens only");
 
 // Shared query-string pagination params for admin list endpoints.
 export const pageSchema = z.coerce.number().int().min(1).default(1);

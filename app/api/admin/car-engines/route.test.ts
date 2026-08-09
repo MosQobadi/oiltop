@@ -158,9 +158,7 @@ describe("GET /api/admin/car-engines", () => {
 
     expect(res.status).toBe(200);
     expect(
-      json.data.carEngines.some(
-        (e: { labelEn: string }) => e.labelEn === seededCarEngine.labelEn,
-      ),
+      json.data.carEngines.some((e: { labelEn: string }) => e.labelEn === seededCarEngine.labelEn),
     ).toBe(false);
   });
 
@@ -171,9 +169,7 @@ describe("GET /api/admin/car-engines", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(
-      json.data.carEngines.every((e: { status: string }) => e.status === "ACTIVE"),
-    ).toBe(true);
+    expect(json.data.carEngines.every((e: { status: string }) => e.status === "ACTIVE")).toBe(true);
   });
 
   it("searches against both labelEn and labelFa", async () => {
@@ -202,9 +198,7 @@ describe("GET /api/admin/car-engines", () => {
 describe("POST /api/admin/car-engines", () => {
   it("rejects an unauthenticated request", async () => {
     cookieJar.clear();
-    const res = await POST(
-      postRequest(validCarEnginePayload({ carModelId: seededCarModelA.id })),
-    );
+    const res = await POST(postRequest(validCarEnginePayload({ carModelId: seededCarModelA.id })));
     expect(res.status).toBe(401);
 
     const admin = await prisma.user.findUniqueOrThrow({

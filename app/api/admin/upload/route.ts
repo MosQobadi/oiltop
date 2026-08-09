@@ -7,10 +7,7 @@ export async function POST(request: NextRequest) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -18,10 +15,7 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData().catch(() => null);
   const file = formData?.get("file");
   if (!file || !(file instanceof File)) {
-    return NextResponse.json(
-      { success: false, error: "No file provided" },
-      { status: 400 },
-    );
+    return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
   }
 
   try {
@@ -29,10 +23,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, data: { url } }, { status: 201 });
   } catch (error) {
     if (error instanceof InvalidFileError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 400 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
     throw error;
   }

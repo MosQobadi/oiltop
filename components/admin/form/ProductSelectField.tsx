@@ -40,9 +40,7 @@ export function ProductSelectField<TFieldValues extends FieldValues>({
   const [results, setResults] = useState<ProductOption[]>([]);
   // Tracked separately from `results` so the selected item's label stays
   // resolvable in `items` even after a later search replaces `results`.
-  const [selectedOption, setSelectedOption] = useState<ProductOption | null>(
-    initialOption ?? null,
-  );
+  const [selectedOption, setSelectedOption] = useState<ProductOption | null>(initialOption ?? null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -57,12 +55,10 @@ export function ProductSelectField<TFieldValues extends FieldValues>({
       if (ignore || !result.success) return;
 
       setResults(
-        result.data.products.map(
-          (product: { id: string; nameEn: string; sku: string }) => ({
-            id: product.id,
-            label: `${product.nameEn} (${product.sku})`,
-          }),
-        ),
+        result.data.products.map((product: { id: string; nameEn: string; sku: string }) => ({
+          id: product.id,
+          label: `${product.nameEn} (${product.sku})`,
+        })),
       );
     }
 
@@ -109,9 +105,7 @@ export function ProductSelectField<TFieldValues extends FieldValues>({
         <ListBox
           items={items}
           renderEmptyState={() => (
-            <div className="px-3 py-2 text-sm text-neutral-500">
-              No products found.
-            </div>
+            <div className="px-3 py-2 text-sm text-neutral-500">No products found.</div>
           )}
         >
           {(item) => (

@@ -59,11 +59,7 @@ export function FormFieldsDemo() {
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
-      <form
-        className="flex flex-col gap-6"
-        noValidate
-        onSubmit={handleSubmit(onSubmit)}
-      >
+      <form className="flex flex-col gap-6" noValidate onSubmit={handleSubmit(onSubmit)}>
         <TextField control={control} name="slug" label="Slug" isRequired />
 
         <BilingualTextField
@@ -98,14 +94,11 @@ export function FormFieldsDemo() {
 
         <ToggleField control={control} name="isActive" label="Active" />
 
-        <FormActions
-          onCancel={() => reset()}
-          isSubmitting={formState.isSubmitting}
-        />
+        <FormActions onCancel={() => reset()} isSubmitting={formState.isSubmitting} />
       </form>
 
       {submitted && (
-        <div className="flex flex-col gap-2 rounded-field border bg-field p-4 text-sm">
+        <div className="rounded-field bg-field flex flex-col gap-2 border p-4 text-sm">
           <p className="font-medium">Submitted values:</p>
           <pre className="overflow-x-auto text-xs">
             {JSON.stringify(

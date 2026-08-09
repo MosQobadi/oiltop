@@ -98,10 +98,7 @@ afterAll(async () => {
 
 describe("POST /api/storefront/products/:slug/notify-me", () => {
   it("creates a StockNotification for an out-of-stock product, unauthenticated", async () => {
-    const res = await POST(
-      postRequest({ contact: "customer@example.com" }),
-      ctx(outOfStockSlug),
-    );
+    const res = await POST(postRequest({ contact: "customer@example.com" }), ctx(outOfStockSlug));
     const json = await res.json();
 
     expect(res.status).toBe(201);
@@ -117,10 +114,7 @@ describe("POST /api/storefront/products/:slug/notify-me", () => {
   });
 
   it("accepts a phone number as the contact", async () => {
-    const res = await POST(
-      postRequest({ contact: "+98 912 345 6789" }),
-      ctx(outOfStockSlug),
-    );
+    const res = await POST(postRequest({ contact: "+98 912 345 6789" }), ctx(outOfStockSlug));
     const json = await res.json();
 
     expect(res.status).toBe(201);
@@ -128,10 +122,7 @@ describe("POST /api/storefront/products/:slug/notify-me", () => {
   });
 
   it("resolves the segment as a product id as well as a slug", async () => {
-    const res = await POST(
-      postRequest({ contact: "by-id@example.com" }),
-      ctx(outOfStockId),
-    );
+    const res = await POST(postRequest({ contact: "by-id@example.com" }), ctx(outOfStockId));
     const json = await res.json();
 
     expect(res.status).toBe(201);
@@ -139,16 +130,10 @@ describe("POST /api/storefront/products/:slug/notify-me", () => {
   });
 
   it("reuses the pending row instead of stacking duplicates", async () => {
-    const first = await POST(
-      postRequest({ contact: "repeat@example.com" }),
-      ctx(outOfStockSlug),
-    );
+    const first = await POST(postRequest({ contact: "repeat@example.com" }), ctx(outOfStockSlug));
     const firstJson = await first.json();
 
-    const second = await POST(
-      postRequest({ contact: "repeat@example.com" }),
-      ctx(outOfStockSlug),
-    );
+    const second = await POST(postRequest({ contact: "repeat@example.com" }), ctx(outOfStockSlug));
     const secondJson = await second.json();
 
     expect(secondJson.data.notification.id).toBe(firstJson.data.notification.id);
@@ -160,10 +145,7 @@ describe("POST /api/storefront/products/:slug/notify-me", () => {
   });
 
   it("accepts a signup for an in-stock product and says so", async () => {
-    const res = await POST(
-      postRequest({ contact: "eager@example.com" }),
-      ctx(inStockSlug),
-    );
+    const res = await POST(postRequest({ contact: "eager@example.com" }), ctx(inStockSlug));
     const json = await res.json();
 
     expect(res.status).toBe(201);
@@ -173,22 +155,16 @@ describe("POST /api/storefront/products/:slug/notify-me", () => {
 
   it("rejects a missing or malformed contact", async () => {
     expect((await POST(postRequest({}), ctx(outOfStockSlug))).status).toBe(400);
+    expect((await POST(postRequest({ contact: "   " }), ctx(outOfStockSlug))).status).toBe(400);
     expect(
-      (await POST(postRequest({ contact: "   " }), ctx(outOfStockSlug))).status,
-    ).toBe(400);
-    expect(
-      (await POST(postRequest({ contact: "not a contact" }), ctx(outOfStockSlug)))
-        .status,
+      (await POST(postRequest({ contact: "not a contact" }), ctx(outOfStockSlug))).status,
     ).toBe(400);
   });
 
   it("404s an unknown product and an INACTIVE one", async () => {
-    expect(
-      (await POST(postRequest({ contact: "a@b.com" }), ctx("no-such-product")))
-        .status,
-    ).toBe(404);
-    expect(
-      (await POST(postRequest({ contact: "a@b.com" }), ctx(inactiveSlug))).status,
-    ).toBe(404);
+    expect((await POST(postRequest({ contact: "a@b.com" }), ctx("no-such-product"))).status).toBe(
+      404,
+    );
+    expect((await POST(postRequest({ contact: "a@b.com" }), ctx(inactiveSlug))).status).toBe(404);
   });
 });

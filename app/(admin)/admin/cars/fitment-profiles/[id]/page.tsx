@@ -9,11 +9,7 @@ import { z } from "zod";
 import { AlertDialog, Button, Chip } from "@heroui/react";
 import { FormActions, TextField, TextareaField } from "@/components/admin/form";
 import { CloseIcon } from "@/components/admin/icons";
-import {
-  ItemFormModal,
-  type CategoryOption,
-  type FitmentProfileItem,
-} from "../ItemFormModal";
+import { ItemFormModal, type CategoryOption, type FitmentProfileItem } from "../ItemFormModal";
 import { AttachEnginesModal } from "../AttachEnginesModal";
 
 const CLIMATE_LABELS: Record<string, string> = {
@@ -66,9 +62,7 @@ export default function FitmentProfileFormPage() {
 
   const [itemModalOpen, setItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FitmentProfileItem | null>(null);
-  const [deleteItemTarget, setDeleteItemTarget] = useState<FitmentProfileItem | null>(
-    null,
-  );
+  const [deleteItemTarget, setDeleteItemTarget] = useState<FitmentProfileItem | null>(null);
   const [isDeletingItem, setIsDeletingItem] = useState(false);
   const [deleteItemError, setDeleteItemError] = useState<string | null>(null);
 
@@ -219,7 +213,7 @@ export default function FitmentProfileFormPage() {
   if (loadError) {
     return (
       <div className="p-8">
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       </div>
@@ -244,11 +238,7 @@ export default function FitmentProfileFormPage() {
         {isEdit ? "Edit Fitment Profile" : "Add Fitment Profile"}
       </h1>
 
-      <form
-        className="flex max-w-2xl flex-col gap-6"
-        noValidate
-        onSubmit={handleSubmit(onSubmit)}
-      >
+      <form className="flex max-w-2xl flex-col gap-6" noValidate onSubmit={handleSubmit(onSubmit)}>
         <TextField control={control} name="label" label="Label" isRequired />
 
         <TextareaField
@@ -259,7 +249,7 @@ export default function FitmentProfileFormPage() {
         />
 
         {submitError && (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-danger text-sm">
             {submitError}
           </p>
         )}
@@ -293,7 +283,7 @@ export default function FitmentProfileFormPage() {
                 {profile.items.map((item) => (
                   <div
                     key={item.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-field bg-field p-3"
+                    className="rounded-field bg-field flex flex-wrap items-center justify-between gap-3 p-3"
                   >
                     <div className="flex flex-wrap items-center gap-3">
                       <span className="text-sm font-medium text-neutral-900">
@@ -305,9 +295,7 @@ export default function FitmentProfileFormPage() {
                       <span className="text-sm text-neutral-700">
                         {item.product ? item.product.nameEn : (item.specNote ?? "Spec only")}
                       </span>
-                      <span className="text-xs text-neutral-500">
-                        Priority {item.priority}
-                      </span>
+                      <span className="text-xs text-neutral-500">Priority {item.priority}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
@@ -339,26 +327,22 @@ export default function FitmentProfileFormPage() {
 
           <section className="flex max-w-3xl flex-col gap-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-neutral-900">
-                Linked Car Engines
-              </h2>
+              <h2 className="text-base font-semibold text-neutral-900">Linked Car Engines</h2>
               <Button size="sm" onPress={() => setAttachModalOpen(true)}>
                 Attach Engines
               </Button>
             </div>
 
             {profile.carEngineLinks.length === 0 ? (
-              <p className="text-sm text-neutral-500">
-                Not attached to any car engines yet.
-              </p>
+              <p className="text-sm text-neutral-500">Not attached to any car engines yet.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {profile.carEngineLinks.map((link) => (
                   <Chip key={link.id} size="sm" variant="soft">
                     <Chip.Label>
-                      {link.carEngine.carModel.carBrand.nameEn}{" "}
-                      {link.carEngine.carModel.nameEn} {link.carEngine.labelEn} (
-                      {link.carEngine.yearStart}–{link.carEngine.yearEnd ?? "Present"})
+                      {link.carEngine.carModel.carBrand.nameEn} {link.carEngine.carModel.nameEn}{" "}
+                      {link.carEngine.labelEn} ({link.carEngine.yearStart}–
+                      {link.carEngine.yearEnd ?? "Present"})
                     </Chip.Label>
                     <button
                       type="button"
@@ -411,11 +395,10 @@ export default function FitmentProfileFormPage() {
               <AlertDialog.Body>
                 <p>
                   Are you sure you want to delete this item for &ldquo;
-                  {deleteItemTarget?.category.nameEn}&rdquo;? This action cannot be
-                  undone.
+                  {deleteItemTarget?.category.nameEn}&rdquo;? This action cannot be undone.
                 </p>
                 {deleteItemError && (
-                  <p role="alert" className="mt-2 text-sm text-danger">
+                  <p role="alert" className="text-danger mt-2 text-sm">
                     {deleteItemError}
                   </p>
                 )}
@@ -456,11 +439,10 @@ export default function FitmentProfileFormPage() {
               </AlertDialog.Header>
               <AlertDialog.Body>
                 <p>
-                  Detach &ldquo;{detachTarget?.carEngine.labelEn}&rdquo; from this
-                  fitment profile?
+                  Detach &ldquo;{detachTarget?.carEngine.labelEn}&rdquo; from this fitment profile?
                 </p>
                 {detachError && (
-                  <p role="alert" className="mt-2 text-sm text-danger">
+                  <p role="alert" className="text-danger mt-2 text-sm">
                     {detachError}
                   </p>
                 )}

@@ -34,9 +34,9 @@ describe("GET /api/storefront/cars/brands/:brandSlug/models", () => {
     expect(json.success).toBe(true);
     // arrayContaining, not toEqual: these tests share the working database with
     // the admin panel, so a brand can gain models over time.
-    expect(
-      json.data.carModels.map((carModel: { slug: string }) => carModel.slug),
-    ).toEqual(expect.arrayContaining(["camry", "corolla"]));
+    expect(json.data.carModels.map((carModel: { slug: string }) => carModel.slug)).toEqual(
+      expect.arrayContaining(["camry", "corolla"]),
+    );
     expect(Object.keys(json.data.carModels[0]).sort()).toEqual([
       "id",
       "image",
@@ -111,8 +111,8 @@ describe("GET /api/storefront/cars/brands/:brandSlug/models", () => {
     const res = await GET(request(), ctx(carBrand.slug));
     const json = await res.json();
 
-    expect(
-      json.data.carModels.map((carModel: { slug: string }) => carModel.slug),
-    ).toEqual([`${SLUG_PREFIX}-active`]);
+    expect(json.data.carModels.map((carModel: { slug: string }) => carModel.slug)).toEqual([
+      `${SLUG_PREFIX}-active`,
+    ]);
   });
 });

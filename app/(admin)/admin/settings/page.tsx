@@ -86,16 +86,13 @@ export default function SettingsPage() {
 
       {isLoading && <p className="text-sm text-neutral-500">Loading...</p>}
       {loadError && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       )}
 
       {settings && (
-        <Tabs
-          selectedKey={activeTab}
-          onSelectionChange={(key) => setActiveTab(key as TabKey)}
-        >
+        <Tabs selectedKey={activeTab} onSelectionChange={(key) => setActiveTab(key as TabKey)}>
           <Tabs.ListContainer>
             <Tabs.List aria-label="Settings sections">
               {TABS.map((tab) => (
@@ -181,7 +178,7 @@ function GeneralTab({
       <KeyValueField control={control} name="socialLinks" label="Social Links" />
 
       {submitError && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {submitError}
         </p>
       )}
@@ -241,11 +238,7 @@ function SeoTab({
         label="Default Meta Title Template"
         placeholder="%s | Top Oil"
       />
-      <TextareaField
-        control={control}
-        name="metaDescription"
-        label="Default Meta Description"
-      />
+      <TextareaField control={control} name="metaDescription" label="Default Meta Description" />
       <TextField
         control={control}
         name="googleSearchConsoleCode"
@@ -254,7 +247,7 @@ function SeoTab({
       <ToggleField control={control} name="sitemapEnabled" label="Sitemap Enabled" />
 
       {submitError && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {submitError}
         </p>
       )}
@@ -342,12 +335,10 @@ function LocalizationTab({
         <ToggleField control={control} name="supportedLocaleFA" label="Persian (FA)" />
       </div>
 
-      <p className="text-sm text-neutral-500">
-        FA renders right-to-left (RTL) in the storefront.
-      </p>
+      <p className="text-sm text-neutral-500">FA renders right-to-left (RTL) in the storefront.</p>
 
       {submitError && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {submitError}
         </p>
       )}
@@ -431,7 +422,7 @@ function ShippingTab({
       />
 
       {submitError && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {submitError}
         </p>
       )}
@@ -462,10 +453,7 @@ function PaymentTab({
 }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const formValues = Object.fromEntries(
-    PAYMENT_METHODS.map((method) => [
-      method.value,
-      initial.enabledMethods.includes(method.value),
-    ]),
+    PAYMENT_METHODS.map((method) => [method.value, initial.enabledMethods.includes(method.value)]),
   ) as PaymentFormValues;
   const {
     control,
@@ -510,7 +498,7 @@ function PaymentTab({
       </div>
 
       {submitError && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {submitError}
         </p>
       )}

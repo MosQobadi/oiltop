@@ -187,9 +187,9 @@ describe("GET /api/admin/orders", () => {
     const res = await GET(getRequest({ search: PREFIX, payment: "PAID", pageSize: "100" }));
     const json = await res.json();
 
-    expect(json.data.items.every((i: { paymentStatus: string }) => i.paymentStatus === "PAID")).toBe(
-      true,
-    );
+    expect(
+      json.data.items.every((i: { paymentStatus: string }) => i.paymentStatus === "PAID"),
+    ).toBe(true);
   });
 
   it("filters by date range", async () => {

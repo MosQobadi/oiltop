@@ -1,19 +1,13 @@
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import type { Prisma } from "@/lib/generated/prisma/client";
-import type {
-  CategoryCreateInput,
-  CategoryListQuery,
-  CategoryUpdateInput,
-} from "@/lib/validation";
+import type { CategoryCreateInput, CategoryListQuery, CategoryUpdateInput } from "@/lib/validation";
 
 export class CategoryNotFoundError extends Error {}
 export class DuplicateSlugError extends Error {}
 export class CategoryHasProductsError extends Error {}
 
-function withProductCount<T extends { _count: { products: number } }>(
-  category: T,
-) {
+function withProductCount<T extends { _count: { products: number } }>(category: T) {
   const { _count, ...rest } = category;
   return { ...rest, productCount: _count.products };
 }
@@ -95,16 +89,13 @@ export async function updateCategory(id: string, input: CategoryUpdateInput) {
       where: { slug: input.slug },
     });
     if (conflict) {
-      throw new DuplicateSlugError(
-        `A category with slug "${input.slug}" already exists`,
-      );
+      throw new DuplicateSlugError(`A category with slug "${input.slug}" already exists`);
     }
     slug = input.slug;
   }
 
   const partType = input.partType ?? existing.partType;
-  const filterKind =
-    partType === "FILTER" ? (input.filterKind ?? existing.filterKind) : null;
+  const filterKind = partType === "FILTER" ? (input.filterKind ?? existing.filterKind) : null;
 
   return prisma.category.update({
     where: { id },

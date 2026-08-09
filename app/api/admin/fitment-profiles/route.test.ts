@@ -86,9 +86,7 @@ describe("GET /api/admin/fitment-profiles", () => {
 
 describe("POST /api/admin/fitment-profiles", () => {
   it("creates a fitment profile", async () => {
-    const res = await POST(
-      requestWithBody("POST", { label: `${LABEL_PREFIX} Created` }),
-    );
+    const res = await POST(requestWithBody("POST", { label: `${LABEL_PREFIX} Created` }));
     const json = await res.json();
 
     expect(res.status).toBe(201);

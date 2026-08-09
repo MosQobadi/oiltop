@@ -1,19 +1,13 @@
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import type { Prisma } from "@/lib/generated/prisma/client";
-import type {
-  BrandCreateInput,
-  BrandListQuery,
-  BrandUpdateInput,
-} from "@/lib/validation";
+import type { BrandCreateInput, BrandListQuery, BrandUpdateInput } from "@/lib/validation";
 
 export class BrandNotFoundError extends Error {}
 export class DuplicateSlugError extends Error {}
 export class BrandHasProductsError extends Error {}
 
-function withProductCount<T extends { _count: { products: number } }>(
-  brand: T,
-) {
+function withProductCount<T extends { _count: { products: number } }>(brand: T) {
   const { _count, ...rest } = brand;
   return { ...rest, productCount: _count.products };
 }
@@ -89,9 +83,7 @@ export async function updateBrand(id: string, input: BrandUpdateInput) {
       where: { slug: input.slug },
     });
     if (conflict) {
-      throw new DuplicateSlugError(
-        `A brand with slug "${input.slug}" already exists`,
-      );
+      throw new DuplicateSlugError(`A brand with slug "${input.slug}" already exists`);
     }
     slug = input.slug;
   }

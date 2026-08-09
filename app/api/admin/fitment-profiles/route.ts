@@ -1,8 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  fitmentProfileCreateSchema,
-  fitmentProfileListQuerySchema,
-} from "@/lib/validation";
+import { fitmentProfileCreateSchema, fitmentProfileListQuerySchema } from "@/lib/validation";
 import { AuthError, requireAdmin } from "@/server/auth";
 import { createFitmentProfile, listFitmentProfiles } from "@/server/fitmentProfile";
 
@@ -11,10 +8,7 @@ export async function GET(request: NextRequest) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -46,10 +40,7 @@ export async function POST(request: NextRequest) {
     await requireAdmin();
   } catch (error) {
     if (error instanceof AuthError) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 401 },
-      );
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     throw error;
   }
@@ -64,8 +55,5 @@ export async function POST(request: NextRequest) {
   }
 
   const fitmentProfile = await createFitmentProfile(parsed.data);
-  return NextResponse.json(
-    { success: true, data: { fitmentProfile } },
-    { status: 201 },
-  );
+  return NextResponse.json({ success: true, data: { fitmentProfile } }, { status: 201 });
 }

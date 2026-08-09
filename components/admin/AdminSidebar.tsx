@@ -48,11 +48,7 @@ function NavSection({ item, pathname }: { item: NavItem; pathname: string }) {
       {isOpen && (
         <div className="mt-1 flex flex-col gap-1 border-l border-neutral-200 pl-4">
           {item.children?.map((child) => (
-            <NavLink
-              key={child.href}
-              item={child}
-              active={isNavItemActive(child, pathname)}
-            />
+            <NavLink key={child.href} item={child} active={isNavItemActive(child, pathname)} />
           ))}
         </div>
       )}
@@ -67,7 +63,7 @@ export function AdminSidebar() {
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col border-r border-neutral-200 bg-white">
       <div className="px-5 py-6">
-        <span className="text-lg font-semibold text-accent">Top Oil</span>
+        <span className="text-accent text-lg font-semibold">Top Oil</span>
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3">
@@ -75,11 +71,7 @@ export function AdminSidebar() {
           item.children ? (
             <NavSection key={item.href} item={item} pathname={pathname} />
           ) : (
-            <NavLink
-              key={item.href}
-              item={item}
-              active={isNavItemActive(item, pathname)}
-            />
+            <NavLink key={item.href} item={item} active={isNavItemActive(item, pathname)} />
           ),
         )}
       </nav>

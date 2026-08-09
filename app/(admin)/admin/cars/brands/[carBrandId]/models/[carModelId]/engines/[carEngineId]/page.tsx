@@ -6,15 +6,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import {
-  AlertDialog,
-  Button,
-  Chip,
-  ComboBox,
-  Input,
-  Label,
-  ListBox,
-} from "@heroui/react";
+import { AlertDialog, Button, Chip, ComboBox, Input, Label, ListBox } from "@heroui/react";
 import {
   BilingualTextField,
   FormActions,
@@ -57,9 +49,7 @@ function AttachExistingProfileControl({
       const searchParams = new URLSearchParams({ pageSize: "20" });
       if (query) searchParams.set("search", query);
 
-      const response = await fetch(
-        `/api/admin/fitment-profiles?${searchParams.toString()}`,
-      );
+      const response = await fetch(`/api/admin/fitment-profiles?${searchParams.toString()}`);
       const result = await response.json();
       if (ignore || !result.success) return;
 
@@ -130,9 +120,7 @@ function AttachExistingProfileControl({
             <ListBox
               items={results}
               renderEmptyState={() => (
-                <div className="px-3 py-2 text-sm text-neutral-500">
-                  No fitment profiles found.
-                </div>
+                <div className="px-3 py-2 text-sm text-neutral-500">No fitment profiles found.</div>
               )}
             >
               {(item) => (
@@ -152,7 +140,7 @@ function AttachExistingProfileControl({
         </Button>
       </div>
       {error && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {error}
         </p>
       )}
@@ -250,9 +238,7 @@ export default function CarEngineFormPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [engineLabelEn, setEngineLabelEn] = useState("");
-  const [fitmentProfileLinks, setFitmentProfileLinks] = useState<FitmentProfileLink[]>(
-    [],
-  );
+  const [fitmentProfileLinks, setFitmentProfileLinks] = useState<FitmentProfileLink[]>([]);
   const [fitmentReloadKey, setFitmentReloadKey] = useState(0);
   const [detachTarget, setDetachTarget] = useState<FitmentProfileLink | null>(null);
   const [isDetaching, setIsDetaching] = useState(false);
@@ -304,8 +290,7 @@ export default function CarEngineFormPage() {
         stillInProduction: carEngine.yearEnd == null,
         yearEnd: carEngine.yearEnd == null ? "" : String(carEngine.yearEnd),
         fuelType: carEngine.fuelType,
-        displacementCc:
-          carEngine.displacementCc == null ? "" : String(carEngine.displacementCc),
+        displacementCc: carEngine.displacementCc == null ? "" : String(carEngine.displacementCc),
         engineCode: carEngine.engineCode ?? "",
         isActive: carEngine.status === "ACTIVE",
       });
@@ -360,14 +345,11 @@ export default function CarEngineFormPage() {
     }
 
     const newProfileId = createResult.data.fitmentProfile.id;
-    const attachResponse = await fetch(
-      `/api/admin/fitment-profiles/${newProfileId}/attach`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ carEngineIds: [carEngineId] }),
-      },
-    );
+    const attachResponse = await fetch(`/api/admin/fitment-profiles/${newProfileId}/attach`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ carEngineIds: [carEngineId] }),
+    });
     const attachResult = await attachResponse.json();
     setIsCreatingProfile(false);
 
@@ -427,7 +409,7 @@ export default function CarEngineFormPage() {
   if (loadError) {
     return (
       <div className="p-8">
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       </div>
@@ -441,10 +423,7 @@ export default function CarEngineFormPage() {
           Car Brands
         </Link>
         <span>/</span>
-        <Link
-          href={`/admin/cars/brands/${carBrandId}/models`}
-          className="hover:text-neutral-700"
-        >
+        <Link href={`/admin/cars/brands/${carBrandId}/models`} className="hover:text-neutral-700">
           Models
         </Link>
         <span>/</span>
@@ -460,11 +439,7 @@ export default function CarEngineFormPage() {
         {isEdit ? "Edit Car Engine" : "Add Car Engine"}
       </h1>
 
-      <form
-        className="flex max-w-2xl flex-col gap-6"
-        noValidate
-        onSubmit={handleSubmit(onSubmit)}
-      >
+      <form className="flex max-w-2xl flex-col gap-6" noValidate onSubmit={handleSubmit(onSubmit)}>
         <BilingualTextField
           control={control}
           nameEn="labelEn"
@@ -520,7 +495,7 @@ export default function CarEngineFormPage() {
         <ToggleField control={control} name="isActive" label="Active" />
 
         {submitError && (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-danger text-sm">
             {submitError}
           </p>
         )}
@@ -586,7 +561,7 @@ export default function CarEngineFormPage() {
               {isCreatingProfile ? "Creating..." : "Create New Profile for This Engine"}
             </Button>
             {createProfileError && (
-              <p role="alert" className="text-sm text-danger">
+              <p role="alert" className="text-danger text-sm">
                 {createProfileError}
               </p>
             )}
@@ -608,12 +583,9 @@ export default function CarEngineFormPage() {
                 <AlertDialog.Heading>Detach fitment profile</AlertDialog.Heading>
               </AlertDialog.Header>
               <AlertDialog.Body>
-                <p>
-                  Detach &ldquo;{detachTarget?.profile.label}&rdquo; from this car
-                  engine?
-                </p>
+                <p>Detach &ldquo;{detachTarget?.profile.label}&rdquo; from this car engine?</p>
                 {detachError && (
-                  <p role="alert" className="mt-2 text-sm text-danger">
+                  <p role="alert" className="text-danger mt-2 text-sm">
                     {detachError}
                   </p>
                 )}

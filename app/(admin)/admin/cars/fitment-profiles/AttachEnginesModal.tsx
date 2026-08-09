@@ -203,7 +203,7 @@ export function AttachEnginesModal({
                       type="number"
                       value={yearFrom}
                       onChange={(e) => setYearFrom(e.target.value)}
-                      className="h-10 rounded-field border border-neutral-300 px-3 text-sm"
+                      className="rounded-field h-10 border border-neutral-300 px-3 text-sm"
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -212,7 +212,7 @@ export function AttachEnginesModal({
                       type="number"
                       value={yearTo}
                       onChange={(e) => setYearTo(e.target.value)}
-                      className="h-10 rounded-field border border-neutral-300 px-3 text-sm"
+                      className="rounded-field h-10 border border-neutral-300 px-3 text-sm"
                     />
                   </div>
                 </div>
@@ -226,18 +226,16 @@ export function AttachEnginesModal({
                 </SearchField>
 
                 {loadError && (
-                  <p role="alert" className="text-sm text-danger">
+                  <p role="alert" className="text-danger text-sm">
                     {loadError}
                   </p>
                 )}
 
-                <div className="max-h-72 overflow-y-auto rounded-field bg-field p-3">
+                <div className="rounded-field bg-field max-h-72 overflow-y-auto p-3">
                   {isLoading ? (
                     <p className="text-sm text-neutral-500">Loading...</p>
                   ) : engines.length === 0 ? (
-                    <p className="text-sm text-neutral-500">
-                      No matching engines found.
-                    </p>
+                    <p className="text-sm text-neutral-500">No matching engines found.</p>
                   ) : (
                     <CheckboxGroup value={selected} onChange={setSelected}>
                       <div className="flex flex-col gap-2">
@@ -257,7 +255,7 @@ export function AttachEnginesModal({
                 </div>
 
                 {attachError && (
-                  <p role="alert" className="text-sm text-danger">
+                  <p role="alert" className="text-danger text-sm">
                     {attachError}
                   </p>
                 )}

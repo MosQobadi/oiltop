@@ -169,9 +169,10 @@ describe("PATCH /api/admin/inventory/:productId — restock notifications", () =
     expect(res.status).toBe(200);
 
     expect(sendNotificationMock).toHaveBeenCalledTimes(2);
-    expect(
-      sendNotificationMock.mock.calls.map(([message]) => message.to).sort(),
-    ).toEqual(["+989121234567", "waiting@example.com"]);
+    expect(sendNotificationMock.mock.calls.map(([message]) => message.to).sort()).toEqual([
+      "+989121234567",
+      "waiting@example.com",
+    ]);
 
     const rows = await prisma.stockNotification.findMany({
       where: { productId: product.id },

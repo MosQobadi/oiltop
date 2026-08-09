@@ -60,10 +60,7 @@ export function TagsInput<TFieldValues extends FieldValues>({
   return (
     <div className={`flex flex-col gap-1.5 ${className ?? ""}`}>
       <Label>{label}</Label>
-      <div
-        className="input flex min-h-9 flex-wrap items-center gap-1.5"
-        data-invalid={!!error}
-      >
+      <div className="input flex min-h-9 flex-wrap items-center gap-1.5" data-invalid={!!error}>
         {tags.map((tag) => (
           <Chip key={tag} size="sm" variant="soft">
             <Chip.Label>{tag}</Chip.Label>
@@ -87,7 +84,7 @@ export function TagsInput<TFieldValues extends FieldValues>({
         />
       </div>
       {error?.message && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {error.message}
         </p>
       )}

@@ -74,11 +74,36 @@ async function main() {
 
   const customerPasswordHash = await bcrypt.hash("Customer123!", 10);
   const customerSeeds = [
-    { email: "sara.ahmadi@example.com", phone: "+989351112233", firstName: "Sara", lastName: "Ahmadi" },
-    { email: "amir.rezaei@example.com", phone: "+989121234567", firstName: "Amir", lastName: "Rezaei" },
-    { email: "niloofar.karimi@example.com", phone: "+989173334455", firstName: "Niloofar", lastName: "Karimi" },
-    { email: "reza.hosseini@example.com", phone: "+989196667788", firstName: "Reza", lastName: "Hosseini" },
-    { email: "maryam.jafari@example.com", phone: "+989301239876", firstName: "Maryam", lastName: "Jafari" },
+    {
+      email: "sara.ahmadi@example.com",
+      phone: "+989351112233",
+      firstName: "Sara",
+      lastName: "Ahmadi",
+    },
+    {
+      email: "amir.rezaei@example.com",
+      phone: "+989121234567",
+      firstName: "Amir",
+      lastName: "Rezaei",
+    },
+    {
+      email: "niloofar.karimi@example.com",
+      phone: "+989173334455",
+      firstName: "Niloofar",
+      lastName: "Karimi",
+    },
+    {
+      email: "reza.hosseini@example.com",
+      phone: "+989196667788",
+      firstName: "Reza",
+      lastName: "Hosseini",
+    },
+    {
+      email: "maryam.jafari@example.com",
+      phone: "+989301239876",
+      firstName: "Maryam",
+      lastName: "Jafari",
+    },
   ];
   const customers = [];
   for (const seed of customerSeeds) {
@@ -177,7 +202,8 @@ async function main() {
       tags: ["fuel filter", "fuel system"],
       shortDescriptionEn: "Fuel filters that protect injectors from contamination.",
       shortDescriptionFa: "فیلترهای سوخت که انژکتورها را از آلودگی محافظت می‌کنند.",
-      longDescriptionEn: "Removes particulates and moisture from fuel before it reaches the injection system.",
+      longDescriptionEn:
+        "Removes particulates and moisture from fuel before it reaches the injection system.",
       longDescriptionFa: "ذرات معلق و رطوبت را پیش از رسیدن سوخت به سیستم انژکتور حذف می‌کند.",
       partType: PartType.FILTER,
       filterKind: FilterKind.FUEL_FILTER,
@@ -235,8 +261,10 @@ async function main() {
       tags: ["5W-30", "fully synthetic", "API SN"],
       shortDescriptionEn: "All-round fully synthetic oil for everyday driving.",
       shortDescriptionFa: "روغن تمام‌سنتتیک همه‌کاره برای رانندگی روزمره.",
-      longDescriptionEn: "Advanced full synthetic formula that keeps engines running clean across long service intervals.",
-      longDescriptionFa: "فرمول پیشرفته تمام‌سنتتیک که موتور را در طول دوره‌های سرویس طولانی تمیز نگه می‌دارد.",
+      longDescriptionEn:
+        "Advanced full synthetic formula that keeps engines running clean across long service intervals.",
+      longDescriptionFa:
+        "فرمول پیشرفته تمام‌سنتتیک که موتور را در طول دوره‌های سرویس طولانی تمیز نگه می‌دارد.",
       stock: 40,
     },
     mobilOil0w40: {
@@ -250,7 +278,8 @@ async function main() {
       tags: ["0W-40", "fully synthetic", "hot climate"],
       shortDescriptionEn: "Low-viscosity synthetic oil suited to sustained high temperatures.",
       shortDescriptionFa: "روغن سنتتیک کم‌ویسکوزیته مناسب دماهای بالا و پایدار.",
-      longDescriptionEn: "Maintains protection and oil pressure under sustained high ambient and engine temperatures.",
+      longDescriptionEn:
+        "Maintains protection and oil pressure under sustained high ambient and engine temperatures.",
       longDescriptionFa: "محافظت و فشار روغن را در دماهای محیط و موتور بالا و پایدار حفظ می‌کند.",
       stock: 25,
     },
@@ -263,10 +292,14 @@ async function main() {
       price: 1_100_000,
       discountPercent: 0,
       tags: ["5W-40", "semi-synthetic"],
-      shortDescriptionEn: "Intelligent molecules cling to critical engine parts for extra protection.",
-      shortDescriptionFa: "مولکول‌های هوشمند به قطعات حیاتی موتور می‌چسبند و محافظت اضافه ایجاد می‌کنند.",
-      longDescriptionEn: "Reduces wear from cold starts by forming a protective layer that clings to engine parts even when the engine is off.",
-      longDescriptionFa: "با تشکیل لایه محافظ که حتی هنگام خاموش بودن موتور به قطعات می‌چسبد، سایش ناشی از استارت سرد را کاهش می‌دهد.",
+      shortDescriptionEn:
+        "Intelligent molecules cling to critical engine parts for extra protection.",
+      shortDescriptionFa:
+        "مولکول‌های هوشمند به قطعات حیاتی موتور می‌چسبند و محافظت اضافه ایجاد می‌کنند.",
+      longDescriptionEn:
+        "Reduces wear from cold starts by forming a protective layer that clings to engine parts even when the engine is off.",
+      longDescriptionFa:
+        "با تشکیل لایه محافظ که حتی هنگام خاموش بودن موتور به قطعات می‌چسبد، سایش ناشی از استارت سرد را کاهش می‌دهد.",
       stock: 30,
     },
     castrolOil0w20: {
@@ -280,8 +313,10 @@ async function main() {
       tags: ["0W-20", "fully synthetic", "cold climate"],
       shortDescriptionEn: "Fully synthetic oil formulated for smooth cold-weather starts.",
       shortDescriptionFa: "روغن تمام‌سنتتیک فرموله‌شده برای استارت روان در هوای سرد.",
-      longDescriptionEn: "Titanium-strengthened formula that flows quickly at low temperatures to protect the engine from the first turn of the key.",
-      longDescriptionFa: "فرمول تقویت‌شده با تیتانیوم که در دماهای پایین به سرعت جریان می‌یابد و از همان اولین چرخش سوئیچ از موتور محافظت می‌کند.",
+      longDescriptionEn:
+        "Titanium-strengthened formula that flows quickly at low temperatures to protect the engine from the first turn of the key.",
+      longDescriptionFa:
+        "فرمول تقویت‌شده با تیتانیوم که در دماهای پایین به سرعت جریان می‌یابد و از همان اولین چرخش سوئیچ از موتور محافظت می‌کند.",
       stock: 18,
     },
     boschOilFilter: {
@@ -296,8 +331,10 @@ async function main() {
       oemPartNumbers: ["04152-YZZA1", "90915-YZZD4"],
       shortDescriptionEn: "Spin-on oil filter with high dirt-holding capacity.",
       shortDescriptionFa: "فیلتر روغن پیچی با ظرفیت بالای نگهداری آلودگی.",
-      longDescriptionEn: "Multi-layer filter media traps fine particles while maintaining steady oil flow across the service interval.",
-      longDescriptionFa: "رسانه فیلتراسیون چندلایه ذرات ریز را به دام می‌اندازد و جریان روغن را در طول دوره سرویس پایدار نگه می‌دارد.",
+      longDescriptionEn:
+        "Multi-layer filter media traps fine particles while maintaining steady oil flow across the service interval.",
+      longDescriptionFa:
+        "رسانه فیلتراسیون چندلایه ذرات ریز را به دام می‌اندازد و جریان روغن را در طول دوره سرویس پایدار نگه می‌دارد.",
       stock: 60,
     },
     mannOilFilter: {
@@ -311,8 +348,10 @@ async function main() {
       tags: ["oil filter", "spin-on"],
       shortDescriptionEn: "OE-equivalent spin-on oil filter for reliable filtration.",
       shortDescriptionFa: "فیلتر روغن پیچی معادل اورجینال برای فیلتراسیون قابل‌اعتماد.",
-      longDescriptionEn: "Built to OE specification with an anti-drain-back valve to protect against dry starts.",
-      longDescriptionFa: "مطابق با مشخصات اورجینال ساخته شده و دارای سوپاپ ضد تخلیه برای محافظت در برابر استارت خشک.",
+      longDescriptionEn:
+        "Built to OE specification with an anti-drain-back valve to protect against dry starts.",
+      longDescriptionFa:
+        "مطابق با مشخصات اورجینال ساخته شده و دارای سوپاپ ضد تخلیه برای محافظت در برابر استارت خشک.",
       stock: 45,
     },
     boschAirFilter: {
@@ -326,8 +365,10 @@ async function main() {
       tags: ["air filter", "intake"],
       shortDescriptionEn: "Panel air filter with pleated paper media.",
       shortDescriptionFa: "فیلتر هوای پنلی با رسانه کاغذی چین‌دار.",
-      longDescriptionEn: "Pleated paper media provides high filtration efficiency while keeping airflow restriction low.",
-      longDescriptionFa: "رسانه کاغذی چین‌دار کارایی فیلتراسیون بالایی ارائه می‌دهد و در عین حال افت جریان هوا را کم نگه می‌دارد.",
+      longDescriptionEn:
+        "Pleated paper media provides high filtration efficiency while keeping airflow restriction low.",
+      longDescriptionFa:
+        "رسانه کاغذی چین‌دار کارایی فیلتراسیون بالایی ارائه می‌دهد و در عین حال افت جریان هوا را کم نگه می‌دارد.",
       stock: 8,
     },
     mannAirFilter: {
@@ -342,8 +383,10 @@ async function main() {
       oemPartNumbers: ["17801-0Y060"],
       shortDescriptionEn: "OE-equivalent panel air filter.",
       shortDescriptionFa: "فیلتر هوای پنلی معادل اورجینال.",
-      longDescriptionEn: "Matches OE dimensions and filtration rating for a direct replacement fit.",
-      longDescriptionFa: "از نظر ابعاد و رتبه فیلتراسیون مطابق با قطعه اورجینال است و جایگزینی مستقیم را فراهم می‌کند.",
+      longDescriptionEn:
+        "Matches OE dimensions and filtration rating for a direct replacement fit.",
+      longDescriptionFa:
+        "از نظر ابعاد و رتبه فیلتراسیون مطابق با قطعه اورجینال است و جایگزینی مستقیم را فراهم می‌کند.",
       stock: 22,
     },
     boschCabinFilter: {
@@ -356,9 +399,11 @@ async function main() {
       discountPercent: 0,
       tags: ["cabin filter", "cabin air"],
       shortDescriptionEn: "Cabin filter that traps dust and pollen before it reaches the cabin.",
-      shortDescriptionFa: "فیلتر کابین که گردوغبار و گرده گیاهان را پیش از ورود به کابین به دام می‌اندازد.",
+      shortDescriptionFa:
+        "فیلتر کابین که گردوغبار و گرده گیاهان را پیش از ورود به کابین به دام می‌اندازد.",
       longDescriptionEn: "Multi-layer media captures fine dust and pollen for cleaner cabin air.",
-      longDescriptionFa: "رسانه چندلایه گردوغبار ریز و گرده گیاهان را جذب می‌کند تا هوای کابین تمیزتر باشد.",
+      longDescriptionFa:
+        "رسانه چندلایه گردوغبار ریز و گرده گیاهان را جذب می‌کند تا هوای کابین تمیزتر باشد.",
       stock: 15,
     },
     mannFuelFilter: {
@@ -372,7 +417,8 @@ async function main() {
       tags: ["fuel filter"],
       shortDescriptionEn: "In-line fuel filter that protects injectors from contamination.",
       shortDescriptionFa: "فیلتر سوخت خطی که انژکتورها را از آلودگی محافظت می‌کند.",
-      longDescriptionEn: "Removes particulates and water from fuel before it reaches the injection system.",
+      longDescriptionEn:
+        "Removes particulates and water from fuel before it reaches the injection system.",
       longDescriptionFa: "ذرات معلق و آب را پیش از رسیدن سوخت به سیستم انژکتور حذف می‌کند.",
       stock: 0,
     },
@@ -565,7 +611,9 @@ async function main() {
     },
   ];
 
-  type CreatedEngine = Awaited<ReturnType<typeof prisma.carEngine.create>> & { oilPlan: EngineSeed["oilPlan"] };
+  type CreatedEngine = Awaited<ReturnType<typeof prisma.carEngine.create>> & {
+    oilPlan: EngineSeed["oilPlan"];
+  };
   const engines: CreatedEngine[] = [];
   let peugeot206EngineId = "";
 
@@ -706,7 +754,8 @@ async function main() {
       customerName: "Amir Rezaei",
       phone: "+989121234567",
       email: "amir.rezaei@example.com",
-      message: "Couldn't find a catalog oil match for my Peugeot 206 — can you help me source the right grade?",
+      message:
+        "Couldn't find a catalog oil match for my Peugeot 206 — can you help me source the right grade?",
       status: FitmentInquiryStatus.NEW,
     },
   });

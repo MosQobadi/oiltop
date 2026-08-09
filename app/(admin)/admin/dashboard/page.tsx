@@ -46,21 +46,15 @@ export default function DashboardPage() {
         {statCards.map((stat) => (
           <Card key={stat.label}>
             <CardContent className="flex flex-col gap-1 p-5">
-              <span className="text-sm font-medium text-neutral-500">
-                {stat.label}
-              </span>
-              <span className="text-2xl font-semibold text-neutral-900">
-                {stat.value}
-              </span>
+              <span className="text-sm font-medium text-neutral-500">{stat.label}</span>
+              <span className="text-2xl font-semibold text-neutral-900">{stat.value}</span>
             </CardContent>
           </Card>
         ))}
       </div>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-base font-semibold text-neutral-900">
-          Recent Orders
-        </h2>
+        <h2 className="text-base font-semibold text-neutral-900">Recent Orders</h2>
         <RecentOrdersTable />
       </section>
     </div>

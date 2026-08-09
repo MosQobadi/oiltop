@@ -41,22 +41,10 @@ const categoryFormSchema = z
     filterKind: z.string(),
     tags: z.array(z.string()),
     isActive: z.boolean(),
-    shortDescriptionEn: z
-      .string()
-      .min(1, "English short description is required")
-      .max(500),
-    shortDescriptionFa: z
-      .string()
-      .min(1, "Persian short description is required")
-      .max(500),
-    longDescriptionEn: z
-      .string()
-      .min(1, "English long description is required")
-      .max(5000),
-    longDescriptionFa: z
-      .string()
-      .min(1, "Persian long description is required")
-      .max(5000),
+    shortDescriptionEn: z.string().min(1, "English short description is required").max(500),
+    shortDescriptionFa: z.string().min(1, "Persian short description is required").max(500),
+    longDescriptionEn: z.string().min(1, "English long description is required").max(5000),
+    longDescriptionFa: z.string().min(1, "Persian long description is required").max(5000),
     metaTitleEn: z.string().max(70),
     metaTitleFa: z.string().max(70),
     metaDescriptionEn: z.string().max(160),
@@ -202,9 +190,7 @@ export default function CategoryFormPage() {
       try {
         imageUrl = await uploadImage(values.image);
       } catch (error) {
-        setSubmitError(
-          error instanceof Error ? error.message : "Failed to upload image",
-        );
+        setSubmitError(error instanceof Error ? error.message : "Failed to upload image");
         return;
       }
     } else {
@@ -259,7 +245,7 @@ export default function CategoryFormPage() {
   if (loadError) {
     return (
       <div className="p-8">
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       </div>
@@ -272,11 +258,7 @@ export default function CategoryFormPage() {
         {isEdit ? "Edit Category" : "Add Category"}
       </h1>
 
-      <form
-        className="flex max-w-2xl flex-col gap-6"
-        noValidate
-        onSubmit={handleSubmit(onSubmit)}
-      >
+      <form className="flex max-w-2xl flex-col gap-6" noValidate onSubmit={handleSubmit(onSubmit)}>
         <BilingualTextField
           control={control}
           nameEn="nameEn"
@@ -356,7 +338,7 @@ export default function CategoryFormPage() {
         <ImageUploadField control={control} name="image" label="Image" />
 
         {submitError && (
-          <p role="alert" className="text-sm text-danger">
+          <p role="alert" className="text-danger text-sm">
             {submitError}
           </p>
         )}

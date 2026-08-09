@@ -123,8 +123,7 @@ export default function InventoryPage() {
     {
       key: "lastUpdatedAt",
       label: "Last Update",
-      render: (row) =>
-        row.lastUpdatedAt ? new Date(row.lastUpdatedAt).toLocaleDateString() : "—",
+      render: (row) => (row.lastUpdatedAt ? new Date(row.lastUpdatedAt).toLocaleDateString() : "—"),
     },
     {
       key: "id",
@@ -133,9 +132,7 @@ export default function InventoryPage() {
         <Button
           variant="ghost"
           size="sm"
-          onPress={() =>
-            setEditingProduct({ id: row.id, nameEn: row.nameEn, stock: row.stock })
-          }
+          onPress={() => setEditingProduct({ id: row.id, nameEn: row.nameEn, stock: row.stock })}
         >
           Edit
         </Button>
@@ -148,7 +145,7 @@ export default function InventoryPage() {
       <h1 className="text-lg font-semibold text-neutral-900">Inventory</h1>
 
       {loadError && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-danger text-sm">
           {loadError}
         </p>
       )}

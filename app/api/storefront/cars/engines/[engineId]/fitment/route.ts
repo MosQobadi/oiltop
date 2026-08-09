@@ -1,8 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  getActiveCarEngineContext,
-  resolveFitmentForEngine,
-} from "@/lib/services/fitment";
+import { getActiveCarEngineContext, resolveFitmentForEngine } from "@/lib/services/fitment";
 import { storefrontIdParamSchema } from "@/lib/validation";
 
 type RouteContext = { params: Promise<{ engineId: string }> };
@@ -14,14 +11,9 @@ type RouteContext = { params: Promise<{ engineId: string }> };
 // match yet — and the storefront turns those into a Fitment Inquiry.
 export async function GET(_request: NextRequest, { params }: RouteContext) {
   const parsed = storefrontIdParamSchema.safeParse((await params).engineId);
-  const context = parsed.success
-    ? await getActiveCarEngineContext(parsed.data)
-    : null;
+  const context = parsed.success ? await getActiveCarEngineContext(parsed.data) : null;
   if (!context) {
-    return NextResponse.json(
-      { success: false, error: "Car engine not found" },
-      { status: 404 },
-    );
+    return NextResponse.json({ success: false, error: "Car engine not found" }, { status: 404 });
   }
 
   const groups = await resolveFitmentForEngine(context.carEngine.id);

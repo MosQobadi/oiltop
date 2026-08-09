@@ -33,7 +33,7 @@ in the admin doc.
 
 **1. The storefront needs its own public API surface — this doesn't exist yet.** Every admin route
 under `/api/admin/*` is JWT+ADMIN gated. The Fitment Preview tool (admin Task 8.5) proves the
-*resolution logic* (CarEngine → CarEngineFitmentProfile → FitmentProfile → FitmentProfileItem) works,
+_resolution logic_ (CarEngine → CarEngineFitmentProfile → FitmentProfile → FitmentProfileItem) works,
 but it's only reachable by a logged-in admin. Phase 0 below adds a parallel, unauthenticated
 `/api/storefront/*` surface that reuses the same underlying service functions (don't duplicate the
 resolution query — extract it to a shared `lib/services/fitment.ts` both the admin preview route and
@@ -66,7 +66,7 @@ brief's single-slug rule.
 **6. Guest checkout is in scope; account creation is optional at checkout, not required.** The schema's
 `User` role split (ADMIN/CUSTOMER) and `Order.customerId` FK don't force every order to have a
 registered account holder — but since `Order.customerId` is a required FK to `User` in the current
-schema, guest checkout still needs *a* `User` row created behind the scenes (role CUSTOMER, no forced
+schema, guest checkout still needs _a_ `User` row created behind the scenes (role CUSTOMER, no forced
 password) unless you want to relax that FK. Flag this to the project owner before Phase 10 — decide
 now whether "guest" means "silently create an account" or "make `customerId` nullable."
 
@@ -223,7 +223,7 @@ Extend prisma/schema.prisma:
   keep email required for ADMIN, optional for CUSTOMER. Add a unique constraint on phone (nullable
   unique — Prisma supports this, multiple NULLs allowed).
 - Add ProductPriceLog: id, productId (FK), price (Decimal), discountPercent (Int), changedAt
-  (DateTime, default now()). 
+  (DateTime, default now()).
 - Add StockNotification: id, productId (FK), contact (String — email or phone), createdAt,
   notifiedAt (DateTime, nullable).
 Update the admin Product update route (Task 7.1) to write a ProductPriceLog row whenever price or

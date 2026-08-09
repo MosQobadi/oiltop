@@ -51,9 +51,7 @@ const filterCategory: FitmentCategorySummary = {
 };
 
 // Shaped like the Prisma payload groupFitmentItemsByCategory receives.
-function makeItem(
-  overrides: Partial<FitmentItemWithRelations> = {},
-): FitmentItemWithRelations {
+function makeItem(overrides: Partial<FitmentItemWithRelations> = {}): FitmentItemWithRelations {
   return {
     id: "item_1",
     profileId: "profile_1",
@@ -80,10 +78,7 @@ describe("groupFitmentItemsByCategory", () => {
       makeItem({ id: "c" }),
     ]);
 
-    expect(groups.map((group) => group.category.id)).toEqual([
-      oilCategory.id,
-      filterCategory.id,
-    ]);
+    expect(groups.map((group) => group.category.id)).toEqual([oilCategory.id, filterCategory.id]);
     expect(groups[0].items.map((item) => item.id)).toEqual(["a", "c"]);
   });
 
@@ -103,9 +98,7 @@ describe("groupFitmentItemsByCategory", () => {
       makeItem({ id: "standard" }),
     ]);
 
-    expect(
-      groups[0].items.map((item) => [item.climate, item.climateLabel]),
-    ).toEqual([
+    expect(groups[0].items.map((item) => [item.climate, item.climateLabel])).toEqual([
       ["HOT", "Hot climate"],
       ["COLD", "Cold climate"],
       ["STANDARD", null],

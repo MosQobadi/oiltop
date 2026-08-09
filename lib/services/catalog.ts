@@ -1,9 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
-import type {
-  StorefrontProductListQuery,
-  StorefrontProductSort,
-} from "@/lib/validation";
+import type { StorefrontProductListQuery, StorefrontProductSort } from "@/lib/validation";
 
 // Public catalog reads — the PLP list, the PDP lookup, and the back-in-stock
 // signup behind them. Sibling of lib/services/fitment.ts and follows the same
@@ -25,9 +22,7 @@ export type StorefrontStockStatus = "OUT_OF_STOCK" | "LOW_STOCK";
 
 const LOW_STOCK_THRESHOLD = 10;
 
-export function deriveStorefrontStockStatus(
-  stock: number,
-): StorefrontStockStatus | null {
+export function deriveStorefrontStockStatus(stock: number): StorefrontStockStatus | null {
   if (stock <= 0) return "OUT_OF_STOCK";
   if (stock < LOW_STOCK_THRESHOLD) return "LOW_STOCK";
   return null;
@@ -109,9 +104,7 @@ function toPublicProduct<T extends ProductCardRow>(product: T) {
   };
 }
 
-export type StorefrontProductCard = ReturnType<
-  typeof toPublicProduct<ProductCardRow>
->;
+export type StorefrontProductCard = ReturnType<typeof toPublicProduct<ProductCardRow>>;
 
 export async function listActiveCategories(): Promise<StorefrontCategory[]> {
   return prisma.category.findMany({
@@ -137,9 +130,7 @@ function slugOrIdFilter(value: string) {
   return { OR: [{ id: value }, { slug: value }] };
 }
 
-function buildProductWhere(
-  query: StorefrontProductListQuery,
-): Prisma.ProductWhereInput {
+function buildProductWhere(query: StorefrontProductListQuery): Prisma.ProductWhereInput {
   return {
     status: "ACTIVE",
     category: {
@@ -252,9 +243,7 @@ export interface FittingCarEngine {
   carBrand: { id: string; slug: string; nameEn: string; nameFa: string };
 }
 
-async function getFittingCarEngines(
-  productId: string,
-): Promise<FittingCarEngine[]> {
+async function getFittingCarEngines(productId: string): Promise<FittingCarEngine[]> {
   const links = await prisma.carEngineFitmentProfile.findMany({
     where: {
       profile: { items: { some: { productId } } },
@@ -312,9 +301,9 @@ async function getFittingCarEngines(
   });
 }
 
-export type StorefrontProductDetail = ReturnType<
-  typeof toPublicProduct<ProductDetailRow>
-> & { fitsCarEngines: FittingCarEngine[] };
+export type StorefrontProductDetail = ReturnType<typeof toPublicProduct<ProductDetailRow>> & {
+  fitsCarEngines: FittingCarEngine[];
+};
 
 export async function getStorefrontProductBySlug(
   slug: string,
@@ -357,10 +346,7 @@ export async function getActiveProductByIdOrSlug(idOrSlug: string) {
 // the same person twice. A contact that was already notified can sign up again
 // (the product went out of stock a second time), so only un-notified rows are
 // reused.
-export async function createStockNotification(
-  productId: string,
-  contact: string,
-) {
+export async function createStockNotification(productId: string, contact: string) {
   const pending = await prisma.stockNotification.findFirst({
     where: { productId, contact, notifiedAt: null },
     select: { id: true, productId: true, contact: true, createdAt: true },

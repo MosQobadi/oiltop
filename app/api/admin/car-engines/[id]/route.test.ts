@@ -125,10 +125,7 @@ describe("GET /api/admin/car-engines/:id", () => {
 describe("PATCH /api/admin/car-engines/:id", () => {
   it("updates fields and returns the updated car engine", async () => {
     const carEngine = await createTestCarEngine();
-    const res = await PATCH(
-      requestWithBody("PATCH", { engineCode: "2ZR-FE" }),
-      ctx(carEngine.id),
-    );
+    const res = await PATCH(requestWithBody("PATCH", { engineCode: "2ZR-FE" }), ctx(carEngine.id));
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -157,10 +154,7 @@ describe("PATCH /api/admin/car-engines/:id", () => {
 
   it("nulls yearEnd when explicitly set to null (still in production)", async () => {
     const carEngine = await createTestCarEngine({ yearEnd: 2020 });
-    const res = await PATCH(
-      requestWithBody("PATCH", { yearEnd: null }),
-      ctx(carEngine.id),
-    );
+    const res = await PATCH(requestWithBody("PATCH", { yearEnd: null }), ctx(carEngine.id));
     const json = await res.json();
 
     expect(res.status).toBe(200);
