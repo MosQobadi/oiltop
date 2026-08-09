@@ -7,12 +7,18 @@ import {
   partTypeSchema,
 } from "./enums";
 
+// Kept default-free here because `.partial()` does not unwrap a ZodDefault:
+// left as `.default([])` in the shared shape, a PATCH that omitted tags would
+// still parse to [] and silently clear the column — renaming a category would
+// wipe its tags. Create opts into the default, update doesn't.
+const tagsField = z.array(z.string().min(1).max(50));
+
 const categoryShape = {
   // Optional on create — auto-generated from nameEn via slugify() when omitted.
   slug: slugSchema.optional(),
   nameEn: z.string().min(1).max(200),
   nameFa: z.string().min(1).max(200),
-  tags: z.array(z.string().min(1).max(50)).default([]),
+  tags: tagsField.default([]),
   shortDescriptionEn: z.string().min(1).max(500).transform(stripHtml),
   shortDescriptionFa: z.string().min(1).max(500).transform(stripHtml),
   longDescriptionEn: z.string().min(1).max(5000).transform(stripHtml),
@@ -54,7 +60,7 @@ export const categoryCreateSchema = z
   .object(categoryShape)
   .superRefine(checkFilterKind);
 export const categoryUpdateSchema = z
-  .object(categoryShape)
+  .object({ ...categoryShape, tags: tagsField })
   .partial()
   .superRefine(checkFilterKind);
 

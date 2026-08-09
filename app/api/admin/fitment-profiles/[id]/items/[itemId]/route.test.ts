@@ -130,6 +130,63 @@ describe("PATCH /api/admin/fitment-profiles/:id/items/:itemId", () => {
     await prisma.fitmentProfileItem.delete({ where: { id: item.id } });
   });
 
+  it("leaves climate and priority alone when the patch doesn't mention them", async () => {
+    const item = await createTestItem({ climate: "HOT", priority: 3 });
+
+    const res = await PATCH(
+      requestWithBody("PATCH", { adminNote: `${LABEL_PREFIX} checked` }),
+      ctx(profile.id, item.id),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.data.item.climate).toBe("HOT");
+    expect(json.data.item.priority).toBe(3);
+
+    await prisma.fitmentProfileItem.delete({ where: { id: item.id } });
+  });
+
+  // The item's stored climate has to be fed into the cross-field rule, or a
+  // patch that only moves the category slips a HOT item under a filter.
+  it("rejects moving a HOT item to a non-oil category without changing its climate", async () => {
+    const item = await createTestItem({ climate: "HOT", priority: 0 });
+
+    const res = await PATCH(
+      requestWithBody("PATCH", { categoryId: oilFilterCategory.id }),
+      ctx(profile.id, item.id),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.success).toBe(false);
+    expect(json.error).toMatch(/climate must be STANDARD/i);
+
+    const unchanged = await prisma.fitmentProfileItem.findUniqueOrThrow({
+      where: { id: item.id },
+    });
+    expect(unchanged.categoryId).toBe(engineOilCategory.id);
+
+    await prisma.fitmentProfileItem.delete({ where: { id: item.id } });
+  });
+
+  it("allows moving a HOT item to a non-oil category when the climate is reset in the same patch", async () => {
+    const item = await createTestItem({ climate: "HOT", priority: 0 });
+
+    const res = await PATCH(
+      requestWithBody("PATCH", {
+        categoryId: oilFilterCategory.id,
+        climate: "STANDARD",
+      }),
+      ctx(profile.id, item.id),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.data.item.climate).toBe("STANDARD");
+
+    await prisma.fitmentProfileItem.delete({ where: { id: item.id } });
+  });
+
   it("allows switching from a product back to spec-only by explicitly clearing productId", async () => {
     const testProduct = await prisma.product.findFirstOrThrow({ where: { status: "ACTIVE" } });
     const item = await createTestItem({ productId: testProduct.id, specNote: null });

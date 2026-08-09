@@ -21,20 +21,33 @@ export const fitmentProfileListQuerySchema = z.object({
 
 export type FitmentProfileListQuery = z.infer<typeof fitmentProfileListQuerySchema>;
 
+// Kept default-free because `.partial()` does not unwrap a ZodDefault: left as
+// `.default(...)` in the shared shape, a PATCH that omitted these would still
+// parse to the default and silently reset the column — editing an item's
+// adminNote would knock a HOT oil recommendation back to STANDARD and reorder
+// it to priority 0. Create opts into the defaults, update doesn't.
+//
+// The update route supplies the item's *current* climate when the body omits
+// it (see app/api/admin/fitment-profiles/[id]/items/[itemId]/route.ts), so
+// checkClimate below still runs against the state the item will actually be
+// in after the patch.
+const climateField = fitmentClimateSchema;
+const priorityField = z.number().int();
+
 const fitmentProfileItemShape = {
   categoryId: z.string().min(1, "categoryId is required"),
   // Looked up by the caller from the related Category — not a persisted field.
   // Passed alongside the payload solely so the climate/partType rule below can
   // run inside Zod instead of requiring a DB round-trip in the schema layer.
   categoryPartType: partTypeSchema,
-  climate: fitmentClimateSchema.default("STANDARD"),
+  climate: climateField.default("STANDARD"),
   // Nullable so a PATCH can explicitly clear the field (e.g. switching from a
   // matched product back to a spec-only recommendation); omitting the key on
   // PATCH leaves it untouched.
   productId: z.string().min(1).nullable().optional(),
   specNote: z.string().min(1).max(2000).nullable().optional(),
   specAttributes: z.record(z.string(), z.unknown()).nullable().optional(),
-  priority: z.number().int().default(0),
+  priority: priorityField.default(0),
   adminNote: z.string().max(2000).nullable().optional(),
 };
 
@@ -80,7 +93,11 @@ export const fitmentProfileItemCreateSchema = z
   });
 
 export const fitmentProfileItemUpdateSchema = z
-  .object(fitmentProfileItemShape)
+  .object({
+    ...fitmentProfileItemShape,
+    climate: climateField,
+    priority: priorityField,
+  })
   .partial()
   .superRefine(checkClimate);
 

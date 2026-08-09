@@ -61,6 +61,15 @@ describe("categoryCreateSchema", () => {
   });
 });
 
+describe("categoryCreateSchema defaults", () => {
+  it("fills in tags when they are omitted", () => {
+    const withoutTags: Partial<typeof validCategory> = { ...validCategory };
+    delete withoutTags.tags;
+
+    expect(categoryCreateSchema.parse(withoutTags).tags).toEqual([]);
+  });
+});
+
 describe("categoryUpdateSchema", () => {
   it("accepts a partial update", () => {
     const result = categoryUpdateSchema.safeParse({ nameEn: "Updated name" });
@@ -70,5 +79,22 @@ describe("categoryUpdateSchema", () => {
   it("rejects an invalid slug", () => {
     const result = categoryUpdateSchema.safeParse({ slug: "Not A Slug!" });
     expect(result.success).toBe(false);
+  });
+
+  // A default that survives `.partial()` turns "rename this category" into
+  // "rename it and clear its tags".
+  it("leaves omitted defaulted fields out of the parsed update", () => {
+    const result = categoryUpdateSchema.parse({ nameEn: "Updated name" });
+
+    expect(result).toEqual({ nameEn: "Updated name" });
+  });
+
+  it("still validates tags when they are supplied", () => {
+    expect(categoryUpdateSchema.safeParse({ tags: [""] }).success).toBe(false);
+    expect(categoryUpdateSchema.safeParse({ tags: ["oil"] }).success).toBe(true);
+  });
+
+  it("keeps an explicitly emptied tags array", () => {
+    expect(categoryUpdateSchema.parse({ tags: [] })).toEqual({ tags: [] });
   });
 });

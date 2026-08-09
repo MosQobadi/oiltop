@@ -11,13 +11,10 @@ import {
 
 type RouteContext = { params: Promise<{ id: string; itemId: string }> };
 
-function extractCategoryId(body: unknown): string | undefined {
-  if (
-    body &&
-    typeof body === "object" &&
-    typeof (body as Record<string, unknown>).categoryId === "string"
-  ) {
-    return (body as Record<string, unknown>).categoryId as string;
+function extractString(body: unknown, key: string): string | undefined {
+  if (body && typeof body === "object") {
+    const value = (body as Record<string, unknown>)[key];
+    if (typeof value === "string") return value;
   }
   return undefined;
 }
@@ -60,12 +57,17 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   // Re-derive the category's partType from whichever category applies after
   // this patch (a newly-supplied categoryId, or the existing one) so the
   // climate/partType rule is checked against the right category either way.
-  const categoryId = extractCategoryId(body) ?? existing.categoryId;
+  const categoryId = extractString(body, "categoryId") ?? existing.categoryId;
   const categoryPartType = await getCategoryPartType(categoryId);
 
   const parsed = fitmentProfileItemUpdateSchema.safeParse({
     ...(body && typeof body === "object" ? body : {}),
     categoryPartType,
+    // Same reasoning for climate: the schema no longer defaults it to STANDARD
+    // on a patch, so the item's stored value stands in when the body omits it.
+    // Without this a PATCH moving a HOT item to a FILTER category would slip
+    // past checkClimate and leave a HOT filter behind.
+    climate: extractString(body, "climate") ?? existing.climate,
   });
   if (!parsed.success) {
     return NextResponse.json(
