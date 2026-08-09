@@ -28,3 +28,29 @@ export function localeFromSetting(value: unknown): Locale {
   const normalized = value.toLowerCase();
   return isLocale(normalized) ? normalized : DEFAULT_LOCALE;
 }
+
+function isTranslated(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.trim() !== "";
+}
+
+// The single way to render a bilingual `xEn`/`xFa` column pair. Persian content
+// will lag English for a long time, so a blank (or whitespace-only) Fa value
+// falls back to En rather than rendering an empty label on the Persian tree.
+//
+// Two overloads so the caller's nullability carries through: a required pair
+// (`nameEn`/`nameFa`) always yields a string, while an optional pair
+// (`metaTitleEn`/`metaTitleFa`) yields `string | null` and has to be handled.
+export function pickLocale(locale: Locale, en: string, fa: string | null | undefined): string;
+export function pickLocale(
+  locale: Locale,
+  en: string | null | undefined,
+  fa: string | null | undefined,
+): string | null;
+export function pickLocale(
+  locale: Locale,
+  en: string | null | undefined,
+  fa: string | null | undefined,
+): string | null {
+  if (locale === "fa" && isTranslated(fa)) return fa;
+  return en ?? null;
+}

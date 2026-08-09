@@ -167,6 +167,29 @@ shape regardless of field type:
 
 ---
 
+## Storefront locale — `lib/i18n/`
+
+The admin panel is English/LTR only; the locale rules below apply to the
+storefront tree (`app/[locale]/`) and anything it renders.
+
+- **`pickLocale(locale, en, fa)`** is the only way a bilingual `xEn`/`xFa` pair
+  is rendered. It returns `fa` on the Persian tree when `fa` is non-empty
+  (whitespace-only counts as empty), and `en` otherwise — Persian content will
+  lag English for a while, and an untranslated field must show English, not a
+  blank. Never hand-roll `locale === "fa" ? nameFa : nameEn`; that skips the
+  fallback. `BilingualTextField` edits a pair, `pickLocale` renders one.
+- **`useLocale()`** (`@/lib/i18n/useLocale`) reads the current `[locale]`
+  segment from a Client Component. Server Components already get it from
+  `params` — use that instead of threading a prop down. Imported from its own
+  module, not the `lib/i18n` barrel, so `"use client"` doesn't leak into server
+  graphs.
+- `LOCALES` / `Locale` / `isLocale` / `localeDir` / `localeFromSetting` are the
+  routing primitives. Note the case split: the URL segment is lowercase
+  (`"en"`), the stored Settings value is uppercase (`"EN"`), and
+  `localeFromSetting` is the only bridge.
+
+---
+
 ## Everything else
 
 Tech stack, architectural principles, TypeScript/React/API/auth rules, styling,
