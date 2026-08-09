@@ -78,9 +78,116 @@ export type FitmentItemWithRelations = Prisma.FitmentProfileItemGetPayload<{
 
 export type FitmentCategorySummary = FitmentItemWithRelations["category"];
 
-export async function getCarModelsForBrand(carBrandId: string) {
+// The four selects below are what the public car-finder is allowed to see. They
+// are deliberately narrow: the wizard only needs enough to render a picker, and
+// keeping the projection here (rather than mapping in each route handler) means
+// a new column on any of these models isn't published by accident.
+const carBrandSelect = {
+  id: true,
+  slug: true,
+  nameEn: true,
+  nameFa: true,
+  logo: true,
+} satisfies Prisma.CarBrandSelect;
+
+const carModelSelect = {
+  id: true,
+  slug: true,
+  nameEn: true,
+  nameFa: true,
+  image: true,
+} satisfies Prisma.CarModelSelect;
+
+const carEngineSelect = {
+  id: true,
+  labelEn: true,
+  labelFa: true,
+  yearStart: true,
+  yearEnd: true,
+  fuelType: true,
+  displacementCc: true,
+  engineCode: true,
+} satisfies Prisma.CarEngineSelect;
+
+export type CarBrandOption = Prisma.CarBrandGetPayload<{
+  select: typeof carBrandSelect;
+}>;
+export type CarModelOption = Prisma.CarModelGetPayload<{
+  select: typeof carModelSelect;
+}>;
+export type CarEngineOption = Prisma.CarEngineGetPayload<{
+  select: typeof carEngineSelect;
+}>;
+
+// A car-finder breadcrumb: "Peugeot › 206 › 1.4L TU3 Petrol".
+export interface CarEngineContext {
+  carEngine: CarEngineOption;
+  carModel: CarModelOption;
+  carBrand: CarBrandOption;
+}
+
+export async function getActiveCarBrands(): Promise<CarBrandOption[]> {
+  return prisma.carBrand.findMany({
+    where: { status: "ACTIVE" },
+    select: carBrandSelect,
+    orderBy: { nameEn: "asc" },
+  });
+}
+
+export async function getActiveCarBrandBySlug(
+  slug: string,
+): Promise<CarBrandOption | null> {
+  return prisma.carBrand.findFirst({
+    where: { slug, status: "ACTIVE" },
+    select: carBrandSelect,
+  });
+}
+
+// Deactivating a car brand has to hide its models too, so every lookup below
+// walks up the chain and requires the whole brand → model → engine path to be
+// ACTIVE — not just the row being asked for.
+export async function getActiveCarModelById(
+  carModelId: string,
+): Promise<CarModelOption | null> {
+  return prisma.carModel.findFirst({
+    where: {
+      id: carModelId,
+      status: "ACTIVE",
+      carBrand: { status: "ACTIVE" },
+    },
+    select: carModelSelect,
+  });
+}
+
+export async function getActiveCarEngineContext(
+  carEngineId: string,
+): Promise<CarEngineContext | null> {
+  const carEngine = await prisma.carEngine.findFirst({
+    where: {
+      id: carEngineId,
+      status: "ACTIVE",
+      carModel: { status: "ACTIVE", carBrand: { status: "ACTIVE" } },
+    },
+    select: {
+      ...carEngineSelect,
+      carModel: {
+        select: { ...carModelSelect, carBrand: { select: carBrandSelect } },
+      },
+    },
+  });
+  if (!carEngine) return null;
+
+  const { carModel, ...engine } = carEngine;
+  const { carBrand, ...model } = carModel;
+  return { carEngine: engine, carModel: model, carBrand };
+}
+
+export async function getCarModelsForBrand(
+  carBrandId: string,
+): Promise<CarModelOption[]> {
   return prisma.carModel.findMany({
     where: { carBrandId, status: "ACTIVE" },
+    select: carModelSelect,
     orderBy: { nameEn: "asc" },
   });
 }
@@ -109,7 +216,10 @@ export async function getYearOptionsForModel(carModelId: string) {
   return expandYearRanges(engines);
 }
 
-export async function getEnginesForModelYear(carModelId: string, year: number) {
+export async function getEnginesForModelYear(
+  carModelId: string,
+  year: number,
+): Promise<CarEngineOption[]> {
   return prisma.carEngine.findMany({
     where: {
       carModelId,
@@ -117,6 +227,7 @@ export async function getEnginesForModelYear(carModelId: string, year: number) {
       yearStart: { lte: year },
       OR: [{ yearEnd: null }, { yearEnd: { gte: year } }],
     },
+    select: carEngineSelect,
     orderBy: [{ yearStart: "asc" }, { labelEn: "asc" }],
   });
 }
