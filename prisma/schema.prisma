@@ -106,9 +106,16 @@ enum PaymentStatus {
 // Users
 // ---------------------------------------------------------------------------
 
+// Admins and storefront customers share this table but identify differently:
+// an admin signs in with an email, a customer registers with a phone number and
+// may never give an email at all (Design Decision 7). Both columns are
+// therefore nullable-unique here, and the per-role rules — email required for
+// ADMIN, phone required for CUSTOMER — live in Zod
+// (`userIdentifiersSchema` in lib/validation/auth.ts), not in a DB constraint,
+// so the rule can change without a migration.
 model User {
   id           String     @id @default(cuid())
-  email        String     @unique
+  email        String?    @unique
   phone        String?    @unique
   passwordHash String
   firstName    String
@@ -218,6 +225,29 @@ model Product {
   orderItems          OrderItem[]
   fitmentProfileItems FitmentProfileItem[]
   stockNotifications  StockNotification[]
+  priceLogs           ProductPriceLog[]
+}
+
+// Append-only price history. A row means "from changedAt onward this product
+// cost this much" — written by the admin product update route only when price
+// or discountPercent actually changes, so an unrelated edit doesn't pollute the
+// history. Storefront checkout reads it to honour a cart price captured within
+// the last 24 hours instead of trusting a client-submitted price
+// (Design Decision 8); a product with no rows has never been re-priced, so its
+// current price applies. changedAt is this model's createdAt — the rows are
+// never updated, so a separate createdAt/updatedAt pair would only be noise.
+model ProductPriceLog {
+  id String @id @default(cuid())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  price           Decimal
+  discountPercent Int
+
+  changedAt DateTime @default(now())
+
+  @@index([productId, changedAt])
 }
 
 // Back-in-stock waiting list, created anonymously from the storefront PDP when

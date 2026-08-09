@@ -38,8 +38,35 @@ describe("productCreateSchema", () => {
   });
 });
 
+describe("productCreateSchema defaults", () => {
+  it("fills in discountPercent, tags, and oemPartNumbers", () => {
+    const result = productCreateSchema.parse({
+      ...validProduct,
+      discountPercent: undefined,
+    });
+
+    expect(result.discountPercent).toBe(0);
+    expect(result.tags).toEqual([]);
+    expect(result.oemPartNumbers).toEqual([]);
+  });
+});
+
 describe("productUpdateSchema", () => {
   it("accepts a partial update", () => {
     expect(productUpdateSchema.safeParse({ price: 30 }).success).toBe(true);
+  });
+
+  // A default that survives `.partial()` turns "rename this product" into
+  // "rename it and zero its discount and wipe its tags".
+  it("leaves omitted defaulted fields out of the parsed update", () => {
+    const result = productUpdateSchema.parse({ nameEn: "Renamed" });
+
+    expect(result).toEqual({ nameEn: "Renamed" });
+  });
+
+  it("still validates the defaulted fields when they are supplied", () => {
+    expect(
+      productUpdateSchema.safeParse({ discountPercent: 150 }).success,
+    ).toBe(false);
   });
 });

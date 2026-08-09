@@ -135,11 +135,38 @@ export async function updateProduct(id: string, input: ProductUpdateInput) {
     }
   }
 
-  const product = await prisma.product.update({
+  // Append-only price history (Design Decision 8) — storefront checkout reads
+  // it to honour a cart price captured in the last 24 hours. A row is written
+  // only when price or discountPercent actually moves, so editing a name or a
+  // tag leaves the history alone and every row still marks a real price change.
+  // Products get no row at creation: "no row at or before this timestamp" is
+  // already defined as "the current price applies".
+  const priceChanged =
+    input.price !== undefined && input.price !== Number(existing.price);
+  const discountChanged =
+    input.discountPercent !== undefined &&
+    input.discountPercent !== existing.discountPercent;
+
+  const updateProductOp = prisma.product.update({
     where: { id },
     data: input,
     include: productInclude,
   });
+
+  if (!priceChanged && !discountChanged) {
+    return toProductResponse(await updateProductOp);
+  }
+
+  const [product] = await prisma.$transaction([
+    updateProductOp,
+    prisma.productPriceLog.create({
+      data: {
+        productId: id,
+        price: input.price ?? existing.price,
+        discountPercent: input.discountPercent ?? existing.discountPercent,
+      },
+    }),
+  ]);
   return toProductResponse(product);
 }
 
@@ -178,8 +205,13 @@ export async function deleteProduct(id: string) {
     );
   }
 
+  // Price history and back-in-stock signups are meaningless without the
+  // product and nothing else references them, so they go with it rather than
+  // blocking the delete on a foreign key.
   await prisma.$transaction([
     prisma.inventory.deleteMany({ where: { productId: id } }),
+    prisma.productPriceLog.deleteMany({ where: { productId: id } }),
+    prisma.stockNotification.deleteMany({ where: { productId: id } }),
     prisma.product.delete({ where: { id } }),
   ]);
 }

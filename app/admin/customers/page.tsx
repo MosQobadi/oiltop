@@ -9,7 +9,9 @@ interface Customer {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  // A customer who registered on the storefront with a phone number only has
+  // no email (Design Decision 7).
+  email: string | null;
   phone: string | null;
   status: "ACTIVE" | "INACTIVE";
   orderCount: number;
@@ -79,7 +81,11 @@ export default function CustomersPage() {
       label: "Name",
       render: (row) => `${row.firstName} ${row.lastName}`,
     },
-    { key: "email", label: "Email" },
+    {
+      key: "email",
+      label: "Email",
+      render: (row) => row.email ?? "—",
+    },
     {
       key: "phone",
       label: "Phone",

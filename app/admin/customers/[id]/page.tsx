@@ -24,7 +24,9 @@ interface CustomerDetail {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  // Null for a storefront customer who registered with a phone number only
+  // (Design Decision 7).
+  email: string | null;
   phone: string | null;
   status: CustomerStatus;
   createdAt: string;
@@ -181,7 +183,7 @@ export default function CustomerDetailPage() {
             </span>
             <StatusPill value={STATUS_LABELS[customer.status]} />
           </div>
-          <span className="text-neutral-500">{customer.email}</span>
+          {customer.email && <span className="text-neutral-500">{customer.email}</span>}
           {customer.phone && <span className="text-neutral-500">{customer.phone}</span>}
           <span className="text-neutral-500">
             Customer since {new Date(customer.createdAt).toLocaleDateString()}

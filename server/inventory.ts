@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
+import { sendNotification } from "@/lib/notify";
 import { ProductNotFoundError } from "@/server/product";
 import type { InventoryAddStockInput, InventoryListQuery, InventoryStatus } from "@/lib/validation";
 
@@ -76,6 +77,51 @@ export async function listInventory(query: InventoryListQuery) {
   return { items: products.map(toInventoryResponse), total };
 }
 
+// Back-in-stock alerts (Design Decision 9). Rows are claimed with an atomic
+// updateMany *before* anything is sent, and only the rows this call flipped are
+// read back — so a concurrent restock or a repeated PATCH can never contact the
+// same subscriber twice. The trade-off is the opposite failure: if the provider
+// is down the alert is lost rather than duplicated, which is the right way
+// round for an unsolicited marketing-adjacent message.
+async function notifyRestockSubscribers(productId: string) {
+  const notifiedAt = new Date();
+  const { count } = await prisma.stockNotification.updateMany({
+    where: { productId, notifiedAt: null },
+    data: { notifiedAt },
+  });
+  if (count === 0) return;
+
+  const [product, claimed] = await Promise.all([
+    prisma.product.findUnique({
+      where: { id: productId },
+      select: { nameEn: true },
+    }),
+    prisma.stockNotification.findMany({
+      where: { productId, notifiedAt },
+      select: { contact: true },
+    }),
+  ]);
+
+  const productName = product?.nameEn ?? "A product you asked about";
+
+  await Promise.all(
+    claimed.map((subscriber) =>
+      sendNotification({
+        to: subscriber.contact,
+        subject: `${productName} is back in stock`,
+        body: `${productName} is available again at Top Oil.`,
+        // A failed send must not fail the admin's restock — the stock update
+        // is already committed by this point.
+      }).catch((error: unknown) => {
+        console.error(
+          `[notify] back-in-stock alert failed for product ${productId}`,
+          error,
+        );
+      }),
+    ),
+  );
+}
+
 export async function addInventoryStock(
   productId: string,
   input: InventoryAddStockInput,
@@ -92,6 +138,12 @@ export async function addInventoryStock(
       lastUpdatedAt: new Date(),
     },
   });
+
+  // Only the 0 -> >0 edge notifies: topping up an already-stocked product isn't
+  // news to anyone waiting.
+  if (existing.stock === 0 && inventory.stock > 0) {
+    await notifyRestockSubscribers(productId);
+  }
 
   return {
     productId,

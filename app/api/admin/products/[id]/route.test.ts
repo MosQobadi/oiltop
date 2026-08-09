@@ -89,6 +89,12 @@ afterAll(async () => {
   await prisma.inventory.deleteMany({
     where: { product: { sku: { startsWith: SKU_PREFIX } } },
   });
+  await prisma.productPriceLog.deleteMany({
+    where: { product: { sku: { startsWith: SKU_PREFIX } } },
+  });
+  await prisma.stockNotification.deleteMany({
+    where: { product: { sku: { startsWith: SKU_PREFIX } } },
+  });
   await prisma.product.deleteMany({ where: { sku: { startsWith: SKU_PREFIX } } });
 });
 
@@ -157,6 +163,88 @@ describe("PATCH /api/admin/products/:id", () => {
     expect(res.status).toBe(409);
     expect(json.error).toMatch(/already exists/i);
   });
+
+  // Price history (Design Decision 8) — storefront checkout reads these rows to
+  // honour a cart price captured in the last 24 hours, so a row must mean a
+  // real price change and nothing else.
+  it("logs a price change", async () => {
+    const product = await createTestProduct({ price: 1000, discountPercent: 0 });
+
+    const res = await PATCH(requestWithBody("PATCH", { price: 1200 }), ctx(product.id));
+    expect(res.status).toBe(200);
+
+    const logs = await prisma.productPriceLog.findMany({
+      where: { productId: product.id },
+    });
+    expect(logs).toHaveLength(1);
+    expect(Number(logs[0].price)).toBe(1200);
+    expect(logs[0].discountPercent).toBe(0);
+  });
+
+  it("logs a discount change, carrying the unchanged price", async () => {
+    const product = await createTestProduct({ price: 1000, discountPercent: 0 });
+
+    const res = await PATCH(
+      requestWithBody("PATCH", { discountPercent: 25 }),
+      ctx(product.id),
+    );
+    expect(res.status).toBe(200);
+
+    const logs = await prisma.productPriceLog.findMany({
+      where: { productId: product.id },
+    });
+    expect(logs).toHaveLength(1);
+    expect(Number(logs[0].price)).toBe(1000);
+    expect(logs[0].discountPercent).toBe(25);
+  });
+
+  it("writes nothing when the update doesn't touch price or discount", async () => {
+    const product = await createTestProduct({ price: 1000, discountPercent: 10 });
+
+    const res = await PATCH(
+      requestWithBody("PATCH", { nameEn: "Renamed, same price" }),
+      ctx(product.id),
+    );
+    expect(res.status).toBe(200);
+
+    const count = await prisma.productPriceLog.count({
+      where: { productId: product.id },
+    });
+    expect(count).toBe(0);
+  });
+
+  it("writes nothing when price and discount are resubmitted unchanged", async () => {
+    const product = await createTestProduct({ price: 1000, discountPercent: 10 });
+
+    const res = await PATCH(
+      requestWithBody("PATCH", { price: 1000, discountPercent: 10 }),
+      ctx(product.id),
+    );
+    expect(res.status).toBe(200);
+
+    const count = await prisma.productPriceLog.count({
+      where: { productId: product.id },
+    });
+    expect(count).toBe(0);
+  });
+
+  it("appends one row per real change", async () => {
+    const product = await createTestProduct({ price: 1000, discountPercent: 0 });
+
+    await PATCH(requestWithBody("PATCH", { price: 1100 }), ctx(product.id));
+    await PATCH(requestWithBody("PATCH", { price: 1100 }), ctx(product.id));
+    await PATCH(
+      requestWithBody("PATCH", { price: 1100, discountPercent: 5 }),
+      ctx(product.id),
+    );
+
+    const logs = await prisma.productPriceLog.findMany({
+      where: { productId: product.id },
+      orderBy: { changedAt: "asc" },
+    });
+    expect(logs).toHaveLength(2);
+    expect(logs.map((log) => log.discountPercent)).toEqual([0, 5]);
+  });
 });
 
 describe("DELETE /api/admin/products/:id", () => {
@@ -179,6 +267,26 @@ describe("DELETE /api/admin/products/:id", () => {
   it("returns 404 for an unknown id", async () => {
     const res = await DELETE(requestWithBody("DELETE"), ctx("does-not-exist"));
     expect(res.status).toBe(404);
+  });
+
+  it("takes price history and back-in-stock signups down with the product", async () => {
+    const product = await createTestProduct();
+    await prisma.productPriceLog.create({
+      data: { productId: product.id, price: 900, discountPercent: 0 },
+    });
+    await prisma.stockNotification.create({
+      data: { productId: product.id, contact: "waiting@example.com" },
+    });
+
+    const res = await DELETE(requestWithBody("DELETE"), ctx(product.id));
+    expect(res.status).toBe(200);
+
+    expect(
+      await prisma.productPriceLog.count({ where: { productId: product.id } }),
+    ).toBe(0);
+    expect(
+      await prisma.stockNotification.count({ where: { productId: product.id } }),
+    ).toBe(0);
   });
 
   it("deactivates instead of deleting when the product has order history", async () => {

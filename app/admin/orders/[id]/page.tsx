@@ -28,7 +28,9 @@ interface OrderDetail {
     id: string;
     firstName: string;
     lastName: string;
-    email: string;
+    // Null for a storefront customer who registered with a phone number only
+    // (Design Decision 7).
+    email: string | null;
     phone: string | null;
   };
   shippingAddress: string;
@@ -363,7 +365,9 @@ export default function OrderDetailPage() {
             <span className="font-medium text-neutral-900">
               {order.customer.firstName} {order.customer.lastName}
             </span>
-            <span className="text-neutral-500">{order.customer.email}</span>
+            {order.customer.email && (
+              <span className="text-neutral-500">{order.customer.email}</span>
+            )}
             {order.customer.phone && (
               <span className="text-neutral-500">{order.customer.phone}</span>
             )}

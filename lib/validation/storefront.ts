@@ -79,13 +79,54 @@ export type StockNotificationCreateInput = z.infer<
   typeof stockNotificationCreateSchema
 >;
 
-// --- Fitment inquiry (lead capture) ----------------------------------------
-
-// An untouched optional field in the storefront form posts as "" rather than
+// An untouched optional field in a storefront form posts as "" rather than
 // being omitted, and 400ing a customer over a field they deliberately skipped
-// is a dead end — so blank means "not provided" here.
+// is a dead end — so blank means "not provided" in the schemas below.
 const blankToUndefined = (value: unknown) =>
   typeof value === "string" && value.trim() === "" ? undefined : value;
+
+// --- Customer accounts -----------------------------------------------------
+
+// The storefront register form asks for a phone number and treats email as
+// optional — the customer-side half of the rule in `userIdentifiersSchema`
+// (lib/validation/auth.ts), stated directly here because the register route
+// only ever creates CUSTOMER accounts. `role` and `status` are deliberately
+// absent: the server sets both, a client can't ask for an admin account.
+export const storefrontRegisterSchema = z.object({
+  firstName: z
+    .string()
+    .trim()
+    .min(1, "firstName is required")
+    .max(100, "firstName must be 100 characters or fewer"),
+  lastName: z
+    .string()
+    .trim()
+    .min(1, "lastName is required")
+    .max(100, "lastName must be 100 characters or fewer"),
+  phone: z
+    .string()
+    .trim()
+    .min(6, "phone is required")
+    .max(30, "phone must be 30 characters or fewer")
+    .regex(PHONE_PATTERN, "phone must be a valid phone number"),
+  email: z.preprocess(
+    blankToUndefined,
+    z
+      .string()
+      .trim()
+      .email("email must be a valid email address")
+      .max(150)
+      .optional(),
+  ),
+  password: z
+    .string()
+    .min(8, "password must be at least 8 characters")
+    .max(100, "password must be 100 characters or fewer"),
+});
+
+export type StorefrontRegisterInput = z.infer<typeof storefrontRegisterSchema>;
+
+// --- Fitment inquiry (lead capture) ----------------------------------------
 
 // Deliberately leaner than the admin fitmentInquiryCreateSchema: a customer
 // hitting the "no recommendation for your car yet" fallback gives a name and a
