@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n";
+import { NUMBER_LOCALE, type Locale } from "@/lib/i18n";
 
 // Price formatting and discount maths for the storefront. Prices come out of
 // `lib/services/catalog.ts` as two plain numbers — `price` (the list price) and
@@ -8,7 +8,6 @@ import type { Locale } from "@/lib/i18n";
 // PriceDisplay, ProductCard and (later) the cart can't drift apart.
 
 // Currency is Toman everywhere; there is no multi-currency story to design for.
-const NUMBER_LOCALE: Record<Locale, string> = { en: "en-US", fa: "fa-IR" };
 const CURRENCY_LABEL: Record<Locale, string> = { en: "Toman", fa: "تومان" };
 
 // `fa-IR` gives Persian digits and the ٬ group separator for free — the same

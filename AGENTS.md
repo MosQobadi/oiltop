@@ -211,6 +211,29 @@ a Server Component can render them straight from its `params`.
   localized in the component because the shared schema's messages also serve the
   API and are English-only.
 
+### `components/storefront/fitment/`
+
+The car-finder. **`FitmentWizard`** takes `locale`, `mode` (`full` stepper /
+`compact` homepage widget) and an optional `onResolve`; `useFitmentWizard` holds
+the Brand → Model → Year → Engine cascade over the four
+`/api/storefront/cars/*` list routes so the component stays a rendering of four
+steps. Neither mode renders a heading — the page that mounts it owns its own
+copy.
+
+- **A resolved car goes in the URL, not a store.** Resolving pushes
+  `/{locale}/fitment?fit=<carEngineId>` (`withFitContext` in
+  `lib/storefront/fitment.ts`), which is what the results page, the PLP banner
+  and the PDP's "fits your car" line read (Design Decision 5) — so a customer's
+  car is shareable and survives a reload. The in-progress selections stay local
+  state: nobody links to a half-answered wizard.
+- **One matching engine skips the Engine step entirely** and resolves on the
+  year pick. The step is rendered (disabled) until the engine list loads,
+  because before a year is chosen there's no way to know whether it's needed.
+- Each step's options are stored under the input they were loaded for, so
+  changing the brand makes the model list read as empty rather than needing a
+  reset — that's what keeps the cascade out of effect bodies and the React
+  Compiler's `set-state-in-effect` rule satisfied.
+
 ### `lib/storefront/pricing.ts`
 
 Price formatting and discount maths, shared by the components above and by
@@ -238,6 +261,11 @@ storefront tree (`app/[locale]/`) and anything it renders.
   `params` — use that instead of threading a prop down. Imported from its own
   module, not the `lib/i18n` barrel, so `"use client"` doesn't leak into server
   graphs.
+- **`formatDigits(value, locale)`** renders a number that is a label rather than
+  a quantity — a model year, a step number — in the reader's digits with no
+  grouping. Grouping would print 2006 as "۲٬۰۰۶", which reads as a price;
+  `formatNumber` in `lib/storefront/pricing.ts` is the one that groups.
+  `NUMBER_LOCALE` (the BCP-47 tag per tree) backs both.
 - `LOCALES` / `Locale` / `isLocale` / `localeDir` / `localeFromSetting` are the
   routing primitives. Note the case split: the URL segment is lowercase
   (`"en"`), the stored Settings value is uppercase (`"EN"`), and

@@ -20,6 +20,22 @@ export function localeDir(locale: Locale): "ltr" | "rtl" {
   return locale === "fa" ? "rtl" : "ltr";
 }
 
+// The BCP-47 tag `Intl` needs for each tree. Lives here rather than next to any
+// one formatter because prices, years and dates all need the same answer —
+// `fa-IR` is what gives Persian digits everywhere numbers are rendered.
+export const NUMBER_LOCALE: Record<Locale, string> = { en: "en-US", fa: "fa-IR" };
+
+// The reader's digits with no grouping, for numbers that are labels rather than
+// quantities — a model year, a step number. Grouping would turn 2006 into
+// "۲٬۰۰۶" on the Persian tree, which reads as a price; `formatNumber` in
+// `lib/storefront/pricing` is the one that should group.
+export function formatDigits(value: number, locale: Locale): string {
+  return new Intl.NumberFormat(NUMBER_LOCALE[locale], {
+    useGrouping: false,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 // Settings stores the default locale uppercase ("EN" / "FA"); the URL uses
 // lowercase. Anything unrecognized (missing row, hand-edited value) falls back
 // to the default rather than 404-ing the site root.

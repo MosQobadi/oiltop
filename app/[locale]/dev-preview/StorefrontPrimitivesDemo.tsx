@@ -1,4 +1,5 @@
 import { Breadcrumbs } from "@/components/storefront/Breadcrumbs";
+import { FitmentWizard } from "@/components/storefront/fitment/FitmentWizard";
 import { PriceDisplay } from "@/components/storefront/PriceDisplay";
 import {
   ProductCard,
@@ -115,6 +116,21 @@ export function StorefrontPrimitivesDemo({ locale }: { locale: Locale }) {
               <p className="text-[11px] text-neutral-400">{caption}</p>
             </div>
           ))}
+        </div>
+      </Section>
+
+      {/* Both wizards run against the real /api/storefront/cars/* routes, so
+          resolving one navigates to /{locale}/fitment?fit=… — a 404 until the
+          results page (Task 3.2) exists. */}
+      <Section title="FitmentWizard · full">
+        <div className="max-w-[560px]">
+          <FitmentWizard locale={locale} />
+        </div>
+      </Section>
+
+      <Section title="FitmentWizard · compact (homepage widget)">
+        <div className="max-w-[720px]">
+          <FitmentWizard locale={locale} mode="compact" />
         </div>
       </Section>
 

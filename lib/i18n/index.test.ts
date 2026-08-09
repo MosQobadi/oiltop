@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_LOCALE,
+  formatDigits,
   isLocale,
   localeDir,
   localeFromSetting,
@@ -105,5 +106,19 @@ describe("pickLocale", () => {
     expect(pickLocale("en", null, null)).toBeNull();
     expect(pickLocale("fa", undefined, null)).toBeNull();
     expect(pickLocale("fa", null, "عنوان")).toBe("عنوان");
+  });
+});
+
+describe("formatDigits", () => {
+  it("leaves an English number alone", () => {
+    expect(formatDigits(2006, "en")).toBe("2006");
+    expect(formatDigits(3, "en")).toBe("3");
+  });
+
+  // The bug this exists to prevent: Intl's default grouping turns a model year
+  // into something that reads like a price.
+  it("uses Persian digits and never a thousands separator", () => {
+    expect(formatDigits(2006, "fa")).toBe("۲۰۰۶");
+    expect(formatDigits(3, "fa")).toBe("۳");
   });
 });

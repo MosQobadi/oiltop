@@ -128,4 +128,37 @@ test.describe.serial("fitment: car brand → model → engine → fitment profil
       airFilter.getByText("No catalog match yet — needs a standard panel air filter."),
     ).toBeVisible();
   });
+
+  test("the storefront car-finder wizard walks the same car and auto-skips the Engine step", async ({
+    page,
+  }) => {
+    // Same brand → model → year → engine path as the admin preview above, but
+    // through the public /api/storefront/cars/* routes. The wizard has no
+    // customer-facing home until the homepage (Task 3.4) and the results page
+    // (Task 3.2) land, so it's exercised where it currently renders.
+    const brandsLoaded = page.waitForResponse((res) =>
+      res.url().includes("/api/storefront/cars/brands"),
+    );
+    await page.goto("/en/dev-preview");
+    await brandsLoaded;
+
+    const wizard = page.locator('[data-testid="fitment-wizard"][data-mode="full"]');
+
+    // Each step's options only exist once the fetch its predecessor triggered
+    // has resolved, so attach the wait before the selection that triggers it.
+    const modelsLoaded = page.waitForResponse((res) => res.url().includes("/models"));
+    await wizard.getByLabel("Car brand", { exact: true }).selectOption({ label: brandName });
+    await modelsLoaded;
+
+    const yearsLoaded = page.waitForResponse((res) => res.url().includes("/years"));
+    await wizard.getByLabel("Model", { exact: true }).selectOption({ label: modelName });
+    await yearsLoaded;
+
+    // This model has exactly one engine, so picking the year is the last thing
+    // the customer does: the Engine step is skipped and the wizard resolves
+    // straight to the results URL. `/en/fitment` itself is Task 3.2's work —
+    // what's asserted here is that the car context arrives there.
+    await wizard.getByLabel("Year", { exact: true }).selectOption(yearStart);
+    await page.waitForURL(/\/en\/fitment\?fit=.+/);
+  });
 });
