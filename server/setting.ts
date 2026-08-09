@@ -17,6 +17,19 @@ export interface SettingsData {
   payment: PaymentSettingsInput;
 }
 
+// The subset of settings the public storefront is allowed to read. Deliberately
+// a flat, hand-written shape rather than a filtered `SettingsData`: anything new
+// the admin Settings screen gains stays private until it is added here on
+// purpose. Shipping and payment never belong in it.
+export interface PublicSettings {
+  storeName: string;
+  supportEmail: string;
+  supportPhone: string;
+  socialLinks: Record<string, string> | null;
+  defaultLocale: LocalizationSettingsInput["defaultLocale"];
+  supportedLocales: LocalizationSettingsInput["supportedLocales"];
+}
+
 const DEFAULTS: SettingsData = {
   general: {
     storeName: "",
@@ -92,6 +105,19 @@ export async function getAllSettings(): Promise<SettingsData> {
         DEFAULTS.payment.enabledMethods,
       ),
     },
+  };
+}
+
+export async function getPublicSettings(): Promise<PublicSettings> {
+  const { general, localization } = await getAllSettings();
+
+  return {
+    storeName: general.storeName,
+    supportEmail: general.supportEmail,
+    supportPhone: general.supportPhone,
+    socialLinks: general.socialLinks,
+    defaultLocale: localization.defaultLocale,
+    supportedLocales: localization.supportedLocales,
   };
 }
 

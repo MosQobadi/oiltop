@@ -70,6 +70,14 @@ schema, guest checkout still needs *a* `User` row created behind the scenes (rol
 password) unless you want to relax that FK. Flag this to the project owner before Phase 10 — decide
 now whether "guest" means "silently create an account" or "make `customerId` nullable."
 
+> **Resolved (Task 0.5): make `customerId` nullable.** `Order.customerId` becomes optional and `Order`
+> gains `guestName`, `guestPhone`, `guestEmail` — a guest order carries its own contact details rather
+> than pointing at a stub account. Creating a `User` per guest order was rejected: it needs a junk
+> `passwordHash` that can never log in, fills the admin Customers list with unreachable rows, and
+> collides with the phone-unique constraint from Decision 7 as soon as a guest orders twice. The
+> schema change and the null-customer handling it forces on the admin Orders list/detail (customer
+> name, customer link) are **Phase 10's** work, not Task 0.6's — Task 0.6 stays as written.
+
 **7. Storefront login accepts phone or email — both are real credentials, not just a UI choice.**
 The `Top Oil.dc.html` prototype's login/register forms only show phone + password, but the decision
 (confirmed) is to support both: `User.phone` becomes required + unique for CUSTOMER-role accounts

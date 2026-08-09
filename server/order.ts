@@ -6,6 +6,17 @@ import type {
   OrderStatusUpdateInput,
 } from "@/lib/validation";
 
+// Storefront Design Decision 6 — RESOLVED (2026-08-09, Storefront Task 0.5):
+// guest checkout stores a guest order, not a silently-created account.
+// `Order.customerId` becomes nullable and `Order` gains guestName/guestPhone/
+// guestEmail; a guest order carries contact details on the row itself.
+// Rejected alternative: creating a CUSTOMER `User` per guest order — it would
+// need a junk `passwordHash` that can never log in, litter the admin Customers
+// list with unreachable rows, and collide on the phone-unique constraint that
+// Design Decision 7 / Task 0.6 adds the moment a guest orders twice.
+// Not yet migrated: the schema change and the null-customer handling below
+// (see `toOrderListItem`, which today assumes `order.customer` is present)
+// belong to Phase 10, which owns storefront checkout.
 export class OrderNotFoundError extends Error {}
 export class InvalidOrderTransitionError extends Error {}
 
