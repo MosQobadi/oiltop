@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Vazirmatn } from "next/font/google";
 import { notFound } from "next/navigation";
-import { isLocale, LOCALES, localeDir } from "@/lib/i18n";
+import { StorefrontShell } from "@/components/storefront/StorefrontShell";
+import { isLocale, localeDir } from "@/lib/i18n";
+import { getPublicSettings } from "@/server/setting";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -18,11 +20,14 @@ export const metadata: Metadata = {
   title: "Top Oil",
 };
 
-// `/en` and `/fa` are the only two trees; prerendering both keeps storefront
-// pages static by default (no `headers()` read in the root layout).
-export function generateStaticParams() {
-  return LOCALES.map((locale) => ({ locale }));
-}
+// The shell's header and footer are Settings-driven, which puts a database read
+// in every storefront route. That rules out `generateStaticParams`: prerendering
+// `/en` and `/fa` would run it at build time, where there is no database (see
+// the builder stage in Dockerfile) and where a store name captured once would
+// then be frozen into the HTML. Rendering on first request and revalidating
+// instead keeps the pages cached without either problem — an admin's Settings
+// edit shows up within the window below rather than at the next deploy.
+export const revalidate = 300;
 
 // This is a *root* layout, not a nested one — it owns `<html>` so `lang`/`dir`
 // can vary per locale, which is why the admin tree lives under its own root
@@ -45,9 +50,19 @@ export default async function LocaleLayout({
   // subset is dead weight on the English tree, and vice versa.
   const font = locale === "fa" ? vazirmatn : geistSans;
 
+  // Read once here and passed down, rather than each of the header and footer
+  // fetching for itself. This is the same `getPublicSettings()` that backs
+  // GET /api/storefront/settings, so the shell and the public route can never
+  // disagree about what a customer is allowed to see.
+  const settings = await getPublicSettings();
+
   return (
     <html lang={locale} dir={localeDir(locale)} className={`${font.variable} h-full antialiased`}>
-      <body className={`${font.className} flex min-h-full flex-col`}>{children}</body>
+      <body className={`${font.className} flex min-h-full flex-col`}>
+        <StorefrontShell locale={locale} settings={settings}>
+          {children}
+        </StorefrontShell>
+      </body>
     </html>
   );
 }
