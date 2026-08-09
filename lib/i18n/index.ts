@@ -29,6 +29,23 @@ export function localeFromSetting(value: unknown): Locale {
   return isLocale(normalized) ? normalized : DEFAULT_LOCALE;
 }
 
+// Swaps the `[locale]` segment of a pathname, keeping the rest of the path
+// intact — `/en/products/x` → `/fa/products/x`, not `/fa`. Switching language
+// must never lose the page the customer was on.
+//
+// A path with no locale segment (a client component rendered outside the
+// storefront tree, same case `useLocale` guards) gets the locale prefixed
+// rather than overwriting its first segment.
+export function switchLocalePath(pathname: string, locale: Locale): string {
+  // pathname always starts with "/", so segments[1] is the first real segment.
+  const segments = pathname.split("/");
+  if (isLocale(segments[1])) {
+    segments[1] = locale;
+    return segments.join("/");
+  }
+  return pathname === "/" ? `/${locale}` : `/${locale}${pathname}`;
+}
+
 function isTranslated(value: string | null | undefined): value is string {
   return typeof value === "string" && value.trim() !== "";
 }

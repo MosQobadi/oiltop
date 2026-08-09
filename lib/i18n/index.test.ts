@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_LOCALE, isLocale, localeDir, localeFromSetting, pickLocale } from ".";
+import {
+  DEFAULT_LOCALE,
+  isLocale,
+  localeDir,
+  localeFromSetting,
+  pickLocale,
+  switchLocalePath,
+} from ".";
 
 describe("isLocale", () => {
   it("accepts the two supported locales", () => {
@@ -34,6 +41,36 @@ describe("localeFromSetting", () => {
     expect(localeFromSetting("")).toBe(DEFAULT_LOCALE);
     expect(localeFromSetting(undefined)).toBe(DEFAULT_LOCALE);
     expect(localeFromSetting(42)).toBe(DEFAULT_LOCALE);
+  });
+});
+
+describe("switchLocalePath", () => {
+  // The whole point of the switcher: you stay on the page you were reading.
+  it("swaps the locale segment and keeps the rest of the path", () => {
+    expect(switchLocalePath("/en/products/castrol-edge-5w30", "fa")).toBe(
+      "/fa/products/castrol-edge-5w30",
+    );
+    expect(switchLocalePath("/fa/categories/engine-oil", "en")).toBe("/en/categories/engine-oil");
+  });
+
+  it("handles a bare locale root", () => {
+    expect(switchLocalePath("/en", "fa")).toBe("/fa");
+    expect(switchLocalePath("/fa", "en")).toBe("/en");
+  });
+
+  it("is a no-op when the target locale is already active", () => {
+    expect(switchLocalePath("/en/cart", "en")).toBe("/en/cart");
+  });
+
+  it("preserves a trailing slash rather than rewriting the path shape", () => {
+    expect(switchLocalePath("/en/cart/", "fa")).toBe("/fa/cart/");
+  });
+
+  it("prefixes the locale when the path has no locale segment", () => {
+    expect(switchLocalePath("/", "fa")).toBe("/fa");
+    expect(switchLocalePath("/products/x", "fa")).toBe("/fa/products/x");
+    // "english" starts with "en" but isn't the segment — must not be truncated.
+    expect(switchLocalePath("/english/x", "fa")).toBe("/fa/english/x");
   });
 });
 
