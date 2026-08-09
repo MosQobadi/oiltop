@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Vazirmatn } from "next/font/google";
-import "./globals.css";
+import "../globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,7 +23,10 @@ export const metadata: Metadata = {
   description: "Admin panel for Top Oil",
 };
 
-export default function RootLayout({
+// Root layout for the admin tree only. The storefront has its own root layout
+// under `app/[locale]/` because `lang`/`dir` vary per locale there; the admin
+// UI stays English/LTR regardless.
+export default function AdminRootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;

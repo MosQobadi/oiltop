@@ -62,9 +62,13 @@ Use this structure unless there's a strong reason not to. No `src/` prefix.
 
 ```
 app/
-  (auth)/login/
-  admin/                # protected route group — every admin screen lives here
-  api/admin/             # Route Handlers, one folder per resource
+  (admin)/              # root layout for the admin tree (English/LTR, always)
+    (auth)/login/
+    admin/              # protected route group — every admin screen lives here
+    dev-preview/
+  [locale]/             # root layout for the storefront (lang/dir per locale)
+  api/admin/            # Route Handlers, one folder per resource
+  api/storefront/       # unauthenticated public counterparts
 components/
   ui/                   # shared primitives (buttons, inputs, pills)
   admin/                 # composed admin components (DataTable, Form fields, AdminShell)
@@ -75,6 +79,11 @@ prisma/
   schema.prisma
   prisma.config.ts
 ```
+
+There is deliberately **no `app/layout.tsx`**. `(admin)/layout.tsx` and `[locale]/layout.tsx` are
+two independent root layouts, each rendering its own `<html>` — that's the only way the storefront
+can set `lang`/`dir` per locale while the admin stays English/LTR. Don't reintroduce a shared root
+layout; it would make the nested `<html>` invalid.
 
 Do not create unnecessary layers. If a task doesn't need a new top-level folder, don't add one.
 

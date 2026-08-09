@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { SignJWT } from "jose";
 import { NextRequest } from "next/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import proxy from "./proxy";
 
 function adminRequest(cookieValue?: string) {
@@ -65,5 +65,58 @@ describe("proxy (route protection for /admin/*)", () => {
 
     expect(res.headers.get("location")).toBeNull();
     expect(res.status).toBe(200);
+  });
+});
+
+function rootRequest() {
+  return new NextRequest("http://localhost/");
+}
+
+function mockSettings(defaultLocale: unknown) {
+  return vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(JSON.stringify({ success: true, data: { settings: { defaultLocale } } }), {
+      headers: { "content-type": "application/json" },
+    }),
+  );
+}
+
+describe("proxy (locale redirect for /)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("redirects to the default locale from Settings", async () => {
+    mockSettings("FA");
+
+    const res = await proxy(rootRequest());
+
+    expect(res.status).toBe(307);
+    expect(new URL(res.headers.get("location")!).pathname).toBe("/fa");
+  });
+
+  it("asks the public settings route, not an admin one", async () => {
+    const fetchSpy = mockSettings("EN");
+
+    await proxy(rootRequest());
+
+    const requestedUrl = new URL(String(fetchSpy.mock.calls[0]![0]));
+    expect(requestedUrl.pathname).toBe("/api/storefront/settings");
+  });
+
+  it("falls back to en when the settings fetch fails", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("connection refused"));
+
+    const res = await proxy(rootRequest());
+
+    expect(res.status).toBe(307);
+    expect(new URL(res.headers.get("location")!).pathname).toBe("/en");
+  });
+
+  it("falls back to en when settings return an unusable locale", async () => {
+    mockSettings("DE");
+
+    const res = await proxy(rootRequest());
+
+    expect(new URL(res.headers.get("location")!).pathname).toBe("/en");
   });
 });
