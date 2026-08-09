@@ -165,6 +165,61 @@ shape regardless of field type:
   and optional `saveLabel`/`cancelLabel`, renders Save (primary) + Cancel
   (outline).
 
+### `components/storefront/`
+
+The customer-facing counterpart to `components/admin/`: the shell (`StorefrontShell`,
+`StorefrontHeader`, `StorefrontFooter`, `LocaleSwitcher`, `CartLink`,
+`MobileNavDrawer`) plus the catalog primitives below, which the PLP, the category
+landing pages, the PDP, the fitment results and the cart all build on. Don't
+hand-roll a product tile, a price line or a stock chip — every screen that shows
+a product shows the same ones. Demo usage in both language trees:
+`app/[locale]/dev-preview/` (development only — the page 404s in production).
+
+Every one of them takes `locale` explicitly rather than calling `useLocale()`, so
+a Server Component can render them straight from its `params`.
+
+- **`ProductCard`** — `locale`, `product`, and four optional props: `href`
+  (defaults to `/{locale}/products/{slug}`), `fitsRibbon` (the "fits your car"
+  slot, rendered over the image's trailing corner), `onAddToCart`, and
+  `imageSizes`. `product` is a plain `ProductCardProduct` shape
+  (`id`/`slug`/`nameEn`/`nameFa`/`image`/`price`/`finalPrice`/`stockStatus`/`brand?`),
+  structurally satisfied by the API's `StorefrontProductCard` but not tied to it,
+  so fitment results and rails can feed it too. Both names are rendered — the
+  reader's first, the other language's underneath — because shoppers search in
+  both scripts.
+  - **Add to cart** writes to the `lib/store/cart` Zustand store by default,
+    capturing `finalPrice` as the displayed price. That default is what keeps the
+    card renderable from a Server Component; pass `onAddToCart` to intercept it.
+  - **Out of stock** swaps the CTA for the ghost "Notify me" button and discloses
+    `NotifyMeForm` inline (Design Decision 9) instead of disabling the card.
+  - **`ProductCardSkeleton`** (same module) is the loading state: identical box
+    sizes, neutral blocks, deliberately no pulse animation.
+- **`PriceDisplay`** — `locale`, `price` (list), `finalPrice` (charged),
+  `size` (`sm` card / `lg` PDP). The only place that decides whether a product
+  reads as discounted; never compare the two numbers at a call site.
+- **`StockBadge`** — `locale`, `status`, `variant` (`inline` dot+label on a card,
+  `pill` chip on the PDP). Three states and no number: the API sends
+  `OUT_OF_STOCK`, `LOW_STOCK`, or `null` for "plenty", and the exact count never
+  leaves the admin panel.
+- **`Breadcrumbs`** — `locale` and `items: { label, href? }[]`. Labels arrive
+  already localized; the last crumb renders as the current page, never a link,
+  and the chevron flips with the locale.
+- **`NotifyMeForm`** — `locale`, `productRef` (id or slug), `autoFocus`. One
+  field, React Hook Form + `stockNotificationCreateSchema`, POSTing to
+  `/api/storefront/products/:ref/notify-me`. It owns its own request rather than
+  taking an `onSubmit` — there is one endpoint and one shape. Validation copy is
+  localized in the component because the shared schema's messages also serve the
+  API and are English-only.
+
+### `lib/storefront/pricing.ts`
+
+Price formatting and discount maths, shared by the components above and by
+anything else that prints money. `formatNumber`/`formatToman` render Persian
+digits and the ٬ separator on the `fa` tree via `Intl` (currency is Toman
+everywhere). `getDiscountPercent` returns a whole percent and is the single test
+for "is this discounted" — a discount that rounds to 0% is not one, which is what
+keeps the strikethrough and the "−15%" badge from disagreeing.
+
 ---
 
 ## Storefront locale — `lib/i18n/`
