@@ -1,9 +1,10 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { NotifyMeForm } from "../NotifyMeForm";
 import { CART_PATH, navHref } from "../nav-items";
+import { QuantityStepper } from "../QuantityStepper";
 import { pickLocale, type Locale } from "@/lib/i18n";
 import { MAX_CART_QUANTITY } from "@/lib/storefront/cart";
 import { useCartStore, type NewCartItem } from "@/lib/store/cart";
@@ -25,19 +26,12 @@ export interface AddToCartControlProps {
   className?: string;
 }
 
-// The PDP knows a product is in stock, not by how much — the cart is where a
-// line meets the live figure (useCartLines), so the only cap this screen can
-// apply is the store's own per-line ceiling.
-const STEPPER_BUTTON_CLASS =
-  "focus-visible:ring-accent inline-flex size-11 shrink-0 items-center justify-center rounded-[9px] text-[17px] leading-none text-neutral-600 transition-colors hover:bg-neutral-100 focus-visible:ring-2 focus-visible:outline-none disabled:text-neutral-300 disabled:hover:bg-transparent";
-
 export function AddToCartControl({
   locale,
   product,
   outOfStock,
   className = "",
 }: AddToCartControlProps) {
-  const quantityId = useId();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const addItem = useCartStore((state) => state.addItem);
@@ -65,53 +59,22 @@ export function AddToCartControl({
   // Any change to the quantity retires the confirmation: it named an amount
   // that is no longer the one the button would add.
   const changeQuantity = (next: number) => {
-    setQuantity(Math.min(Math.max(next, 1), MAX_CART_QUANTITY));
+    setQuantity(next);
     setAdded(false);
   };
 
   return (
     <div className={className}>
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1 rounded-[11px] border border-neutral-200 bg-white p-1">
-          <button
-            type="button"
-            onClick={() => changeQuantity(quantity - 1)}
-            disabled={quantity <= 1}
-            aria-label={pickLocale(locale, "Decrease quantity", "کاهش تعداد")}
-            className={STEPPER_BUTTON_CLASS}
-          >
-            <span aria-hidden="true">−</span>
-          </button>
-
-          {/* A real number input, not a label around two buttons: entering "12"
-              beats twelve taps, and it's what a keyboard user expects here. */}
-          <label htmlFor={quantityId} className="sr-only">
-            {pickLocale(locale, "Quantity", "تعداد")}
-          </label>
-          <input
-            id={quantityId}
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={MAX_CART_QUANTITY}
-            value={quantity}
-            onChange={(event) => {
-              const next = Number.parseInt(event.target.value, 10);
-              changeQuantity(Number.isNaN(next) ? 1 : next);
-            }}
-            className="focus-visible:ring-accent w-12 [appearance:textfield] rounded-[7px] border-0 bg-transparent py-2 text-center text-[14px] font-medium text-neutral-900 focus-visible:ring-2 focus-visible:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-          />
-
-          <button
-            type="button"
-            onClick={() => changeQuantity(quantity + 1)}
-            disabled={quantity >= MAX_CART_QUANTITY}
-            aria-label={pickLocale(locale, "Increase quantity", "افزایش تعداد")}
-            className={STEPPER_BUTTON_CLASS}
-          >
-            <span aria-hidden="true">+</span>
-          </button>
-        </div>
+        {/* The PDP knows a product is in stock, not by how much — the cart is
+            where a line meets the live figure (useCartLines), so the only cap
+            this screen can apply is the store's own per-line ceiling. */}
+        <QuantityStepper
+          locale={locale}
+          value={quantity}
+          onChange={changeQuantity}
+          max={MAX_CART_QUANTITY}
+        />
 
         <button
           type="button"

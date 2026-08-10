@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCartLines, cartHasBlockingIssue, pendingCartLine } from "./cart";
+import { buildCartLines, cartBlockingReason, cartHasBlockingIssue, pendingCartLine } from "./cart";
 import type { StorefrontCartProduct } from "@/lib/services/catalog";
 import type { CartItem } from "@/lib/store/cart";
 
@@ -131,5 +131,43 @@ describe("cartHasBlockingIssue", () => {
   it("is false for a healthy cart and for an empty one", () => {
     expect(cartHasBlockingIssue(buildCartLines([item()], [live()]))).toBe(false);
     expect(cartHasBlockingIssue([])).toBe(false);
+  });
+});
+
+describe("cartBlockingReason", () => {
+  it("names the reason so the summary can say it in one line", () => {
+    expect(cartBlockingReason(buildCartLines([item()], []))).toBe("unavailable");
+    expect(
+      cartBlockingReason(
+        buildCartLines([item()], [live({ stockStatus: "OUT_OF_STOCK", maxQuantity: 0 })]),
+      ),
+    ).toBe("outOfStock");
+    expect(
+      cartBlockingReason(buildCartLines([item({ quantity: 9 })], [live({ maxQuantity: 4 })])),
+    ).toBe("exceedsStock");
+  });
+
+  it("reports the most final problem first when a cart has several", () => {
+    const lines = buildCartLines(
+      [
+        item({ productId: "prod_3", quantity: 9 }),
+        item({ productId: "prod_2" }),
+        item({ productId: "prod_1" }),
+      ],
+      [
+        live({ productId: "prod_3", maxQuantity: 4 }),
+        live({ productId: "prod_2", stockStatus: "OUT_OF_STOCK", maxQuantity: 0 }),
+      ],
+    );
+
+    expect(cartBlockingReason(lines)).toBe("unavailable");
+  });
+
+  it("is null for a healthy cart, a re-priced one, and an empty one", () => {
+    expect(cartBlockingReason(buildCartLines([item()], [live()]))).toBeNull();
+    expect(
+      cartBlockingReason(buildCartLines([item()], [live({ finalPrice: 5_500_000 })])),
+    ).toBeNull();
+    expect(cartBlockingReason([])).toBeNull();
   });
 });

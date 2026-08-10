@@ -32,6 +32,11 @@ export const storefrontNavItems: StorefrontNavItem[] = [
 
 export const CART_PATH = "/cart";
 
+// Where the cart's CTA hands off. The screen itself is Task 9.1 — the path is
+// named here now so the cart has one place to point at and Phase 9 doesn't have
+// to go looking for a hardcoded string.
+export const CHECKOUT_PATH = "/checkout";
+
 export function navHref(locale: Locale, path: string): string {
   return `/${locale}${path}`;
 }

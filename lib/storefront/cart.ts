@@ -78,9 +78,25 @@ export function buildCartLines(items: CartItem[], products: StorefrontCartProduc
   });
 }
 
+/** Why checkout is refused — one reason, in the order they're worth saying. */
+export type CartBlockingReason = "unavailable" | "outOfStock" | "exceedsStock";
+
 // What stops "Proceed to checkout" (Task 6.2). A changed price deliberately
 // isn't in here: per Design Decision 8 the server re-resolves every price at
 // checkout anyway, so the cart only has to mention it, not block on it.
+//
+// One reason rather than all of them, because the summary has one line to say
+// it in and each line already carries its own warning. The order is by how
+// final the problem is: an unavailable product can only be removed, an
+// out-of-stock one may come back, and an over-stock quantity is a number the
+// customer can just lower.
+export function cartBlockingReason(lines: CartLine[]): CartBlockingReason | null {
+  if (lines.some((line) => line.unavailable)) return "unavailable";
+  if (lines.some((line) => line.outOfStock)) return "outOfStock";
+  if (lines.some((line) => line.exceedsStock)) return "exceedsStock";
+  return null;
+}
+
 export function cartHasBlockingIssue(lines: CartLine[]): boolean {
-  return lines.some((line) => line.unavailable || line.outOfStock || line.exceedsStock);
+  return cartBlockingReason(lines) !== null;
 }
