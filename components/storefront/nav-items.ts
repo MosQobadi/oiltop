@@ -24,6 +24,12 @@ export const PRODUCTS_PATH = "/products";
 // a place for the category's own copy and SEO pair to live.
 export const CATEGORIES_PATH = "/categories";
 
+// The car content pages — `/cars/<brandSlug>` and `/cars/<brandSlug>/<modelSlug>`.
+// Named here ahead of the screens themselves (Task 10.3) because the sitemap
+// already has to emit those URLs, and one definition beats two string literals
+// drifting apart.
+export const CARS_PATH = "/cars";
+
 export const storefrontNavItems: StorefrontNavItem[] = [
   { key: "home", labelEn: "Home", labelFa: "خانه", path: "" },
   { key: "categories", labelEn: "Categories", labelFa: "دسته‌بندی‌ها", path: PRODUCTS_PATH },

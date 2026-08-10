@@ -118,6 +118,15 @@ export async function getPublicSettings(): Promise<PublicSettings> {
   };
 }
 
+// The Settings SEO group is admin-only and stays out of `PublicSettings`, so
+// `app/sitemap.ts` and `app/robots.ts` read the toggle through here rather than
+// through GET /api/storefront/settings — they render on the server and would
+// only be fetching this app over HTTP to reach the same row.
+export async function isSitemapEnabled(): Promise<boolean> {
+  const { seo } = await getAllSettings();
+  return seo.sitemapEnabled;
+}
+
 export async function updateSettings(patch: SettingsPatchInput): Promise<SettingsData> {
   await prisma.$transaction(
     Object.entries(patch).map(([key, value]) =>
