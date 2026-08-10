@@ -32,10 +32,12 @@ export const storefrontNavItems: StorefrontNavItem[] = [
 
 export const CART_PATH = "/cart";
 
-// Where the cart's CTA hands off. The screen itself is Task 9.1 — the path is
-// named here now so the cart has one place to point at and Phase 9 doesn't have
-// to go looking for a hardcoded string.
+// Where the cart's CTA hands off, and where a placed order lands. The
+// confirmation is a child route rather than a `?placed=` on checkout so the two
+// screens are two components with two jobs — and so a reload of the receipt
+// can't re-enter the form.
 export const CHECKOUT_PATH = "/checkout";
+export const CHECKOUT_CONFIRMATION_PATH = `${CHECKOUT_PATH}/confirmation`;
 
 // The `app/[locale]/(account)/*` screens. The group's parentheses don't appear
 // in a URL, so `/en/login` and `/en/orders` are the real paths — named here for

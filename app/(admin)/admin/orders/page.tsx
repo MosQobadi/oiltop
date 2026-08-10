@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Label, TextField } from "@heroui/react";
 import { DataTable, StatusPill, type DataTableColumn } from "@/components/admin/DataTable";
+import { formatOrderNumber } from "@/lib/orders";
 
 interface Order {
   id: string;
@@ -92,7 +93,7 @@ export default function OrdersPage() {
       setOrders(
         result.data.items.map((order: Omit<Order, "orderNumber">) => ({
           ...order,
-          orderNumber: `#${order.id.slice(-8).toUpperCase()}`,
+          orderNumber: formatOrderNumber(order.id),
         })),
       );
       setTotal(result.data.total);

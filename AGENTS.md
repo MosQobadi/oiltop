@@ -210,6 +210,13 @@ a Server Component can render them straight from its `params`.
   taking an `onSubmit` — there is one endpoint and one shape. Validation copy is
   localized in the component because the shared schema's messages also serve the
   API and are English-only.
+- **`Field`** (`FormField.tsx`) — the label + control + error row every
+  customer-facing form is built from (fitment request, register, login,
+  checkout). The control is a render prop, not a `type` switch, so an input, a
+  textarea and a select each keep their own attributes; it hands back the `id`,
+  `aria-invalid`, `aria-describedby` and the shared `CONTROL_CLASS`. An optional
+  `hint` is standing help for the field — it stays put when an error appears
+  rather than being replaced by it, and both are announced, in reading order.
 - **`ProductFilters`** — the PLP's filter rail: `locale`, `basePath`, `params`
   (`ProductListParams`), and pre-localized `categories`/`brands` option lists.
   It holds no filter state — every control writes the next URL and the server
@@ -273,6 +280,51 @@ account affordance.
 - **`AccountLink`** — the header pill: "Account" → `/[locale]/orders` for a
   signed-in CUSTOMER, "Sign in" → `/[locale]/login` otherwise. The storefront's
   one reader of the session store below; sign-out lives on the orders screen.
+
+### `components/storefront/checkout/`
+
+The `/[locale]/checkout` screen and the receipt at `/[locale]/checkout/confirmation`.
+Both routes are shells around these; like the cart, there is nothing for the
+server to render, and both are `noindex`.
+
+- **One page, not a wizard.** The order needs seven fields and a delivery
+  choice. `CheckoutSteps` renders the prototype's three pills as markers for the
+  sections below and the gateway that follows — they are not a stepper the page
+  navigates, and the third one is not a screen this build has.
+- **`CheckoutView`** owns the form and the submit. It reads the same
+  `useCartLines` the cart screen does, so the same `canCheckout` rule disables
+  "Place order" here, with the reason and a link back to the cart — every fix
+  lives on that screen. The server re-checks all of it regardless; this only
+  keeps a 409 from being the first the customer hears of a problem.
+- **Three address fields, one stored string.** `composeShippingAddress`
+  (`lib/storefront/checkout.ts`) joins province → city → street, and
+  `toOrderPayload` is the only place the form's shape becomes the API's. There
+  is no address book (design brief), so nothing is kept between orders and there
+  is no "save this address" to build.
+- **`storefrontCheckoutFormSchema` reuses the API schema's fields** rather than
+  restating them, so a limit can't be tightened on one and left loose on the
+  other. It asks for no email: the design brief's field list doesn't have one,
+  and the API's `contactEmail` stays optional for whoever adds it later.
+- **`DeliveryMethodField`** is real radios under the cards — one tab stop, arrow
+  keys, and RHF registers them like any field. Rates come from
+  `lib/storefront/delivery.ts` (what the server bills); the labels and ETAs are
+  here, because that file deliberately owns no customer-facing text.
+- **The summary's totals are an estimate and say so.** They add the cart's
+  captured prices to the delivery rate. `includedVat` reads the 9% _out of_ the
+  total rather than adding it — VAT is included in every price (design brief),
+  which is also why `Order.tax` is stored as 0.
+- **`OrderConfirmation` renders the POST's response and nothing else.** That is
+  the snapshot rule: no catalog read, no re-fetch of the order, so a price that
+  moves an hour later can't change what a placed order says it was. It's also
+  why the product names are English on both trees — `productNameSnapshot` is
+  what the order stored. A `repriced` line names what the cart had quoted
+  (Design Decision 8's one visible edge).
+- **The handoff between the two screens is `lib/store/order-confirmation.ts`**,
+  persisted to **sessionStorage**: a guest order can't be fetched back (there's
+  no owner to check it against), so a reload of the receipt has to keep working
+  — but it must not still be there for whoever opens the browser next. Placing
+  an order sets that store, empties the cart, and `router.replace`s, so going
+  back can't land on a checkout form for a cart that was already ordered.
 
 ### `components/storefront/fitment/`
 

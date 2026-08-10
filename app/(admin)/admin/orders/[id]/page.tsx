@@ -9,6 +9,7 @@ import { z } from "zod";
 import { Button, Card, CardContent, CardHeader, CardTitle, Table } from "@heroui/react";
 import { StatusPill } from "@/components/admin/DataTable";
 import { TextareaField } from "@/components/admin/form";
+import { formatOrderNumber } from "@/lib/orders";
 
 type OrderStatus = "PENDING" | "SENDING" | "SENT" | "DELIVERED" | "CANCELLED";
 type PaymentStatus = "UNPAID" | "PAID" | "REFUNDED";
@@ -245,7 +246,7 @@ export default function OrderDetailPage() {
     );
   }
 
-  const orderNumber = `#${order.id.slice(-8).toUpperCase()}`;
+  const orderNumber = formatOrderNumber(order.id);
   const nextStatus = NEXT_STATUS[order.status];
 
   return (

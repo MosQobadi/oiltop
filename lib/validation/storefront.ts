@@ -297,3 +297,40 @@ export type StorefrontOrderCreateInput = z.infer<typeof storefrontOrderCreateSch
 // The checkout form's own value shape — `contactEmail` goes through
 // `z.preprocess`, same reason as the two form-values types above.
 export type StorefrontOrderFormValues = z.input<typeof storefrontOrderCreateSchema>;
+
+// What the checkout *screen* collects, which is deliberately not the same shape
+// as the payload above: the order stores one `shippingAddress` string, while
+// nobody writes an address as one string — province, city and street are three
+// questions. `toOrderPayload` (lib/storefront/checkout.ts) is the join between
+// the two, and it is the only place the three become one.
+//
+// Every field the two shapes share is reused from the schema above rather than
+// restated, so a limit can't be tightened on the API and left loose on the form
+// that feeds it. `contactEmail` is absent because the screen doesn't ask for it
+// (design brief); the API keeps it optional for whoever does later.
+export const storefrontCheckoutFormSchema = z.object({
+  contactName: storefrontOrderCreateSchema.shape.contactName,
+  contactPhone: storefrontOrderCreateSchema.shape.contactPhone,
+  province: z
+    .string()
+    .trim()
+    .min(1, "province is required")
+    .max(50, "province must be 50 characters or fewer"),
+  city: z.string().trim().min(1, "city is required").max(50, "city must be 50 characters or fewer"),
+  // The three lengths add up to less than the 500 the composed address is
+  // capped at, so a valid form can never produce a payload the API rejects.
+  street: z
+    .string()
+    .trim()
+    .min(10, "street is required")
+    .max(300, "street must be 300 characters or fewer"),
+  postalCode: storefrontOrderCreateSchema.shape.postalCode,
+  deliveryMethod: storefrontOrderCreateSchema.shape.deliveryMethod,
+});
+
+export type StorefrontCheckoutFormInput = z.infer<typeof storefrontCheckoutFormSchema>;
+
+// `postalCode` strips its separators, so the value the form holds and the value
+// the schema produces are two different strings — the form is generic over both
+// for the same reason as the three form-values types above.
+export type StorefrontCheckoutFormValues = z.input<typeof storefrontCheckoutFormSchema>;
