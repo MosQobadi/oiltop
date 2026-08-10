@@ -3,6 +3,7 @@ import {
   accountReturnPath,
   isNavItemActive,
   isProtectedAccountPath,
+  loginHref,
   navHref,
 } from "./nav-items";
 
@@ -90,5 +91,20 @@ describe("accountReturnPath", () => {
   it("refuses the auth screens themselves, which would bounce back to this form", () => {
     expect(accountReturnPath("/en/login", "en")).toBe("/en/orders");
     expect(accountReturnPath("/en/register?from=%2Fen%2Forders", "en")).toBe("/en/orders");
+  });
+});
+
+describe("loginHref", () => {
+  it("points at this locale's sign-in screen", () => {
+    expect(loginHref("en")).toBe("/en/login");
+    expect(loginHref("fa")).toBe("/fa/login");
+  });
+
+  it("carries the page that was turned away, encoded", () => {
+    expect(loginHref("en", "/en/orders/ord_123")).toBe("/en/login?from=%2Fen%2Forders%2Ford_123");
+    // Round-trips through the value the auth forms actually read back.
+    expect(accountReturnPath(decodeURIComponent("%2Fen%2Forders%2Ford_123"), "en")).toBe(
+      "/en/orders/ord_123",
+    );
   });
 });

@@ -83,6 +83,15 @@ export function accountReturnPath(from: string | null | undefined, locale: Local
   return authPaths.includes(pathOnly!) ? fallback : from;
 }
 
+// The inverse of `accountReturnPath`: where to send someone who has to sign in
+// first, carrying the page they were trying to reach. `proxy.ts` builds the same
+// URL from the live request; the account screens build it from their own path,
+// because a Server Component doesn't get to read the URL it is rendering.
+export function loginHref(locale: Locale, from?: string): string {
+  const base = navHref(locale, LOGIN_PATH);
+  return from ? `${base}?from=${encodeURIComponent(from)}` : base;
+}
+
 export function categoryHref(locale: Locale, slug: string): string {
   return navHref(locale, `${CATEGORIES_PATH}/${slug}`);
 }

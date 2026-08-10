@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import type { OrderStatus, Prisma } from "@/lib/generated/prisma/client";
+import type { OrderStatus, PaymentStatus, Prisma } from "@/lib/generated/prisma/client";
 import { contains, searchTokens } from "@/lib/search";
 import { isPriceHoldActive } from "@/lib/storefront/cart";
 import { DELIVERY_COST } from "@/lib/storefront/delivery";
@@ -8,6 +8,7 @@ import type {
   OrderNoteInput,
   OrderStatusUpdateInput,
   StorefrontOrderCreateInput,
+  StorefrontOrderListQuery,
 } from "@/lib/validation";
 
 // Storefront Design Decision 6 — RESOLVED (2026-08-09, Storefront Task 0.5)
@@ -21,6 +22,11 @@ import type {
 // Design Decision 7 / Task 0.6 adds the moment a guest orders twice.
 export class OrderNotFoundError extends Error {}
 export class InvalidOrderTransitionError extends Error {}
+
+// Someone else's order, or a guest order nobody owns. Separate from
+// `OrderNotFoundError` because the storefront route answers 403 rather than 404
+// — the id in the URL is real, it simply isn't theirs to read.
+export class OrderAccessDeniedError extends Error {}
 
 // PENDING -> SENDING -> SENT -> DELIVERED is the only forward path; CANCELLED
 // is reachable only from PENDING or SENDING. Every other pair (skipping a
@@ -428,6 +434,129 @@ export async function createStorefrontOrder(
       lineTotal: line.lineTotal,
       repriced: line.repriced,
       previousUnitPrice: line.previousUnitPrice,
+    })),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Storefront order history
+// ---------------------------------------------------------------------------
+
+// A customer's own view of an order, which is deliberately narrower than
+// `getOrderById`'s. `adminNote` is absent — it is staff-to-staff text about the
+// customer, and the read that serves the account screens must not be one edit
+// away from publishing it. The guest contact columns are absent too: an order
+// only reaches these functions when it has an owner, so there is nothing there
+// to show.
+export interface CustomerOrderListItem {
+  id: string;
+  createdAt: Date;
+  itemCount: number;
+  total: number;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+}
+
+export interface CustomerOrderItem {
+  id: string;
+  productId: string;
+  /** `productNameSnapshot` — the name as it stood when the order was placed. */
+  productName: string;
+  price: number;
+  quantity: number;
+  lineTotal: number;
+}
+
+export interface CustomerOrder extends CustomerOrderListItem {
+  subtotal: number;
+  discount: number;
+  shippingCost: number;
+  tax: number;
+  shippingAddress: string;
+  postalCode: string;
+  items: CustomerOrderItem[];
+}
+
+/**
+ * One customer's order history, newest first.
+ *
+ * `customerId` is the verified session's, never a query param — and it is a
+ * required `string` rather than the column's nullable type on purpose: passing
+ * the null a guest order carries would make `where` match every guest order in
+ * the table instead of none.
+ */
+export async function listCustomerOrders(
+  customerId: string,
+  query: StorefrontOrderListQuery,
+): Promise<{ items: CustomerOrderListItem[]; total: number }> {
+  const where: Prisma.OrderWhereInput = { customerId };
+
+  const [orders, total] = await Promise.all([
+    prisma.order.findMany({
+      where,
+      include: { _count: { select: { items: true } } },
+      orderBy: { createdAt: "desc" },
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+    }),
+    prisma.order.count({ where }),
+  ]);
+
+  return {
+    items: orders.map((order) => ({
+      id: order.id,
+      createdAt: order.createdAt,
+      itemCount: order._count.items,
+      total: Number(order.total),
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+    })),
+    total,
+  };
+}
+
+/**
+ * One order, as its owner sees it.
+ *
+ * The order is looked up by id and *then* checked against `customerId`, rather
+ * than filtered by both, so "no such order" and "not yours" stay two different
+ * answers — the route turns them into 404 and 403. A guest order fails the same
+ * check as another customer's: `customerId` is null on it, and nobody owns it.
+ */
+export async function getCustomerOrderById(id: string, customerId: string): Promise<CustomerOrder> {
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { items: { orderBy: { createdAt: "asc" } } },
+  });
+  if (!order) {
+    throw new OrderNotFoundError(`Order "${id}" was not found`);
+  }
+  if (order.customerId !== customerId) {
+    throw new OrderAccessDeniedError("This order belongs to a different account");
+  }
+
+  return {
+    id: order.id,
+    createdAt: order.createdAt,
+    itemCount: order.items.length,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    subtotal: Number(order.subtotal),
+    discount: Number(order.discount),
+    shippingCost: Number(order.shippingCost),
+    tax: Number(order.tax),
+    total: Number(order.total),
+    shippingAddress: order.shippingAddress,
+    postalCode: order.postalCode,
+    // Snapshot columns, not a join back to Product: what the order says it was
+    // must not change when the catalog does.
+    items: order.items.map((item) => ({
+      id: item.id,
+      productId: item.productId,
+      productName: item.productNameSnapshot,
+      price: Number(item.priceSnapshot),
+      quantity: item.quantity,
+      lineTotal: Number(item.lineTotal),
     })),
   };
 }

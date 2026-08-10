@@ -4,7 +4,7 @@ import { SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { getCookieName } from "@/lib/auth/cookies";
 import { prisma } from "@/lib/db";
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 // Integration tests against a running database (`docker compose up -d db`).
 // The route reads the session cookie on every request — guest checkout is the
@@ -27,6 +27,11 @@ vi.mock("next/headers", () => ({
 const PREFIX = "test-sf-checkout";
 const ADDRESS = `${PREFIX} — No. 5, Valiasr St., Tehran`;
 const CUSTOMER_PHONE = "+989000000199";
+// The history tests get their own customer rather than reusing the checkout
+// one, whose order count depends on which POST cases ran first. `customer` then
+// serves as the other account whose orders must not show up.
+const HISTORY_PHONE = "+989000000198";
+const ADMIN_PHONE = "+989000000197";
 
 const HOUR = 60 * 60 * 1000;
 
@@ -68,9 +73,11 @@ let snapshotProduct: { id: string; nameEn: string };
 let scarceProduct: { id: string };
 let inactiveProduct: { id: string };
 let customer: { id: string };
+let historyCustomer: { id: string };
+let admin: { id: string };
 
-async function signCustomerToken(userId: string) {
-  return new SignJWT({ userId, role: "CUSTOMER" })
+async function signSessionToken(userId: string, role: "CUSTOMER" | "ADMIN" = "CUSTOMER") {
+  return new SignJWT({ userId, role })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
@@ -176,16 +183,22 @@ beforeAll(async () => {
     }),
   ]);
 
-  customer = await prisma.user.create({
-    data: {
-      phone: CUSTOMER_PHONE,
-      passwordHash: "unused",
-      firstName: "Checkout",
-      lastName: "Customer",
-      role: "CUSTOMER",
-      status: "ACTIVE",
-    },
-  });
+  async function createUser(phone: string, firstName: string, role: "CUSTOMER" | "ADMIN") {
+    return prisma.user.create({
+      data: {
+        phone,
+        passwordHash: "unused",
+        firstName,
+        lastName: "Customer",
+        role,
+        status: "ACTIVE",
+      },
+    });
+  }
+
+  customer = await createUser(CUSTOMER_PHONE, "Checkout", "CUSTOMER");
+  historyCustomer = await createUser(HISTORY_PHONE, "History", "CUSTOMER");
+  admin = await createUser(ADMIN_PHONE, "Staff", "ADMIN");
 });
 
 afterAll(async () => {
@@ -200,7 +213,9 @@ afterAll(async () => {
   await prisma.product.deleteMany({ where: { sku: { startsWith: PREFIX } } });
   await prisma.category.deleteMany({ where: { slug: { startsWith: PREFIX } } });
   await prisma.brand.deleteMany({ where: { slug: { startsWith: PREFIX } } });
-  await prisma.user.deleteMany({ where: { phone: CUSTOMER_PHONE } });
+  await prisma.user.deleteMany({
+    where: { phone: { in: [CUSTOMER_PHONE, HISTORY_PHONE, ADMIN_PHONE] } },
+  });
 });
 
 describe("POST /api/storefront/orders", () => {
@@ -458,7 +473,7 @@ describe("POST /api/storefront/orders", () => {
   });
 
   it("attributes the order to the signed-in customer instead of storing guest contact", async () => {
-    cookieJar.set(getCookieName(), await signCustomerToken(customer.id));
+    cookieJar.set(getCookieName(), await signSessionToken(customer.id));
     try {
       const res = await POST(
         postRequest(
@@ -530,5 +545,159 @@ describe("POST /api/storefront/orders", () => {
         )
       ).status,
     ).toBe(400);
+  });
+});
+
+describe("GET /api/storefront/orders", () => {
+  // Three orders for the customer under test, one for a second customer and one
+  // guest order — the last two are what "the customer's orders only" has to
+  // exclude. Placed directly rather than through POST: checkout is already
+  // covered above, and these need statuses a fresh order never has.
+  let mine: string[];
+
+  function getRequest(query = "") {
+    return new NextRequest(`http://localhost/api/storefront/orders${query}`);
+  }
+
+  async function createOrder(
+    customerId: string | null,
+    overrides: {
+      status?: "PENDING" | "SENDING" | "DELIVERED";
+      paymentStatus?: "UNPAID" | "PAID";
+      createdAt?: Date;
+    } = {},
+  ) {
+    const order = await prisma.order.create({
+      data: {
+        customerId,
+        guestName: customerId ? null : "Guest Shopper",
+        guestPhone: customerId ? null : "+989121110000",
+        status: overrides.status ?? "PENDING",
+        paymentStatus: overrides.paymentStatus ?? "UNPAID",
+        subtotal: 1_000_000,
+        discount: 0,
+        shippingCost: NATIONWIDE_COST,
+        tax: 0,
+        total: 1_000_000 + NATIONWIDE_COST,
+        shippingAddress: ADDRESS,
+        postalCode: "1234567890",
+        adminNote: "Staff-only note",
+        items: {
+          create: [
+            {
+              productId: snapshotProduct.id,
+              productNameSnapshot: "Name as it was",
+              priceSnapshot: 400_000,
+              quantity: 2,
+              lineTotal: 800_000,
+            },
+            {
+              productId: holdProduct.id,
+              productNameSnapshot: "Second line",
+              priceSnapshot: 200_000,
+              quantity: 1,
+              lineTotal: 200_000,
+            },
+          ],
+        },
+      },
+    });
+    if (overrides.createdAt) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { createdAt: overrides.createdAt },
+      });
+    }
+    return order.id;
+  }
+
+  beforeAll(async () => {
+    const day = 24 * HOUR;
+    const now = Date.now();
+    // Created oldest-first so insertion order can't be what makes the assertion
+    // about "newest first" pass.
+    const oldest = await createOrder(historyCustomer.id, { createdAt: new Date(now - 3 * day) });
+    const middle = await createOrder(historyCustomer.id, {
+      status: "SENDING",
+      paymentStatus: "PAID",
+      createdAt: new Date(now - 2 * day),
+    });
+    const newest = await createOrder(historyCustomer.id, {
+      status: "DELIVERED",
+      paymentStatus: "PAID",
+      createdAt: new Date(now - day),
+    });
+    mine = [newest, middle, oldest];
+
+    // Another customer's order and a guest order — neither may appear below.
+    await createOrder(customer.id);
+    await createOrder(null);
+  });
+
+  it("rejects a request with no session", async () => {
+    const res = await GET(getRequest());
+    expect(res.status).toBe(401);
+    expect((await res.json()).success).toBe(false);
+  });
+
+  it("rejects an admin session — a staff login has no order history", async () => {
+    cookieJar.set(getCookieName(), await signSessionToken(admin.id, "ADMIN"));
+    try {
+      expect((await GET(getRequest())).status).toBe(401);
+    } finally {
+      cookieJar.clear();
+    }
+  });
+
+  it("returns only the signed-in customer's orders, newest first", async () => {
+    cookieJar.set(getCookieName(), await signSessionToken(historyCustomer.id));
+    try {
+      const json = await (await GET(getRequest())).json();
+
+      expect(json.success).toBe(true);
+      expect(json.data.total).toBe(3);
+      expect(json.data.orders.map((order: { id: string }) => order.id)).toEqual(mine);
+    } finally {
+      cookieJar.clear();
+    }
+  });
+
+  it("reports fulfilment and payment status independently", async () => {
+    cookieJar.set(getCookieName(), await signSessionToken(historyCustomer.id));
+    try {
+      const json = await (await GET(getRequest())).json();
+      const [, sendingAndPaid] = json.data.orders;
+
+      // The case the design brief calls out: on its way *and* already paid.
+      expect(sendingAndPaid.status).toBe("SENDING");
+      expect(sendingAndPaid.paymentStatus).toBe("PAID");
+      expect(sendingAndPaid.itemCount).toBe(2);
+      expect(sendingAndPaid.total).toBe(1_000_000 + NATIONWIDE_COST);
+    } finally {
+      cookieJar.clear();
+    }
+  });
+
+  it("paginates", async () => {
+    cookieJar.set(getCookieName(), await signSessionToken(historyCustomer.id));
+    try {
+      const json = await (await GET(getRequest("?page=2&pageSize=2"))).json();
+
+      expect(json.data.total).toBe(3);
+      expect(json.data.orders).toHaveLength(1);
+      expect(json.data.orders[0].id).toBe(mine[2]);
+    } finally {
+      cookieJar.clear();
+    }
+  });
+
+  it("rejects a malformed page param", async () => {
+    cookieJar.set(getCookieName(), await signSessionToken(historyCustomer.id));
+    try {
+      expect((await GET(getRequest("?page=0"))).status).toBe(400);
+      expect((await GET(getRequest("?pageSize=5000"))).status).toBe(400);
+    } finally {
+      cookieJar.clear();
+    }
   });
 });

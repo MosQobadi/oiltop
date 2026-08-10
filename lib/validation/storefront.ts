@@ -298,6 +298,34 @@ export type StorefrontOrderCreateInput = z.infer<typeof storefrontOrderCreateSch
 // `z.preprocess`, same reason as the two form-values types above.
 export type StorefrontOrderFormValues = z.input<typeof storefrontOrderCreateSchema>;
 
+// --- Order history -----------------------------------------------------------
+
+// Whose orders these are is never a query param — it comes from the auth cookie,
+// the same rule checkout follows. All that's left to validate is the window into
+// them. Paginated like every other list in the app: a shop selling oil changes
+// has repeat customers, and an unbounded `findMany` on a public route is a page
+// that gets slower the longer someone shops here.
+export const storefrontOrderListQuerySchema = z.object({
+  page: pageSchema,
+  pageSize: pageSizeSchema,
+});
+
+export type StorefrontOrderListQuery = z.infer<typeof storefrontOrderListQuerySchema>;
+
+// The same param read by the orders *page* rather than the route handler. A page
+// can't answer `?page=abc` with a 400 — it still has to render the history — so
+// it falls back to the first page. `pageSize` is absent for the same reason as
+// the PLP's: the screen owns it, not the URL.
+export const storefrontOrderListPageQuerySchema = z.object({
+  page: pageSchema.catch(1),
+});
+
+export type StorefrontOrderListPageQuery = z.infer<typeof storefrontOrderListPageQuerySchema>;
+
+// A cuid path segment. Nothing to check beyond "non-empty" — an id that doesn't
+// exist is a 404, and one that belongs to someone else is a 403.
+export const storefrontOrderIdParamSchema = storefrontIdParamSchema;
+
 // What the checkout *screen* collects, which is deliberately not the same shape
 // as the payload above: the order stores one `shippingAddress` string, while
 // nobody writes an address as one string — province, city and street are three

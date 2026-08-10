@@ -267,8 +267,8 @@ The product page's own three pieces. Everything else on it — `PriceDisplay`,
 
 ### `components/storefront/account/`
 
-The `/[locale]/login` and `/[locale]/register` screens' pieces, plus the header's
-account affordance.
+The `/[locale]/login`, `/[locale]/register` and `/[locale]/orders` screens'
+pieces, plus the header's account affordance.
 
 - **`AuthCard`** — the two-tab pill switcher over a titled form that both auth
   screens are built on. The tabs are `Link`s to two real routes, not client
@@ -280,6 +280,62 @@ account affordance.
 - **`AccountLink`** — the header pill: "Account" → `/[locale]/orders` for a
   signed-in CUSTOMER, "Sign in" → `/[locale]/login` otherwise. The storefront's
   one reader of the session store below; sign-out lives on the orders screen.
+- **`SignOutButton`** — that sign-out, and the promise `AccountLink` makes good
+  on. It passes `logout` this locale's home, because the store knows no route
+  names.
+- **`OrderFulfilmentBadge`** / **`OrderPaymentBadge`** — the two status chips,
+  two components rather than one with a `kind` prop because they are two
+  vocabularies that only happen to render alike. **Each carries its own label**
+  — visible (`showLabel`) on the detail screen, screen-reader-only in the
+  history list — since a bare "Sent" beside a bare "Unpaid" is two words with no
+  subjects. Colour is a second channel and never the only one.
+
+### Order history — `app/[locale]/(account)/orders/`
+
+Both screens are Server Components reading `server/order.ts` directly, the same
+pattern as the PLP: the function `GET /api/storefront/orders` serves, minus an
+HTTP round-trip to ourselves that would have to forward the session cookie to be
+let in. The public routes still exist for client callers.
+
+- **Both statuses, always, and never blended** (design brief). An order can be
+  Sending _and_ Paid; `status` is where the parcel is, `paymentStatus` is
+  whether the money arrived. There is deliberately no combined "order state"
+  anywhere for a screen to reach for instead.
+- **`export const dynamic = "force-dynamic"` on both.** Reading the session
+  already makes them dynamic — it's spelled out because `app/[locale]/layout.tsx`
+  sets `revalidate = 300`, and the failure mode if these ever weren't dynamic is
+  serving one customer's orders to everyone out of the cache.
+- **The pages re-check the session themselves.** `proxy.ts` turned away anyone
+  without a CUSTOMER token, but it runs on the edge with no Prisma and can't
+  know the account was deleted or deactivated since the token was signed. Same
+  rule as the admin route handlers.
+- **A page answers 404 where the API answers 403.** `GET
+/api/storefront/orders/:id` distinguishes "no such order" (404) from "not
+  yours" (403); the _screen_ renders the same 404 for both, so browsing ids
+  tells nobody which ones are real. Guest orders fail the ownership check like
+  any other order nobody owns.
+- **`getCustomerOrderById` is narrower than `getOrderById` on purpose.**
+  `adminNote` is absent from the customer-facing shape — it's staff-to-staff text
+  about the customer, and the read that feeds these screens must not be one edit
+  away from publishing it.
+- **`listCustomerOrders` takes a non-nullable `customerId`.** Passing the null a
+  guest order carries would make `where` match every guest order in the table
+  instead of none.
+- **No reorder and no address book.** Neither was asked for; the design brief
+  keeps nothing between orders.
+
+### `lib/storefront/orders.ts`
+
+How an order _reads_ — `orderStatusLabel`, `paymentStatusLabel`,
+`formatOrderDate`, `formatPostalCode` — shared by the checkout confirmation and
+the order history, which show the same order at two moments and must not
+describe it differently. The English labels match the admin panel's wording
+exactly: a customer reading "Sending" down the phone has to land on the word the
+staff member is looking at.
+
+A postal code is ten digits, not a number: `formatPostalCode` localizes it one
+character at a time, which is what keeps a leading zero that `Number(...)` would
+drop and `formatNumber` would group into a price.
 
 ### `components/storefront/checkout/`
 
@@ -496,6 +552,11 @@ knowing:
 for CUSTOMER, redirecting to the right login with `from` set to the path _and_
 query it turned away. Two rules keep it honest:
 
+- `loginHref(locale, from)` and `accountReturnPath(from, locale)` are the two
+  halves of the same round trip and both live in `nav-items.ts`: the first
+  builds the redirect (the proxy from the live request, an account page from its
+  own path — a Server Component can't read the URL it is rendering), the second
+  is what the auth forms trust the value through on the way back.
 - The protected paths come from `PROTECTED_ACCOUNT_PATHS` in
   `components/storefront/nav-items.ts`, not from the `(account)` route group —
   `/login` and `/register` sit in that group and must stay public. Next needs

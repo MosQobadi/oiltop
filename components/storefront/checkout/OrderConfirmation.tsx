@@ -3,9 +3,15 @@
 import Link from "next/link";
 import { useIsHydrated } from "@heroui/react";
 import { CART_PATH, navHref, PRODUCTS_PATH } from "../nav-items";
-import { formatDigits, NUMBER_LOCALE, pickLocale, type Locale } from "@/lib/i18n";
+import { formatDigits, pickLocale, type Locale } from "@/lib/i18n";
 import { formatOrderNumber } from "@/lib/orders";
 import { includedVat } from "@/lib/storefront/checkout";
+import {
+  formatOrderDate,
+  formatPostalCode,
+  orderStatusLabel,
+  paymentStatusLabel,
+} from "@/lib/storefront/orders";
 import { formatToman } from "@/lib/storefront/pricing";
 import { useOrderConfirmationStore } from "@/lib/store/order-confirmation";
 
@@ -87,12 +93,15 @@ export function OrderConfirmation({ locale }: { locale: Locale }) {
                 {formatOrderDate(order.createdAt, locale)}
               </Detail>
               {/* Two statuses, never blended: an order can be on its way and
-                  still unpaid, and each answers a different question. */}
+                  still unpaid, and each answers a different question. A new
+                  order is always PENDING/UNPAID, but the words come from the
+                  shared labels so this screen and the order history can't call
+                  the same status two different things. */}
               <Detail label={pickLocale(locale, "Fulfilment status", "وضعیت ارسال")}>
-                {pickLocale(locale, "Pending", "در انتظار")}
+                {orderStatusLabel(order.status, locale)}
               </Detail>
               <Detail label={pickLocale(locale, "Payment status", "وضعیت پرداخت")}>
-                {pickLocale(locale, "Unpaid", "پرداخت‌نشده")}
+                {paymentStatusLabel(order.paymentStatus, locale)}
               </Detail>
             </dl>
           </section>
@@ -228,22 +237,4 @@ function TotalRow({ label, children }: { label: string; children: React.ReactNod
       <dd className="text-neutral-900 tabular-nums">{children}</dd>
     </div>
   );
-}
-
-// A postal code is ten digits that happen to be written with digits — not a
-// number. Localizing it one character at a time is what keeps a leading zero,
-// which `Number(...)` would drop and `formatNumber` would group into a price.
-function formatPostalCode(postalCode: string, locale: Locale): string {
-  return postalCode.replace(/\d/g, (digit) => formatDigits(Number(digit), locale));
-}
-
-// `fa-IR` gives the Persian calendar and Persian digits; `en-US` the Gregorian
-// date. Local to this screen — the account's order history (Task 9.1) will want
-// the same thing, and sharing it before there are two callers would be guessing
-// at what the second one needs.
-function formatOrderDate(iso: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(NUMBER_LOCALE[locale], {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
 }
