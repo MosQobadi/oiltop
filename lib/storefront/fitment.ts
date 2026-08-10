@@ -23,18 +23,27 @@ export interface CarEngineLabelParts {
   yearEnd: number | null;
 }
 
+// "2001–2010", or "2001–Present" while the car is still being built — a null
+// `yearEnd` means still in production, not unknown. Takes a bare span rather
+// than an engine so the PDP can write a whole model's range with it too.
+export function formatYearSpan(
+  locale: Locale,
+  span: { yearStart: number; yearEnd: number | null },
+): string {
+  const start = formatDigits(span.yearStart, locale);
+  const end =
+    span.yearEnd === null
+      ? pickLocale(locale, "Present", "تاکنون")
+      : formatDigits(span.yearEnd, locale);
+
+  return `${start}–${end}`;
+}
+
 // "1.4L TU3 Petrol (2001–2010)". The range is part of the label because two
-// engines of one model often differ by nothing else a customer can see, and a
-// null `yearEnd` means still in production rather than unknown.
+// engines of one model often differ by nothing else a customer can see.
 export function formatEngineOptionLabel(locale: Locale, engine: CarEngineLabelParts): string {
   const name = pickLocale(locale, engine.labelEn, engine.labelFa);
-  const start = formatDigits(engine.yearStart, locale);
-  const end =
-    engine.yearEnd === null
-      ? pickLocale(locale, "Present", "تاکنون")
-      : formatDigits(engine.yearEnd, locale);
-
-  return `${name} (${start}–${end})`;
+  return `${name} (${formatYearSpan(locale, engine)})`;
 }
 
 /** Enough of a resolved car to write its header, breadcrumb and request line. */

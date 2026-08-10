@@ -1,0 +1,259 @@
+import { cache } from "react";
+import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Breadcrumbs } from "@/components/storefront/Breadcrumbs";
+import { categoryHref, navHref, PRODUCTS_PATH } from "@/components/storefront/nav-items";
+import { AddToCartControl } from "@/components/storefront/pdp/AddToCartControl";
+import { CompatibleVehicles } from "@/components/storefront/pdp/CompatibleVehicles";
+import { FitsYourCarNotice } from "@/components/storefront/pdp/FitsYourCarNotice";
+import { PriceDisplay } from "@/components/storefront/PriceDisplay";
+import { StockBadge } from "@/components/storefront/StockBadge";
+import { pickLocale, type Locale } from "@/lib/i18n";
+import { getStorefrontProductBySlug } from "@/lib/services/catalog";
+import { getActiveCarEngineContext } from "@/lib/services/fitment";
+import { FIT_PARAM, withFitContext } from "@/lib/storefront/fitment";
+import { buildProductListHref } from "@/lib/storefront/plp";
+import { groupFittingEnginesByModel } from "@/lib/storefront/pdp";
+import { firstFilled } from "@/lib/storefront/seo";
+import { storefrontProductSlugParamSchema } from "@/lib/validation";
+
+// One product, and the two things the catalog knows about it that a generic
+// shop doesn't: which cars it was matched to, and — when the customer arrived
+// from the car finder — whether theirs is one of them.
+//
+// The URL stays car-agnostic (Design Decision 5): `?fit=` is context riding
+// alongside the slug, never part of it, so the page a search engine indexes and
+// the page a customer shares are the same page.
+//
+// Data comes from lib/services/catalog directly rather than by fetching this
+// app's own GET /api/storefront/products/:slug — same function that route
+// serves, minus an HTTP round-trip to ourselves, and it renders on the server
+// instead of arriving after a spinner. Same pattern as the PLP and the fitment
+// page; the public route still exists for client callers.
+
+export default async function ProductDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: Locale; slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const { locale, slug } = await params;
+  const product = await findProduct(slug);
+  // Unknown, deactivated, or hanging off a deactivated category/brand: all the
+  // same 404, exactly as the public route answers them.
+  if (!product) notFound();
+
+  const rawFit = (await searchParams)[FIT_PARAM];
+  // A `fit` that resolves to nothing is a stale or hand-edited link, not a 404 —
+  // the product page renders either way, just without the verdict.
+  const car = typeof rawFit === "string" ? await getActiveCarEngineContext(rawFit) : null;
+  const fitsThisCar =
+    car !== null &&
+    product.fitsCarEngines.some((engine) => engine.carEngineId === car.carEngine.id);
+
+  const vehicleGroups = groupFittingEnginesByModel(product.fitsCarEngines);
+
+  const name = pickLocale(locale, product.nameEn, product.nameFa);
+  // The other language's name, same as ProductCard: shoppers here search for
+  // "Mobil 1" and "موبیل ۱" interchangeably.
+  const secondaryName = locale === "fa" ? product.nameEn : product.nameFa;
+  const showSecondaryName = secondaryName.trim() !== "" && secondaryName !== name;
+
+  const categoryName = pickLocale(locale, product.category.nameEn, product.category.nameFa);
+  const brandName = pickLocale(locale, product.brand.nameEn, product.brand.nameFa);
+  const longDescription = pickLocale(locale, product.longDescriptionEn, product.longDescriptionFa);
+
+  // Every link out of this page keeps the customer's car with them, the same
+  // way the PLP hands it over on the way in.
+  const carryFit = (href: string) => (car ? withFitContext(href, car.carEngine.id) : href);
+
+  return (
+    <div className="mx-auto w-full max-w-[1180px] px-4 py-10 sm:px-6">
+      <Breadcrumbs
+        locale={locale}
+        items={[
+          { label: pickLocale(locale, "Home", "خانه"), href: navHref(locale, "") },
+          {
+            label: pickLocale(locale, "Products", "محصولات"),
+            href: carryFit(navHref(locale, PRODUCTS_PATH)),
+          },
+          { label: categoryName, href: carryFit(categoryHref(locale, product.category.slug)) },
+          { label: name },
+        ]}
+      />
+
+      <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-12">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-neutral-100 lg:aspect-square">
+          {product.image ? (
+            <Image
+              src={product.image}
+              alt={name}
+              fill
+              sizes="(min-width: 1024px) 720px, 100vw"
+              className="object-contain p-6"
+              priority
+            />
+          ) : (
+            // Same designed placeholder as ProductCard — a catalog mid-import
+            // is the norm, so a missing image is a state, not a broken icon.
+            <span
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(135deg, var(--color-neutral-200) 0 1px, transparent 1px 12px)",
+              }}
+              className="flex h-full w-full items-center justify-center font-mono text-[11px] tracking-[0.04em] text-neutral-500"
+            >
+              {pickLocale(locale, "no image", "بدون تصویر")}
+            </span>
+          )}
+        </div>
+
+        <div className="lg:pt-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={buildProductListHref(navHref(locale, PRODUCTS_PATH), {
+                brand: product.brand.slug,
+                fit: car?.carEngine.id,
+              })}
+              className="focus-visible:ring-accent hover:border-accent hover:text-accent rounded-full border border-neutral-200 px-3 py-1 font-mono text-[11.5px] tracking-[0.04em] text-neutral-600 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
+              {brandName}
+            </Link>
+            <Link
+              href={carryFit(categoryHref(locale, product.category.slug))}
+              className="focus-visible:ring-accent hover:border-accent hover:text-accent rounded-full border border-neutral-200 px-3 py-1 text-[12px] text-neutral-600 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
+              {categoryName}
+            </Link>
+          </div>
+
+          <h1 className="mt-3 text-[26px] leading-tight font-semibold tracking-[-0.025em] text-neutral-900">
+            {name}
+          </h1>
+          {showSecondaryName && (
+            <p dir="auto" className="mt-1 text-[14.5px] text-neutral-500">
+              {secondaryName}
+            </p>
+          )}
+
+          <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <PriceDisplay
+              locale={locale}
+              price={product.price}
+              finalPrice={product.finalPrice}
+              size="lg"
+            />
+            <StockBadge locale={locale} status={product.stockStatus} variant="pill" />
+          </div>
+
+          {car && (
+            <FitsYourCarNotice locale={locale} car={car} fits={fitsThisCar} className="mt-5" />
+          )}
+
+          <AddToCartControl
+            locale={locale}
+            outOfStock={product.stockStatus === "OUT_OF_STOCK"}
+            product={{
+              productId: product.id,
+              slug: product.slug,
+              nameEn: product.nameEn,
+              nameFa: product.nameFa,
+              image: product.image,
+              // What the customer was shown. Checkout re-resolves the real
+              // price server-side, so nothing captured here is ever charged.
+              price: product.finalPrice,
+            }}
+            className="mt-6"
+          />
+        </div>
+      </div>
+
+      <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-12">
+        <div>
+          {longDescription.trim() !== "" && (
+            <section>
+              <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-neutral-900">
+                {pickLocale(locale, "Description", "توضیحات")}
+              </h2>
+              {/* Plain text, not markup: descriptions are edited in a textarea
+                  and stripped of HTML on the way in (lib/sanitize), so the only
+                  formatting to honour is the line breaks the admin typed. */}
+              <p className="mt-3 max-w-[70ch] text-[14.5px] leading-relaxed whitespace-pre-line text-neutral-600">
+                {longDescription}
+              </p>
+            </section>
+          )}
+
+          {vehicleGroups.length > 0 && (
+            <CompatibleVehicles
+              locale={locale}
+              groups={vehicleGroups}
+              highlightCarEngineId={fitsThisCar ? car?.carEngine.id : null}
+              className="mt-10"
+            />
+          )}
+        </div>
+
+        {product.oemPartNumbers.length > 0 && (
+          <section>
+            <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-neutral-900">
+              {pickLocale(locale, "OEM part numbers", "شماره‌های فنی اصلی")}
+            </h2>
+            <p className="mt-2 text-[13.5px] text-neutral-500">
+              {pickLocale(
+                locale,
+                "Manufacturer codes this part replaces — search any of them to land back here.",
+                "کدهای کارخانه‌ای که این قطعه جایگزین آن‌هاست — جست‌وجوی هرکدام دوباره به همین صفحه می‌رسد.",
+              )}
+            </p>
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {product.oemPartNumbers.map((partNumber) => (
+                <li
+                  key={partNumber}
+                  dir="ltr"
+                  className="rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1 font-mono text-[12.5px] tracking-[0.02em] text-neutral-700"
+                >
+                  {partNumber}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// generateMetadata and the page both need the row, and Prisma has no
+// per-request dedupe of its own — `cache` keeps it to one query.
+const findProduct = cache(async (slug: string) => {
+  const parsed = storefrontProductSlugParamSchema.safeParse(slug);
+  // A segment that can't be a slug can't match a row either; skip the query.
+  if (!parsed.success) return null;
+  return getStorefrontProductBySlug(parsed.data);
+});
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: Locale; slug: string }>;
+}): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const product = await findProduct(slug);
+  // The page 404s; there's nothing to describe.
+  if (!product) return {};
+
+  return {
+    title: firstFilled(
+      pickLocale(locale, product.metaTitleEn, product.metaTitleFa),
+      pickLocale(locale, product.nameEn, product.nameFa),
+    ),
+    description: firstFilled(
+      pickLocale(locale, product.metaDescriptionEn, product.metaDescriptionFa),
+      pickLocale(locale, product.shortDescriptionEn, product.shortDescriptionFa),
+    ),
+  };
+}

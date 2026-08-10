@@ -234,6 +234,30 @@ a Server Component can render them straight from its `params`.
   client state: the context lives in the URL, and hiding the banner while every
   link still carried the car would be a lie the next page tells.
 
+### `components/storefront/pdp/`
+
+The product page's own three pieces. Everything else on it — `PriceDisplay`,
+`StockBadge`, `Breadcrumbs`, `NotifyMeForm` — is the shared set above.
+
+- **`AddToCartControl`** (client) — `locale`, `product` (a `NewCartItem`),
+  `outOfStock`. The same store write `ProductCard` does, with a quantity in
+  front of it: a grid tile only has room to ask for one, the product page is
+  where someone decides on four. Out of stock renders `NotifyMeForm` outright
+  rather than behind the card's toggle — the page has the room, and a customer
+  who came this far has already shown the interest the toggle asks about. Its
+  quantity cap is a stray-keypress guard, not a stock limit: exact stock never
+  leaves the admin panel, so the real check is the cart's (Task 6.1).
+- **`FitsYourCarNotice`** — the verdict for a customer who arrived with `?fit=`,
+  sitting next to the buy button. **Neither state says "incompatible."** A
+  product appears in a car's fitment because a profile recommends it; the
+  absence of that link means we haven't matched it, which is a weaker claim than
+  "it won't fit" and the only one the catalog can support.
+- **`CompatibleVehicles`** — "this fits: Peugeot 206 (2001–2010), …", one row
+  per **model**, not per engine (`groupFittingEnginesByModel`). Past six rows
+  the rest go behind a native `<details>` — still in the HTML, so a crawler
+  reads the whole list — and the `?fit=` car's row is floated to the top and
+  tagged, because that's the one row the customer came for.
+
 ### `components/storefront/fitment/`
 
 The car-finder. **`FitmentWizard`** takes `locale`, `mode` (`full` stepper /
@@ -331,6 +355,25 @@ carried, never applied**: the car rides along in the banner and in every link
 the customer follows (so the PDP can say "fits your car"), but the grid stays
 the full catalog. Narrowing to one car is what the fitment results page is for,
 and silently hiding products here would look like an empty shop.
+
+### `lib/storefront/pdp.ts` and `lib/storefront/seo.ts`
+
+`groupFittingEnginesByModel` turns the catalog's flat "fits these car engines"
+list into the PDP's vehicle rows. One row per engine is what the service
+returns and it is not what a customer needs: three trims of a 206 across four
+year ranges is one fact, "the 206". A group's span opens up (`yearEnd: null`) if
+**any** of its engines is still in production, and the service's brand → model →
+year order is preserved rather than re-sorted here.
+
+`firstFilled(...values)` is the fallback every `generateMetadata` on the
+storefront runs: the admin's meta fields are optional and an untouched one
+reaches the database as `""`, so it's a trim check, and it returns `undefined`
+so Next omits the tag rather than emitting an empty one.
+
+`app/[locale]/products/[slug]/page.tsx` composes both. The slug is the whole
+canonical URL — `?fit=` is context alongside it, never part of it (Design
+Decision 5) — and it carries that context onward into every link out of the
+page, the same way the PLP handed it in.
 
 ---
 

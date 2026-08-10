@@ -1,0 +1,125 @@
+import { describe, expect, it } from "vitest";
+import {
+  formatGroupEngineLabels,
+  groupContainsEngine,
+  groupFittingEnginesByModel,
+  type FittingEngineParts,
+} from "./pdp";
+import { firstFilled } from "./seo";
+
+const peugeot = { nameEn: "Peugeot", nameFa: "پژو" };
+
+function engine(
+  overrides: Partial<FittingEngineParts> & { carEngineId: string },
+): FittingEngineParts {
+  return {
+    labelEn: "1.4L TU3 Petrol",
+    labelFa: "۱٫۴ لیتر TU3 بنزینی",
+    yearStart: 2001,
+    yearEnd: 2010,
+    carModel: { id: "mdl_206", nameEn: "206", nameFa: "۲۰۶" },
+    carBrand: peugeot,
+    ...overrides,
+  };
+}
+
+describe("groupFittingEnginesByModel", () => {
+  it("collapses several engines of one model into a single group", () => {
+    const groups = groupFittingEnginesByModel([
+      engine({ carEngineId: "eng_1" }),
+      engine({ carEngineId: "eng_2", labelEn: "1.6L", yearStart: 2003, yearEnd: 2012 }),
+    ]);
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].carModel.nameEn).toBe("206");
+    expect(groups[0].engines.map((row) => row.carEngineId)).toEqual(["eng_1", "eng_2"]);
+  });
+
+  it("spans the group across the earliest and latest year of its engines", () => {
+    const groups = groupFittingEnginesByModel([
+      engine({ carEngineId: "eng_1", yearStart: 2003, yearEnd: 2012 }),
+      engine({ carEngineId: "eng_2", yearStart: 2001, yearEnd: 2010 }),
+    ]);
+
+    expect(groups[0]).toMatchObject({ yearStart: 2001, yearEnd: 2012 });
+  });
+
+  it("leaves the span open-ended when any one engine is still in production", () => {
+    const groups = groupFittingEnginesByModel([
+      engine({ carEngineId: "eng_1", yearStart: 2001, yearEnd: 2010 }),
+      engine({ carEngineId: "eng_2", yearStart: 2011, yearEnd: null }),
+    ]);
+
+    expect(groups[0]).toMatchObject({ yearStart: 2001, yearEnd: null });
+  });
+
+  it("keeps separate models apart, in the order the service resolved them", () => {
+    const groups = groupFittingEnginesByModel([
+      engine({ carEngineId: "eng_1", carModel: { id: "mdl_405", nameEn: "405", nameFa: "۴۰۵" } }),
+      engine({ carEngineId: "eng_2" }),
+      engine({ carEngineId: "eng_3", carModel: { id: "mdl_405", nameEn: "405", nameFa: "۴۰۵" } }),
+    ]);
+
+    expect(groups.map((group) => group.carModel.nameEn)).toEqual(["405", "206"]);
+    expect(groups[0].engines).toHaveLength(2);
+  });
+
+  it("returns nothing for a product no fitment profile references", () => {
+    expect(groupFittingEnginesByModel([])).toEqual([]);
+  });
+});
+
+describe("formatGroupEngineLabels", () => {
+  it("drops the years when the model has one engine — the heading already spans them", () => {
+    const [group] = groupFittingEnginesByModel([engine({ carEngineId: "eng_1" })]);
+
+    expect(formatGroupEngineLabels("en", group)).toEqual(["1.4L TU3 Petrol"]);
+  });
+
+  it("keeps each range when several engines share a model", () => {
+    const [group] = groupFittingEnginesByModel([
+      engine({ carEngineId: "eng_1" }),
+      engine({ carEngineId: "eng_2", labelEn: "1.6L", yearStart: 2011, yearEnd: null }),
+    ]);
+
+    expect(formatGroupEngineLabels("en", group)).toEqual([
+      "1.4L TU3 Petrol (2001–2010)",
+      "1.6L (2011–Present)",
+    ]);
+  });
+
+  it("reads the Persian label on the Persian tree", () => {
+    const [group] = groupFittingEnginesByModel([engine({ carEngineId: "eng_1" })]);
+
+    expect(formatGroupEngineLabels("fa", group)).toEqual(["۱٫۴ لیتر TU3 بنزینی"]);
+  });
+});
+
+describe("groupContainsEngine", () => {
+  const [group] = groupFittingEnginesByModel([
+    engine({ carEngineId: "eng_1" }),
+    engine({ carEngineId: "eng_2" }),
+  ]);
+
+  it("finds the engine a customer arrived with", () => {
+    expect(groupContainsEngine(group, "eng_2")).toBe(true);
+  });
+
+  it("is false for an engine this product was never matched to", () => {
+    expect(groupContainsEngine(group, "eng_9")).toBe(false);
+  });
+});
+
+describe("firstFilled", () => {
+  it("takes the first value with something in it", () => {
+    expect(firstFilled(null, "Meta title", "Name")).toBe("Meta title");
+  });
+
+  it("skips a field the admin left untouched, which arrives as an empty string", () => {
+    expect(firstFilled("", "   ", "Name")).toBe("Name");
+  });
+
+  it("returns undefined rather than an empty tag when nothing is filled", () => {
+    expect(firstFilled("", null, undefined)).toBeUndefined();
+  });
+});

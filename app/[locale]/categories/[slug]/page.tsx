@@ -28,6 +28,7 @@ import {
   productPageCount,
   type ProductListParams,
 } from "@/lib/storefront/plp";
+import { firstFilled } from "@/lib/storefront/seo";
 import {
   storefrontCategorySlugParamSchema,
   storefrontProductListPageQuerySchema,
@@ -261,10 +262,6 @@ const findCategory = cache(async (slug: string) => {
   return getStorefrontCategoryBySlug(parsed.data);
 });
 
-function blankToNull(value: string | null): string | null {
-  return value !== null && value.trim() !== "" ? value : null;
-}
-
 export async function generateMetadata({
   params,
 }: {
@@ -276,16 +273,15 @@ export async function generateMetadata({
   if (!category) return {};
 
   // The admin's meta pair is optional, so the category's own name and short
-  // description stand in — an unoptimised <title> beats a blank one. Blank
-  // rather than just null: the admin's schema caps a meta field's length
-  // without requiring one, so an untouched field reaches the database as "".
-  const title =
-    blankToNull(pickLocale(locale, category.metaTitleEn, category.metaTitleFa)) ??
-    pickLocale(locale, category.nameEn, category.nameFa);
-  const description =
-    blankToNull(pickLocale(locale, category.metaDescriptionEn, category.metaDescriptionFa)) ??
-    blankToNull(pickLocale(locale, category.shortDescriptionEn, category.shortDescriptionFa)) ??
-    undefined;
-
-  return { title, description };
+  // description stand in — an unoptimised <title> beats a blank one.
+  return {
+    title: firstFilled(
+      pickLocale(locale, category.metaTitleEn, category.metaTitleFa),
+      pickLocale(locale, category.nameEn, category.nameFa),
+    ),
+    description: firstFilled(
+      pickLocale(locale, category.metaDescriptionEn, category.metaDescriptionFa),
+      pickLocale(locale, category.shortDescriptionEn, category.shortDescriptionFa),
+    ),
+  };
 }

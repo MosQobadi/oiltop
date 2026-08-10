@@ -7,6 +7,7 @@ import {
   formatCarName,
   formatEngineOptionLabel,
   formatSpecAttributes,
+  formatYearSpan,
   sortFitmentGroups,
   splitItemsByClimate,
   withFitContext,
@@ -27,6 +28,18 @@ describe("withFitContext", () => {
 
   it("uses the exported param name, so readers and writers can't drift", () => {
     expect(withFitContext("/en/fitment", "eng_1")).toContain(`${FIT_PARAM}=`);
+  });
+});
+
+describe("formatYearSpan", () => {
+  it("writes a closed range in the reader's digits", () => {
+    expect(formatYearSpan("en", { yearStart: 2001, yearEnd: 2010 })).toBe("2001–2010");
+    expect(formatYearSpan("fa", { yearStart: 2001, yearEnd: 2010 })).toBe("۲۰۰۱–۲۰۱۰");
+  });
+
+  it("reads a null yearEnd as still in production, not as unknown", () => {
+    expect(formatYearSpan("en", { yearStart: 2011, yearEnd: null })).toBe("2011–Present");
+    expect(formatYearSpan("fa", { yearStart: 2011, yearEnd: null })).toBe("۲۰۱۱–تاکنون");
   });
 });
 
