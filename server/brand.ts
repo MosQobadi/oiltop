@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import type { Prisma } from "@/lib/generated/prisma/client";
+import { contains, searchTokens } from "@/lib/search";
 import type { BrandCreateInput, BrandListQuery, BrandUpdateInput } from "@/lib/validation";
 
 export class BrandNotFoundError extends Error {}
@@ -15,14 +16,10 @@ function withProductCount<T extends { _count: { products: number } }>(brand: T) 
 export async function listBrands(query: BrandListQuery) {
   const where: Prisma.BrandWhereInput = {
     ...(query.status ? { status: query.status } : {}),
-    ...(query.search
-      ? {
-          OR: [
-            { nameEn: { contains: query.search, mode: "insensitive" } },
-            { nameFa: { contains: query.search, mode: "insensitive" } },
-          ],
-        }
-      : {}),
+    // Tokenised — see `lib/search.ts`.
+    AND: searchTokens(query.search).map((token) => ({
+      OR: [{ nameEn: contains(token) }, { nameFa: contains(token) }],
+    })),
   };
 
   const [brands, total] = await Promise.all([

@@ -461,6 +461,45 @@ bouncing a signed-in admin between each other forever.
 
 ---
 
+## List search — `lib/search.ts`
+
+**Every list service builds its search clause the same way**, and it is not a
+bare `contains: query.search`. That naive form silently fails whenever what the
+admin typed isn't stored in one column exactly as typed — "Sara Ahmadi" against
+`firstName`/`lastName`, "Peugeot 206" against `carBrand.nameEn` +
+`carModel.nameEn`, "Mobil 5W-30" against a product actually named "Mobil 1
+5W-30". All three matched nothing.
+
+The shape to copy, using `searchTokens` and `contains` from `lib/search.ts`:
+
+```ts
+const where: Prisma.UserWhereInput = {
+  role: "CUSTOMER",
+  ...(query.status ? { status: query.status } : {}),
+  AND: searchTokens(query.search).map((token) => ({
+    OR: [{ firstName: contains(token) }, { lastName: contains(token) }],
+  })),
+};
+```
+
+- **No conditional spread is needed.** `searchTokens` returns `[]` for an
+  absent or blank query and Prisma treats `AND: []` as no constraint, so the
+  empty case falls out for free.
+- **Every token must match at least one column, and tokens may match different
+  columns.** A single-word query behaves exactly as it did before this existed.
+- **`contains(token)` exists for the `as const` on `mode`.** These clauses are
+  built inside a `.map`, so TypeScript infers the callback's return type before
+  checking it against Prisma's where-input, and a bare `"insensitive"` widens
+  to `string`.
+- **Where the service already has an `AND` array** (`listSearchableCarEngines`),
+  spread the tokens into it rather than adding a second `AND` key.
+- **Array columns are the one exception.** `oemPartNumbers` matches with `has`,
+  which is exact rather than substring, so an OEM code containing a space would
+  never survive tokenisation — `listProducts` and the storefront catalog search
+  therefore also try the raw query whole, OR'd against the tokenised branch.
+
+---
+
 ## Guest orders — Design Decision 6, settled
 
 **A guest checkout creates an order, never an account.** `Order.customerId` is

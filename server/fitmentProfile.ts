@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/lib/generated/prisma/client";
+import { contains, searchTokens } from "@/lib/search";
 import type {
   FitmentProfileAttachInput,
   FitmentProfileCreateInput,
@@ -60,7 +61,9 @@ async function ensureProfileExists(profileId: string) {
 
 export async function listFitmentProfiles(query: FitmentProfileListQuery) {
   const where: Prisma.FitmentProfileWhereInput = {
-    ...(query.search ? { label: { contains: query.search, mode: "insensitive" } } : {}),
+    // Tokenised — see `lib/search.ts`. A profile label like "Peugeot 206 1.4L"
+    // is one column, but tokens let the words be typed in any order.
+    AND: searchTokens(query.search).map((token) => ({ label: contains(token) })),
   };
 
   const [fitmentProfiles, total] = await Promise.all([

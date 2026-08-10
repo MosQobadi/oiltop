@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
+import { contains, searchTokens } from "@/lib/search";
 import type { CustomerListQuery, CustomerStatusInput } from "@/lib/validation";
 import { toOrderListItem } from "@/server/order";
 
@@ -24,16 +25,15 @@ export async function listCustomers(query: CustomerListQuery) {
   const where: Prisma.UserWhereInput = {
     role: "CUSTOMER",
     ...(query.status ? { status: query.status } : {}),
-    ...(query.search
-      ? {
-          OR: [
-            { firstName: { contains: query.search, mode: "insensitive" } },
-            { lastName: { contains: query.search, mode: "insensitive" } },
-            { email: { contains: query.search, mode: "insensitive" } },
-            { phone: { contains: query.search, mode: "insensitive" } },
-          ],
-        }
-      : {}),
+    // Tokenised so a full name spans firstName + lastName — see `lib/search.ts`.
+    AND: searchTokens(query.search).map((token) => ({
+      OR: [
+        { firstName: contains(token) },
+        { lastName: contains(token) },
+        { email: contains(token) },
+        { phone: contains(token) },
+      ],
+    })),
   };
 
   const [users, total] = await Promise.all([

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import type { Prisma } from "@/lib/generated/prisma/client";
+import { contains, searchTokens } from "@/lib/search";
 import type { CarBrandCreateInput, CarBrandListQuery, CarBrandUpdateInput } from "@/lib/validation";
 
 export class CarBrandNotFoundError extends Error {}
@@ -15,14 +16,10 @@ function withModelCount<T extends { _count: { models: number } }>(carBrand: T) {
 export async function listCarBrands(query: CarBrandListQuery) {
   const where: Prisma.CarBrandWhereInput = {
     ...(query.status ? { status: query.status } : {}),
-    ...(query.search
-      ? {
-          OR: [
-            { nameEn: { contains: query.search, mode: "insensitive" } },
-            { nameFa: { contains: query.search, mode: "insensitive" } },
-          ],
-        }
-      : {}),
+    // Tokenised — see `lib/search.ts`.
+    AND: searchTokens(query.search).map((token) => ({
+      OR: [{ nameEn: contains(token) }, { nameFa: contains(token) }],
+    })),
   };
 
   const [carBrands, total] = await Promise.all([

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
+import { contains, searchTokens } from "@/lib/search";
 import { MAX_CART_QUANTITY } from "@/lib/storefront/cart";
 import type { StorefrontProductListQuery, StorefrontProductSort } from "@/lib/validation";
 
@@ -176,14 +177,24 @@ function buildProductWhere(query: StorefrontProductListQuery): Prisma.ProductWhe
         ...(query.brand ? slugOrIdFilter(query.brand) : {}),
       },
     },
+    // Tokenised, and the raw query still tried whole against `oemPartNumbers` —
+    // same shape as the admin Products search, so the two stay consistent.
+    // See `lib/search.ts`.
     ...(query.search
       ? {
           OR: [
-            { nameEn: { contains: query.search, mode: "insensitive" } },
-            { nameFa: { contains: query.search, mode: "insensitive" } },
-            // Array columns can't do substring matching in Prisma — OEM codes
-            // match an exact entry, same as the admin Products search.
             { oemPartNumbers: { has: query.search } },
+            {
+              AND: searchTokens(query.search).map((token) => ({
+                OR: [
+                  { nameEn: contains(token) },
+                  { nameFa: contains(token) },
+                  // Array columns can't do substring matching in Prisma — OEM
+                  // codes match an exact entry, same as the admin search.
+                  { oemPartNumbers: { has: token } },
+                ],
+              })),
+            },
           ],
         }
       : {}),

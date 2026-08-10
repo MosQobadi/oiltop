@@ -2,16 +2,14 @@ import { test, expect } from "@playwright/test";
 import { rowContaining } from "./support/table";
 
 // Seeded as PENDING (prisma/seed.ts) — the only seeded order for this
-// customer, so searching by name resolves to exactly one row.
+// customer, so searching by name resolves to exactly one row. The full name
+// spans firstName + lastName, which only matches because the search is
+// tokenised (`lib/search.ts`) — this doubles as a regression test for that.
 const CUSTOMER_NAME = "Sara Ahmadi";
-// Searched separately from the displayed name: the Orders query matches
-// `contains` against firstName / lastName / email individually, so a full name
-// matches no registered customer. A surname is the narrowest term that hits.
-const CUSTOMER_SEARCH = "Ahmadi";
 
 test("advance an order through its full status sequence", async ({ page }) => {
   await page.goto("/admin/orders");
-  await page.getByPlaceholder("Search by customer...").fill(CUSTOMER_SEARCH);
+  await page.getByPlaceholder("Search by customer...").fill(CUSTOMER_NAME);
 
   // The search box debounces 300ms and then refetches, so the unfiltered rows
   // are still on screen right after `fill`. Matching one of those and clicking

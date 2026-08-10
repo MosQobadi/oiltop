@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import type { Prisma } from "@/lib/generated/prisma/client";
+import { contains, searchTokens } from "@/lib/search";
 import type { ProductCreateInput, ProductListQuery, ProductUpdateInput } from "@/lib/validation";
 
 export class ProductNotFoundError extends Error {}
@@ -35,15 +36,26 @@ export async function listProducts(query: ProductListQuery) {
     ...(query.status ? { status: query.status } : {}),
     ...(query.category ? { categoryId: query.category } : {}),
     ...(query.brand ? { brandId: query.brand } : {}),
+    // Tokenised so "Mobil 5W-30" still finds "Mobil 1 5W-30" — see
+    // `lib/search.ts`. The raw query is tried against `oemPartNumbers` as well,
+    // because that match is exact rather than substring: an OEM code with a
+    // space in it would never survive tokenisation.
     ...(query.search
       ? {
           OR: [
-            { nameEn: { contains: query.search, mode: "insensitive" } },
-            { nameFa: { contains: query.search, mode: "insensitive" } },
-            { sku: { contains: query.search, mode: "insensitive" } },
-            // Array fields don't support substring matching in Prisma — OEM
-            // codes are matched exactly against any entry instead.
             { oemPartNumbers: { has: query.search } },
+            {
+              AND: searchTokens(query.search).map((token) => ({
+                OR: [
+                  { nameEn: contains(token) },
+                  { nameFa: contains(token) },
+                  { sku: contains(token) },
+                  // Array fields don't support substring matching in Prisma —
+                  // OEM codes are matched exactly against any entry instead.
+                  { oemPartNumbers: { has: token } },
+                ],
+              })),
+            },
           ],
         }
       : {}),

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import type { Prisma } from "@/lib/generated/prisma/client";
+import { contains, searchTokens } from "@/lib/search";
 import type { CategoryCreateInput, CategoryListQuery, CategoryUpdateInput } from "@/lib/validation";
 
 export class CategoryNotFoundError extends Error {}
@@ -16,14 +17,10 @@ export async function listCategories(query: CategoryListQuery) {
   const where: Prisma.CategoryWhereInput = {
     ...(query.status ? { status: query.status } : {}),
     ...(query.partType ? { partType: query.partType } : {}),
-    ...(query.search
-      ? {
-          OR: [
-            { nameEn: { contains: query.search, mode: "insensitive" } },
-            { nameFa: { contains: query.search, mode: "insensitive" } },
-          ],
-        }
-      : {}),
+    // Tokenised — see `lib/search.ts`.
+    AND: searchTokens(query.search).map((token) => ({
+      OR: [{ nameEn: contains(token) }, { nameFa: contains(token) }],
+    })),
   };
 
   const [categories, total] = await Promise.all([

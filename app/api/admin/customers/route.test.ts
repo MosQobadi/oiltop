@@ -179,4 +179,13 @@ describe("GET /api/admin/customers", () => {
 
     expect(json.data.items.some((i: { id: string }) => i.id === customerBeta.id)).toBe(true);
   });
+
+  it("matches a full name spanning firstName and lastName", async () => {
+    const res = await GET(getRequest({ search: "Alpha Tester" }));
+    const json = await res.json();
+
+    expect(json.data.items.some((i: { id: string }) => i.id === customerAlpha.id)).toBe(true);
+    // Every token has to match, so the shared "Tester" surname isn't enough.
+    expect(json.data.items.some((i: { id: string }) => i.id === customerBeta.id)).toBe(false);
+  });
 });

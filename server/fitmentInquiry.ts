@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
+import { contains, searchTokens } from "@/lib/search";
 import type {
   FitmentInquiryListQuery,
   FitmentInquiryPatchInput,
@@ -96,15 +97,14 @@ export async function createFitmentInquiry(input: StorefrontFitmentInquiryCreate
 export async function listFitmentInquiries(query: FitmentInquiryListQuery) {
   const where: Prisma.FitmentInquiryWhereInput = {
     ...(query.status ? { status: query.status } : {}),
-    ...(query.search
-      ? {
-          OR: [
-            { customerName: { contains: query.search, mode: "insensitive" } },
-            { phone: { contains: query.search, mode: "insensitive" } },
-            { email: { contains: query.search, mode: "insensitive" } },
-          ],
-        }
-      : {}),
+    // Tokenised — see `lib/search.ts`.
+    AND: searchTokens(query.search).map((token) => ({
+      OR: [
+        { customerName: contains(token) },
+        { phone: contains(token) },
+        { email: contains(token) },
+      ],
+    })),
   };
 
   const [inquiries, total] = await Promise.all([

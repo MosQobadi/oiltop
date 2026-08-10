@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
+import { contains, searchTokens } from "@/lib/search";
 import { sendNotification } from "@/lib/notify";
 import { ProductNotFoundError } from "@/server/product";
 import type { InventoryAddStockInput, InventoryListQuery, InventoryStatus } from "@/lib/validation";
@@ -51,15 +52,10 @@ export async function listInventory(query: InventoryListQuery) {
   const where: Prisma.ProductWhereInput = {
     ...(query.category ? { categoryId: query.category } : {}),
     ...(query.brand ? { brandId: query.brand } : {}),
-    ...(query.search
-      ? {
-          OR: [
-            { nameEn: { contains: query.search, mode: "insensitive" } },
-            { nameFa: { contains: query.search, mode: "insensitive" } },
-            { sku: { contains: query.search, mode: "insensitive" } },
-          ],
-        }
-      : {}),
+    // Tokenised — see `lib/search.ts`.
+    AND: searchTokens(query.search).map((token) => ({
+      OR: [{ nameEn: contains(token) }, { nameFa: contains(token) }, { sku: contains(token) }],
+    })),
     ...(stockFilter ? { inventory: { stock: stockFilter } } : {}),
   };
 

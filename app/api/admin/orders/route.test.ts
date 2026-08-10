@@ -227,6 +227,16 @@ describe("GET /api/admin/orders", () => {
     expect(json.data.items.some((i: { id: string }) => i.id === orderBeta.id)).toBe(true);
   });
 
+  it("matches a full name spanning firstName and lastName", async () => {
+    const res = await GET(getRequest({ search: "Alpha Tester" }));
+    const json = await res.json();
+
+    expect(json.data.items.some((i: { id: string }) => i.id === orderAlpha.id)).toBe(true);
+    // Every token has to match, so the other customer's order is excluded even
+    // though it shares the "Tester" surname.
+    expect(json.data.items.some((i: { id: string }) => i.id === orderBeta.id)).toBe(false);
+  });
+
   it("lists a guest order under its own name and flags it", async () => {
     const res = await GET(getRequest({ search: "Gamma Guest" }));
     const json = await res.json();

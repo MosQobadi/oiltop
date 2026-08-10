@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { OrderStatus, Prisma } from "@/lib/generated/prisma/client";
+import { contains, searchTokens } from "@/lib/search";
 import type { OrderListQuery, OrderNoteInput, OrderStatusUpdateInput } from "@/lib/validation";
 
 // Storefront Design Decision 6 — RESOLVED (2026-08-09, Storefront Task 0.5)
@@ -70,19 +71,18 @@ export async function listOrders(query: OrderListQuery) {
         }
       : {}),
     // Guest fields are searched alongside the customer relation, otherwise a
-    // guest order would be unreachable from the Customer search box.
-    ...(query.search
-      ? {
-          OR: [
-            { customer: { firstName: { contains: query.search, mode: "insensitive" } } },
-            { customer: { lastName: { contains: query.search, mode: "insensitive" } } },
-            { customer: { email: { contains: query.search, mode: "insensitive" } } },
-            { guestName: { contains: query.search, mode: "insensitive" } },
-            { guestEmail: { contains: query.search, mode: "insensitive" } },
-            { guestPhone: { contains: query.search, mode: "insensitive" } },
-          ],
-        }
-      : {}),
+    // guest order would be unreachable from the Customer search box. Tokenised
+    // so "Sara Ahmadi" spans firstName + lastName — see `lib/search.ts`.
+    AND: searchTokens(query.search).map((token) => ({
+      OR: [
+        { customer: { firstName: contains(token) } },
+        { customer: { lastName: contains(token) } },
+        { customer: { email: contains(token) } },
+        { guestName: contains(token) },
+        { guestEmail: contains(token) },
+        { guestPhone: contains(token) },
+      ],
+    })),
   };
 
   const [orders, total] = await Promise.all([

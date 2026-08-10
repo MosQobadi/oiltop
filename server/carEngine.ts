@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
+import { contains, searchTokens } from "@/lib/search";
 import type {
   CarEngineCreateInput,
   CarEngineListQuery,
@@ -14,14 +15,10 @@ export async function listCarEngines(query: CarEngineListQuery) {
   const where: Prisma.CarEngineWhereInput = {
     carModelId: query.carModelId,
     ...(query.status ? { status: query.status } : {}),
-    ...(query.search
-      ? {
-          OR: [
-            { labelEn: { contains: query.search, mode: "insensitive" } },
-            { labelFa: { contains: query.search, mode: "insensitive" } },
-          ],
-        }
-      : {}),
+    // Tokenised — see `lib/search.ts`.
+    AND: searchTokens(query.search).map((token) => ({
+      OR: [{ labelEn: contains(token) }, { labelFa: contains(token) }],
+    })),
   };
 
   const [carEngines, total] = await Promise.all([
@@ -110,28 +107,17 @@ export async function listSearchableCarEngines(query: CarEngineSearchableQuery) 
         ? [{ OR: [{ yearEnd: null }, { yearEnd: { gte: query.yearFrom } }] }]
         : []),
       ...(query.yearTo !== undefined ? [{ yearStart: { lte: query.yearTo } }] : []),
-      ...(query.search
-        ? [
-            {
-              OR: [
-                { labelEn: { contains: query.search, mode: "insensitive" as const } },
-                { labelFa: { contains: query.search, mode: "insensitive" as const } },
-                {
-                  carModel: {
-                    nameEn: { contains: query.search, mode: "insensitive" as const },
-                  },
-                },
-                {
-                  carModel: {
-                    carBrand: {
-                      nameEn: { contains: query.search, mode: "insensitive" as const },
-                    },
-                  },
-                },
-              ],
-            },
-          ]
-        : []),
+      // Tokenised so "Peugeot 206" spans carBrand.nameEn + carModel.nameEn —
+      // the picker's label is built from both, so neither column ever contains
+      // the whole phrase. See `lib/search.ts`.
+      ...searchTokens(query.search).map((token) => ({
+        OR: [
+          { labelEn: contains(token) },
+          { labelFa: contains(token) },
+          { carModel: { nameEn: contains(token) } },
+          { carModel: { carBrand: { nameEn: contains(token) } } },
+        ],
+      })),
     ],
   };
 
