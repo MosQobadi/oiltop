@@ -7,6 +7,7 @@ import {
   formatCarName,
   formatEngineOptionLabel,
   formatSpecAttributes,
+  formatSpecSummary,
   formatYearSpan,
   sortFitmentGroups,
   splitItemsByClimate,
@@ -195,6 +196,28 @@ describe("formatSpecAttributes", () => {
     expect(formatSpecAttributes(null)).toEqual([]);
     expect(formatSpecAttributes("5W-30")).toEqual([]);
     expect(formatSpecAttributes(["5W-30"])).toEqual([]);
+  });
+});
+
+describe("formatSpecSummary", () => {
+  it("joins the spec attributes into one line", () => {
+    expect(
+      formatSpecSummary({
+        specNote: "ignored when attributes exist",
+        specAttributes: { viscosity: "5W-30", apiRating: "API SP" },
+      }),
+    ).toBe("5W-30, API SP");
+  });
+
+  it("falls back to the admin's free-text note", () => {
+    expect(formatSpecSummary({ specNote: "  Standard spin-on filter  ", specAttributes: {} })).toBe(
+      "Standard spin-on filter",
+    );
+  });
+
+  it("has nothing to say when neither is filled in", () => {
+    expect(formatSpecSummary({ specNote: null, specAttributes: null })).toBeNull();
+    expect(formatSpecSummary({ specNote: "   ", specAttributes: null })).toBeNull();
   });
 });
 

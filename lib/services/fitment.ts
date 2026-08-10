@@ -318,3 +318,217 @@ export async function resolveFitmentForEngine(
 
   return groupFitmentItemsByCategory(links.flatMap((link) => link.profile.items));
 }
+
+// --- Car content pages -----------------------------------------------------
+//
+// Everything below serves `/{locale}/cars/<brand>` and `/{locale}/cars/<brand>/<model>`
+// — pages a search engine ranks, not wizard steps (admin Design Decision 7). The
+// wizard reads a model to populate a `<select>`; these read it to write a page
+// about it, which is why the SEO pair and the year arithmetic live here and not
+// in the four selects above.
+
+/** A production range. An open end (`null`) means the car is still being built. */
+export interface YearSpan {
+  yearStart: number;
+  yearEnd: number | null;
+}
+
+// The union of several ranges: earliest start, and an open end if any one of
+// them is still open. This is what lets a model — or a profile covering three
+// engines — state a single "2006–2016" the way a customer would say it.
+export function combineYearSpans(spans: YearSpan[]): YearSpan | null {
+  if (spans.length === 0) return null;
+
+  let yearStart = Infinity;
+  let yearEnd: number | null = -Infinity;
+
+  for (const span of spans) {
+    yearStart = Math.min(yearStart, span.yearStart);
+    // Once one range is open the union is open, and no closed range can shut it
+    // again — so a null end is sticky rather than merely the largest value.
+    if (span.yearEnd === null) yearEnd = null;
+    else if (yearEnd !== null) yearEnd = Math.max(yearEnd, span.yearEnd);
+  }
+
+  return { yearStart, yearEnd };
+}
+
+export interface CarModelSummary extends CarModelOption {
+  /** Over the model's active engines; null when it has none listed yet. */
+  span: YearSpan | null;
+  engineCount: number;
+}
+
+// The brand page's model index. The engines come back as bare ranges because
+// that is all the listing says about them — a count and a span, not a spec.
+export async function listCarModelSummariesForBrand(
+  carBrandId: string,
+): Promise<CarModelSummary[]> {
+  const models = await prisma.carModel.findMany({
+    where: { carBrandId, status: "ACTIVE" },
+    select: {
+      ...carModelSelect,
+      engines: { where: { status: "ACTIVE" }, select: { yearStart: true, yearEnd: true } },
+    },
+    orderBy: { nameEn: "asc" },
+  });
+
+  return models.map(({ engines, ...model }) => ({
+    ...model,
+    span: combineYearSpans(engines),
+    engineCount: engines.length,
+  }));
+}
+
+// The model's own SEO copy, which the wizard's `carModelSelect` has no use for.
+// A second select rather than four more columns on every wizard response.
+const carModelContentSelect = {
+  ...carModelSelect,
+  metaTitleEn: true,
+  metaTitleFa: true,
+  metaDescriptionEn: true,
+  metaDescriptionFa: true,
+} satisfies Prisma.CarModelSelect;
+
+export type CarModelContent = Prisma.CarModelGetPayload<{
+  select: typeof carModelContentSelect;
+}>;
+
+export interface CarModelContext {
+  carModel: CarModelContent;
+  carBrand: CarBrandOption;
+}
+
+// Addressed by the two slugs that form the URL rather than by id: `CarModel.slug`
+// is only unique within its brand (`@@unique([carBrandId, slug])`), so the brand
+// slug is half the key, not a label. Same active-up-the-chain rule as every
+// lookup above — a deactivated brand takes its model pages down with it.
+export async function getActiveCarModelBySlugs(
+  brandSlug: string,
+  modelSlug: string,
+): Promise<CarModelContext | null> {
+  const carModel = await prisma.carModel.findFirst({
+    where: {
+      slug: modelSlug,
+      status: "ACTIVE",
+      carBrand: { slug: brandSlug, status: "ACTIVE" },
+    },
+    select: { ...carModelContentSelect, carBrand: { select: carBrandSelect } },
+  });
+  if (!carModel) return null;
+
+  const { carBrand, ...model } = carModel;
+  return { carModel: model, carBrand };
+}
+
+export interface SharedProfileSelection {
+  profileId: string;
+  carEngineIds: string[];
+}
+
+// Which of a model's fitment profiles are worth stating as the *model's*
+// recommendation rather than leaving to the wizard: one attached to more than a
+// single engine, or one attached to every engine the model has (which is what a
+// single-engine model's only profile is). A profile covering one engine out of
+// five is that engine's answer, not the model's, and stays in the wizard —
+// printing it as page copy would claim a range it doesn't cover.
+//
+// Ordered by coverage, widest first; `sort` is stable, so profiles tied on
+// coverage keep the order their links were created in.
+export function selectSharedProfiles(
+  links: { profileId: string; carEngineId: string }[],
+  engineCount: number,
+): SharedProfileSelection[] {
+  const byProfileId = new Map<string, string[]>();
+
+  for (const link of links) {
+    const carEngineIds = byProfileId.get(link.profileId);
+    if (carEngineIds) carEngineIds.push(link.carEngineId);
+    else byProfileId.set(link.profileId, [link.carEngineId]);
+  }
+
+  return Array.from(byProfileId, ([profileId, carEngineIds]) => ({ profileId, carEngineIds }))
+    .filter(({ carEngineIds }) => carEngineIds.length > 1 || carEngineIds.length === engineCount)
+    .sort((a, b) => b.carEngineIds.length - a.carEngineIds.length);
+}
+
+export interface SharedFitmentProfile {
+  id: string;
+  /** The union of the covered engines' ranges — the "2006–2016" in the heading. */
+  span: YearSpan;
+  /** The engines it covers, in the model's own order, so the page can name them. */
+  engines: CarEngineOption[];
+  groups: FitmentCategoryGroup[];
+}
+
+export interface CarModelFitment {
+  engines: CarEngineOption[];
+  /** Over every active engine; null when the model has none listed yet. */
+  span: YearSpan | null;
+  sharedProfiles: SharedFitmentProfile[];
+}
+
+// What a model page can say about fitment before the customer has picked a year:
+// its production span, and the recommendations that hold across enough of the
+// range to be stated as the model's own.
+export async function getCarModelFitment(carModelId: string): Promise<CarModelFitment> {
+  const engines = await prisma.carEngine.findMany({
+    where: { carModelId, status: "ACTIVE" },
+    select: carEngineSelect,
+    orderBy: [{ yearStart: "asc" }, { labelEn: "asc" }],
+  });
+
+  const span = combineYearSpans(engines);
+  if (engines.length === 0) return { engines, span, sharedProfiles: [] };
+
+  // Ids first, profiles second, rather than one nested include: a profile
+  // attached to four engines comes back four times through the link table,
+  // items and all, and most of those copies are about to be discarded. Two
+  // narrow queries read less than one wide one here.
+  const links = await prisma.carEngineFitmentProfile.findMany({
+    where: { carEngineId: { in: engines.map((engine) => engine.id) } },
+    select: { profileId: true, carEngineId: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const shared = selectSharedProfiles(links, engines.length);
+  if (shared.length === 0) return { engines, span, sharedProfiles: [] };
+
+  const profiles = await prisma.fitmentProfile.findMany({
+    where: { id: { in: shared.map((selection) => selection.profileId) } },
+    select: {
+      id: true,
+      items: {
+        include: fitmentItemInclude,
+        orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
+      },
+    },
+  });
+  const itemsByProfileId = new Map(profiles.map((profile) => [profile.id, profile.items]));
+
+  return {
+    engines,
+    span,
+    sharedProfiles: shared.flatMap((selection) => {
+      const items = itemsByProfileId.get(selection.profileId) ?? [];
+      const covered = new Set(selection.carEngineIds);
+      // Filtered out of `engines` rather than mapped from the link rows, so the
+      // labels read in the model's own year order.
+      const profileEngines = engines.filter((engine) => covered.has(engine.id));
+      const profileSpan = combineYearSpans(profileEngines);
+
+      // An empty profile has nothing to state as content; the wizard can still
+      // resolve to it and show its (equally empty) results.
+      if (items.length === 0 || profileSpan === null) return [];
+
+      return [
+        {
+          id: selection.profileId,
+          span: profileSpan,
+          engines: profileEngines,
+          groups: groupFitmentItemsByCategory(items),
+        },
+      ];
+    }),
+  };
+}

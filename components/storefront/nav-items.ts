@@ -25,9 +25,9 @@ export const PRODUCTS_PATH = "/products";
 export const CATEGORIES_PATH = "/categories";
 
 // The car content pages — `/cars/<brandSlug>` and `/cars/<brandSlug>/<modelSlug>`.
-// Named here ahead of the screens themselves (Task 10.3) because the sitemap
-// already has to emit those URLs, and one definition beats two string literals
-// drifting apart.
+// A brand index and a page per model, each with its own copy and SEO pair: car
+// pages rank as content, not merely as wizard steps (admin Design Decision 7).
+// One definition, because the sitemap emits these URLs too.
 export const CARS_PATH = "/cars";
 
 export const storefrontNavItems: StorefrontNavItem[] = [

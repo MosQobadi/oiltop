@@ -39,6 +39,14 @@ export function formatYearSpan(
   return `${start}–${end}`;
 }
 
+// "4 engines" — how many variants a car model was sold with, next to its year
+// span on the car content pages. Persian has no plural inflection to match, so
+// only the English form has the singular case.
+export function formatEngineCount(locale: Locale, count: number): string {
+  const digits = formatDigits(count, locale);
+  return pickLocale(locale, `${digits} ${count === 1 ? "engine" : "engines"}`, `${digits} موتور`);
+}
+
 // "1.4L TU3 Petrol (2001–2010)". The range is part of the label because two
 // engines of one model often differ by nothing else a customer can see.
 export function formatEngineOptionLabel(locale: Locale, engine: CarEngineLabelParts): string {
@@ -183,6 +191,20 @@ export function formatSpecAttributes(specAttributes: unknown): SpecAttributeRow[
   return rows;
 }
 
+// A spec-only item as one line of prose, for the car content pages — those
+// state a model's recommendation as readable text rather than as a grid of
+// cards, so a spec that has no product yet still has to read as a sentence
+// fragment ("5W-30, API SL or newer"). Null when the admin filled in neither:
+// there is nothing to say, and an em dash isn't content.
+export function formatSpecSummary(item: {
+  specNote: string | null;
+  specAttributes: unknown;
+}): string | null {
+  const rows = formatSpecAttributes(item.specAttributes);
+  if (rows.length > 0) return rows.map((row) => row.value).join(", ");
+  return item.specNote?.trim() || null;
+}
+
 // The message the "Request it" form (Task 3.3) opens pre-filled:
 // "Looking for: 5W-30 or 10W-40, API SL or newer — Engine Oil for Peugeot 206 ·
 // 1.4L TU3 Petrol (2001–2010)". Built from the spec attributes when there are
@@ -196,8 +218,7 @@ export function buildFitmentRequestMessage(
     specAttributes: unknown;
   },
 ): string {
-  const rows = formatSpecAttributes(input.specAttributes);
-  const spec = rows.length > 0 ? rows.map((row) => row.value).join(", ") : input.specNote?.trim();
+  const spec = formatSpecSummary(input);
 
   // With no category this is the whole-car case ("nothing matched at all"), so
   // the subject names what's being asked for instead of leaving a dangling "for".

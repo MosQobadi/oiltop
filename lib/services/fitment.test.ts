@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { Prisma } from "@/lib/generated/prisma/client";
 import {
+  combineYearSpans,
   expandYearRanges,
   groupFitmentItemsByCategory,
+  selectSharedProfiles,
   type FitmentCategorySummary,
   type FitmentItemWithRelations,
 } from "./fitment";
@@ -151,5 +153,92 @@ describe("groupFitmentItemsByCategory", () => {
 
   it("returns no groups for an engine with no fitment items", () => {
     expect(groupFitmentItemsByCategory([])).toEqual([]);
+  });
+});
+
+describe("combineYearSpans", () => {
+  it("takes the earliest start and the latest end", () => {
+    expect(
+      combineYearSpans([
+        { yearStart: 2010, yearEnd: 2014 },
+        { yearStart: 2006, yearEnd: 2012 },
+      ]),
+    ).toEqual({ yearStart: 2006, yearEnd: 2014 });
+  });
+
+  it("stays open when any one range is still in production", () => {
+    expect(
+      combineYearSpans([
+        { yearStart: 2006, yearEnd: 2016 },
+        { yearStart: 2017, yearEnd: null },
+      ]),
+    ).toEqual({ yearStart: 2006, yearEnd: null });
+  });
+
+  it("keeps the open end regardless of the order the ranges arrive in", () => {
+    expect(
+      combineYearSpans([
+        { yearStart: 2017, yearEnd: null },
+        { yearStart: 2006, yearEnd: 2016 },
+      ]),
+    ).toEqual({ yearStart: 2006, yearEnd: null });
+  });
+
+  it("returns a single range unchanged", () => {
+    expect(combineYearSpans([{ yearStart: 2001, yearEnd: 2010 }])).toEqual({
+      yearStart: 2001,
+      yearEnd: 2010,
+    });
+  });
+
+  it("has no span for a model with no engines", () => {
+    expect(combineYearSpans([])).toBeNull();
+  });
+});
+
+describe("selectSharedProfiles", () => {
+  it("keeps a profile attached to more than one of the model's engines", () => {
+    expect(
+      selectSharedProfiles(
+        [
+          { profileId: "profile_a", carEngineId: "engine_1" },
+          { profileId: "profile_a", carEngineId: "engine_2" },
+        ],
+        3,
+      ),
+    ).toEqual([{ profileId: "profile_a", carEngineIds: ["engine_1", "engine_2"] }]);
+  });
+
+  it("drops a profile that covers a single engine out of several", () => {
+    // One engine's answer, not the model's — printing it as page copy would
+    // claim a year range it doesn't cover.
+    expect(selectSharedProfiles([{ profileId: "profile_a", carEngineId: "engine_1" }], 4)).toEqual(
+      [],
+    );
+  });
+
+  it("keeps a single-engine model's only profile", () => {
+    expect(selectSharedProfiles([{ profileId: "profile_a", carEngineId: "engine_1" }], 1)).toEqual([
+      { profileId: "profile_a", carEngineIds: ["engine_1"] },
+    ]);
+  });
+
+  it("orders by coverage, widest first", () => {
+    const selections = selectSharedProfiles(
+      [
+        { profileId: "narrow", carEngineId: "engine_1" },
+        { profileId: "narrow", carEngineId: "engine_2" },
+        { profileId: "wide", carEngineId: "engine_1" },
+        { profileId: "wide", carEngineId: "engine_2" },
+        { profileId: "wide", carEngineId: "engine_3" },
+      ],
+      3,
+    );
+
+    expect(selections.map((selection) => selection.profileId)).toEqual(["wide", "narrow"]);
+  });
+
+  it("has nothing to state for a model with no attached profiles", () => {
+    expect(selectSharedProfiles([], 2)).toEqual([]);
   });
 });

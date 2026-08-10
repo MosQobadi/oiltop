@@ -47,6 +47,19 @@ const NO_MODELS: CarModelOption[] = [];
 const NO_YEARS: number[] = [];
 const NO_ENGINES: CarEngineOption[] = [];
 
+/**
+ * Mounts the cascade already part-answered. The car content pages (Task 10.3)
+ * embed the wizard *inside* a model, so Brand and Model are facts of the page
+ * rather than questions — the cascade starts at Year.
+ *
+ * Note this is read once per mount, not watched: a caller whose scope can change
+ * in place (navigating between two model pages, which React reconciles as the
+ * same component) must give the wizard a `key` so the answers below it reset.
+ */
+export interface FitmentWizardScope {
+  carModelId: string;
+}
+
 export interface FitmentWizardSelection {
   /** Brands are addressed by slug — that's what the models route takes. */
   brandSlug: string;
@@ -107,7 +120,10 @@ async function loadStep<T>(options: {
   }
 }
 
-export function useFitmentWizard(onResolve: (carEngineId: string) => void): FitmentWizardState {
+export function useFitmentWizard(
+  onResolve: (carEngineId: string) => void,
+  scope?: FitmentWizardScope,
+): FitmentWizardState {
   // Resolving navigates, so the callback is read through a ref: a caller that
   // passes an inline arrow must not re-run the engine fetch on every render.
   const onResolveRef = useRef(onResolve);
@@ -115,13 +131,17 @@ export function useFitmentWizard(onResolve: (carEngineId: string) => void): Fitm
     onResolveRef.current = onResolve;
   });
 
+  // Held as a plain string rather than the object, so an inline `scope={{…}}`
+  // prop doesn't re-run every effect below it on each render.
+  const scopedModelId = scope?.carModelId ?? "";
+
   const [brands, setBrands] = useState<CarBrandOption[]>([]);
   const [loadedModels, setLoadedModels] = useState<StepOptions<CarModelOption>>(NO_OPTIONS);
   const [loadedYears, setLoadedYears] = useState<StepOptions<number>>(NO_OPTIONS);
   const [loadedEngines, setLoadedEngines] = useState<StepOptions<CarEngineOption>>(NO_OPTIONS);
 
   const [brandSlug, setBrandSlug] = useState("");
-  const [modelId, setModelId] = useState("");
+  const [modelIdAnswer, setModelId] = useState("");
   const [year, setYear] = useState("");
   const [carEngineId, setCarEngineId] = useState("");
 
@@ -134,10 +154,19 @@ export function useFitmentWizard(onResolve: (carEngineId: string) => void): Fitm
     setAllFlags((current) => ({ ...current, [step]: stepFlags }));
   }, []);
 
+  // Scoped, the model is the page's, not the customer's. `brandSlug` stays ""
+  // for the same reason and needs no override — nothing calls `selectBrand`,
+  // and an empty brand is already what stops the model list from loading.
+  const modelId = scopedModelId || modelIdAnswer;
+
   // The engine list is the only one keyed on two answers at once.
   const engineKey = modelId && year ? `${modelId}|${year}` : "";
 
   useEffect(() => {
+    // A step that never renders is never fetched: scoped, the Brand and Model
+    // lists would be two requests nobody looks at.
+    if (scopedModelId) return;
+
     let stale = false;
     void loadStep<{ carBrands: CarBrandOption[] }>({
       step: "brand",
@@ -149,7 +178,7 @@ export function useFitmentWizard(onResolve: (carEngineId: string) => void): Fitm
     return () => {
       stale = true;
     };
-  }, [reloadToken, setFlags]);
+  }, [reloadToken, scopedModelId, setFlags]);
 
   useEffect(() => {
     if (!brandSlug) return;

@@ -21,9 +21,9 @@ import { isSitemapEnabled } from "@/server/setting";
 // files that can't reference each other.
 //
 // Car brand and model URLs are emitted here per admin Design Decision 7 — car
-// pages are SEO pages, not just wizard steps. The pages themselves land in
-// Task 10.3; until then those entries resolve to 404s, so keep the sitemap
-// toggle off in Settings until that task ships.
+// pages are SEO pages, not just wizard steps. The two screens under
+// `app/[locale]/cars/` (Task 10.3) 404 on exactly the rows the two queries
+// below leave out, so no entry here points at a page that won't answer 200.
 
 // Catalog rows and the Settings toggle both change without a deploy, so the
 // sitemap is rendered per request rather than baked at build time.

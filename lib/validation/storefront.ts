@@ -15,6 +15,10 @@ export const storefrontIdParamSchema = z.string().min(1, "Invalid id");
 
 export const carBrandSlugParamSchema = slugSchema;
 
+// `/cars/<brandSlug>/<modelSlug>` — a model slug is only unique within its
+// brand, so the two always arrive together and are validated the same way.
+export const carModelSlugParamSchema = slugSchema;
+
 // The car-finder's Engine step always arrives with the year the customer picked
 // in the previous step, so it's required rather than defaulted.
 export const carFinderEngineQuerySchema = z.object({

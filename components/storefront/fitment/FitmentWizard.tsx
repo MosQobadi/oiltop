@@ -2,7 +2,7 @@
 
 import { useCallback, useId, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useFitmentWizard, type FitmentStepKey } from "./useFitmentWizard";
+import { useFitmentWizard, type FitmentStepKey, type FitmentWizardScope } from "./useFitmentWizard";
 import { FITMENT_PATH, navHref } from "../nav-items";
 import { formatDigits, pickLocale, type Locale } from "@/lib/i18n";
 import { formatEngineOptionLabel, withFitContext } from "@/lib/storefront/fitment";
@@ -29,6 +29,12 @@ export interface FitmentWizardProps {
    * `full` is the fitment page — a numbered stepper with room to breathe.
    */
   mode?: FitmentWizardMode;
+  /**
+   * Drops the steps the surrounding page has already answered — a car model
+   * page starts the customer at Year. See `FitmentWizardScope` for the `key`
+   * this asks of a caller whose scope can change in place.
+   */
+  scope?: FitmentWizardScope;
   /** Overrides the default navigation to `/{locale}/fitment?fit=<carEngineId>`. */
   onResolve?: (carEngineId: string) => void;
   className?: string;
@@ -55,6 +61,7 @@ const LABEL_CLASS = "text-[12.5px] font-medium text-neutral-600";
 export function FitmentWizard({
   locale,
   mode = "full",
+  scope,
   onResolve,
   className = "",
 }: FitmentWizardProps) {
@@ -72,7 +79,7 @@ export function FitmentWizard({
     [onResolve, router, locale],
   );
 
-  const wizard = useFitmentWizard(handleResolve);
+  const wizard = useFitmentWizard(handleResolve, scope);
   const { brands, models, years, engines, selection, flags } = wizard;
 
   const steps: StepView[] = [
@@ -139,12 +146,14 @@ export function FitmentWizard({
     },
   ];
 
-  // The auto-skip is a rendering decision, not a data one: the step is dropped
-  // entirely once its answer is the only possible one, and the wizard has
+  // Two reasons a step doesn't render, both rendering decisions rather than
+  // data ones: the page it's embedded in already answered it, or its answer
+  // turned out to be the only one there is — by which point the wizard has
   // already resolved on the year.
-  const visibleSteps = wizard.engineStepSkipped
-    ? steps.filter((step) => step.key !== "engine")
-    : steps;
+  const scopedOut: FitmentStepKey[] = scope ? ["brand", "model"] : [];
+  const visibleSteps = steps.filter(
+    (step) => !scopedOut.includes(step.key) && !(wizard.engineStepSkipped && step.key === "engine"),
+  );
 
   const renderStep = (step: StepView, index: number) => {
     const stepFlags = flags[step.key];
