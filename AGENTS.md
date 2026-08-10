@@ -210,6 +210,29 @@ a Server Component can render them straight from its `params`.
   taking an `onSubmit` — there is one endpoint and one shape. Validation copy is
   localized in the component because the shared schema's messages also serve the
   API and are English-only.
+- **`ProductFilters`** — the PLP's filter rail: `locale`, `basePath`, `params`
+  (`ProductListParams`), and pre-localized `categories`/`brands` option lists.
+  It holds no filter state — every control writes the next URL and the server
+  re-renders — so the only `useState` in it is whether the rail is open on a
+  phone. Options arrive already localized so the catalog's types (and Prisma)
+  stay out of the browser bundle. The Filter-kind select appears under
+  `partType = FILTER`, and also whenever a kind is already applied, so a
+  hand-edited URL can't filter the grid with no control to undo it.
+- **`ProductSortSelect`** — the same contract, split out because sort sits above
+  the grid rather than in the rail: it changes the order, not which products
+  are shown. Both it and `ProductFilters` reset to page 1 on any change.
+- **`Pagination`** — `locale`, `page`, `pageCount`, and `hrefForPage(page)`.
+  Real links, not buttons: page 2 is only crawlable if it has a URL. The caller
+  owns what a page's href looks like (it holds the filters); this owns which
+  pages are offered, via `paginationRange`. Renders nothing at one page or
+  fewer, and the disabled ends are spans so there is nothing to focus.
+- **`FitContextBanner`** — "Shopping for: Peugeot 206 · 1.4L TU3 Petrol
+  (2001–2010)", the car carried into general browsing by `?fit=`. It is
+  context, not a filter — the catalog underneath stays whole — so it offers the
+  car-specific view (`See parts that fit`), a different car (`Change car`), and
+  a dismiss. **Dismissing is a link to the same page without `?fit=`**, not
+  client state: the context lives in the URL, and hiding the banner while every
+  link still carried the car would be a lie the next page tells.
 
 ### `components/storefront/fitment/`
 
@@ -278,6 +301,36 @@ digits and the ٬ separator on the `fa` tree via `Intl` (currency is Toman
 everywhere). `getDiscountPercent` returns a whole percent and is the single test
 for "is this discounted" — a discount that rounds to 0% is not one, which is what
 keeps the strikethrough and the "−15%" badge from disagreeing.
+
+### `lib/storefront/plp.ts`
+
+The product listing's shared vocabulary — the PLP has no store and no state
+hook, because its filters, sort and page all live in the query string. That is
+what lets the grid render on the server and a filtered view stay linkable and
+crawlable, with only the controls that write the next URL shipping to the
+browser.
+
+- **`buildProductListHref(basePath, params)`** is the only place a PLP URL is
+  spelled. Params are written in a fixed order and anything at its default is
+  omitted, so one set of filters is always exactly one URL — two spellings of
+  the same view would split its crawl budget for nothing.
+- **`partTypeLabel`/`filterKindLabel`** render the fitment engine's identifiers
+  for a customer. Never show a raw enum, and never let a category's name stand
+  in for its part type — several categories share one.
+- `PLP_PAGE_SIZE` is the screen's decision, not the URL's: unlike the API's
+  query schema, `storefrontProductListPageQuerySchema` has no `pageSize` field.
+  That schema is the page's counterpart to the route handler's — same params,
+  but each field falls back on its own (`.catch`), because a page can't answer
+  `?page=abc` with a 400 and one bad param shouldn't silently clear the
+  customer's other filters.
+
+`app/[locale]/products/page.tsx` composes those with the primitives above, and
+reads through `lib/services/catalog` directly rather than fetching its own
+`GET /api/storefront/products` — same pattern as the fitment page. **`?fit=` is
+carried, never applied**: the car rides along in the banner and in every link
+the customer follows (so the PDP can say "fits your car"), but the grid stays
+the full catalog. Narrowing to one car is what the fitment results page is for,
+and silently hiding products here would look like an empty shop.
 
 ---
 

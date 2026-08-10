@@ -31,9 +31,9 @@ export type CarFinderEngineQuery = z.infer<typeof carFinderEngineQuerySchema>;
 // depends on which of nameEn/nameFa is being rendered, and the API doesn't
 // know the locale — add it alongside the PLP screen if it's wanted, with the
 // locale passed in.
-export const storefrontProductSortSchema = z
-  .enum(["newest", "price-asc", "price-desc"])
-  .default("newest");
+export const STOREFRONT_PRODUCT_SORTS = ["newest", "price-asc", "price-desc"] as const;
+
+export const storefrontProductSortSchema = z.enum(STOREFRONT_PRODUCT_SORTS).default("newest");
 
 export type StorefrontProductSort = z.infer<typeof storefrontProductSortSchema>;
 
@@ -51,6 +51,26 @@ export const storefrontProductListQuerySchema = z.object({
 });
 
 export type StorefrontProductListQuery = z.infer<typeof storefrontProductListQuerySchema>;
+
+// The same query string, read by the PLP page instead of the route handler. A
+// page can't answer `?page=abc` with a 400 — it still has to render the
+// catalog — so every field falls back on its own rather than the object failing
+// as a whole, which is what keeps one hand-edited param from silently clearing
+// the customer's other filters.
+//
+// `pageSize` is deliberately absent: the grid's page size is the screen's
+// decision (PLP_PAGE_SIZE in lib/storefront/plp.ts), not the URL's.
+export const storefrontProductListPageQuerySchema = z.object({
+  category: storefrontProductListQuerySchema.shape.category.catch(undefined),
+  brand: storefrontProductListQuerySchema.shape.brand.catch(undefined),
+  partType: storefrontProductListQuerySchema.shape.partType.catch(undefined),
+  filterKind: storefrontProductListQuerySchema.shape.filterKind.catch(undefined),
+  search: storefrontProductListQuerySchema.shape.search.catch(undefined),
+  sort: storefrontProductSortSchema.catch("newest"),
+  page: pageSchema.catch(1),
+});
+
+export type StorefrontProductListPageQuery = z.infer<typeof storefrontProductListPageQuerySchema>;
 
 export const storefrontProductSlugParamSchema = slugSchema;
 
