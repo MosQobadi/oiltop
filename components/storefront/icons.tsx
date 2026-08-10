@@ -37,6 +37,16 @@ export function MenuIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+// Points forward in reading order, not east: callers flip it with `rtl:` so the
+// Persian tree's "go on" arrow doesn't point back where the customer came from.
+export function ChevronIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="m9 5 7 7-7 7" />
+    </Svg>
+  );
+}
+
 export function MailIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Svg {...props}>
