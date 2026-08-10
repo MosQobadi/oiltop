@@ -59,6 +59,22 @@ async function createTestCategory(overrides: Record<string, unknown> = {}) {
   });
 }
 
+// The delete-blocked test needs a brand only as a parent FK for its product. It
+// creates its own rather than borrowing an arbitrary existing one: test files
+// run in parallel against the shared database, and several of them create and
+// then delete their own brands, so an unfiltered `findFirstOrThrow()` can hand
+// back a row that is gone by the time `product.create` runs.
+async function createTestBrand() {
+  return prisma.brand.create({
+    data: {
+      slug: `${SLUG_PREFIX}-brand-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      nameEn: "Test Brand For Category ID Route",
+      nameFa: "برند آزمایشی",
+      status: "ACTIVE",
+    },
+  });
+}
+
 beforeAll(async () => {
   const admin = await prisma.user.findUniqueOrThrow({
     where: { email: "admin@topoil.com" },
@@ -69,6 +85,10 @@ beforeAll(async () => {
 afterAll(async () => {
   await prisma.product.deleteMany({ where: { sku: { startsWith: SLUG_PREFIX } } });
   await prisma.category.deleteMany({
+    where: { slug: { startsWith: SLUG_PREFIX } },
+  });
+  // After the products, which reference them.
+  await prisma.brand.deleteMany({
     where: { slug: { startsWith: SLUG_PREFIX } },
   });
 });
@@ -167,7 +187,7 @@ describe("DELETE /api/admin/categories/:id", () => {
 
   it("soft-fails with a clear error when the category has products", async () => {
     const category = await createTestCategory();
-    const brand = await prisma.brand.findFirstOrThrow();
+    const brand = await createTestBrand();
     const product = await prisma.product.create({
       data: {
         sku: `${SLUG_PREFIX}-sku-${Date.now()}`,

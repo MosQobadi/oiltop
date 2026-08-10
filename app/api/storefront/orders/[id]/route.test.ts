@@ -68,13 +68,19 @@ async function asCustomer<T>(userId: string, run: () => Promise<T>, role?: "ADMI
 
 beforeAll(async () => {
   // A *seeded* product rather than a fresh one: an order line only needs a
-  // valid product FK here, and creating a throwaway brand/category would leave
-  // rows for the admin suites that reach for `findFirstOrThrow()` to trip over
-  // while this file's cleanup deletes them underneath. Every suite in this repo
-  // prefixes its fixture SKUs with `test-`, so excluding those is what makes
-  // this pick a row no other file running in parallel is about to delete.
+  // valid product FK here, and a throwaway brand/category is three more rows to
+  // create and tear down for nothing. Every suite in this repo prefixes its
+  // fixture SKUs with `test-`, so excluding those is what makes this pick a row
+  // no other file running in parallel is about to delete.
+  //
+  // Case-insensitively: several admin suites spell the prefix `TEST-`
+  // (TEST-PROD-ID-7-1, TEST-INV-9-1, ...), and Postgres `startsWith` is
+  // case-sensitive — so a sensitive match let exactly the rows this is meant to
+  // avoid back in.
   product = await prisma.product.findFirstOrThrow({
-    where: { sku: { not: { startsWith: "test-" } } },
+    // `NOT` at the top level rather than `sku: { not: ... }` — `mode` is only
+    // accepted on a filter, not inside a nested `not`.
+    where: { NOT: { sku: { startsWith: "test-", mode: "insensitive" } } },
     select: { id: true },
   });
 

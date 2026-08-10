@@ -83,6 +83,10 @@ afterAll(async () => {
   await prisma.orderItem.deleteMany({
     where: { product: { sku: { startsWith: SKU_PREFIX } } },
   });
+  // After its items, which reference it.
+  await prisma.order.deleteMany({
+    where: { guestName: { startsWith: SKU_PREFIX } },
+  });
   await prisma.fitmentProfileItem.deleteMany({
     where: { product: { sku: { startsWith: SKU_PREFIX } } },
   });
@@ -275,7 +279,26 @@ describe("DELETE /api/admin/products/:id", () => {
 
   it("deactivates instead of deleting when the product has order history", async () => {
     const product = await createTestProduct();
-    const order = await prisma.order.findFirstOrThrow();
+    // Its own order, not an arbitrary existing one: the storefront checkout
+    // suites create orders and delete them in their own cleanup, and they run in
+    // parallel with this file against the shared database — so a row picked by
+    // an unfiltered `findFirstOrThrow()` can be deleted underneath this test.
+    // A guest order (no customerId) keeps the fixture to a single row.
+    const order = await prisma.order.create({
+      data: {
+        guestName: `${SKU_PREFIX} Guest`,
+        guestPhone: "02112345678",
+        status: "PENDING",
+        paymentStatus: "UNPAID",
+        subtotal: 1000,
+        discount: 0,
+        shippingCost: 0,
+        tax: 0,
+        total: 1000,
+        shippingAddress: "Tehran, Tehran, Somewhere",
+        postalCode: "1234567890",
+      },
+    });
     const orderItem = await prisma.orderItem.create({
       data: {
         orderId: order.id,

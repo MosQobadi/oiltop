@@ -45,6 +45,13 @@ let profile: { id: string };
 let otherProfile: { id: string };
 let engineOilCategory: { id: string };
 let oilFilterCategory: { id: string };
+// The product one test attaches to an item. Created here rather than picked
+// with `findFirstOrThrow({ where: { status: "ACTIVE" } })`: test files run in
+// parallel against the shared database and most of them create ACTIVE products
+// they later delete, so an arbitrary one can vanish mid-test.
+let testProduct: { id: string };
+
+const PRODUCT_SKU_PREFIX = "test-fp-item-id-route";
 
 async function createTestItem(overrides: Record<string, unknown> = {}) {
   return prisma.fitmentProfileItem.create({
@@ -77,6 +84,29 @@ beforeAll(async () => {
   otherProfile = await prisma.fitmentProfile.create({
     data: { label: `${LABEL_PREFIX} Other Profile` },
   });
+
+  const brand = await prisma.brand.findUniqueOrThrow({ where: { slug: "mobil-1" } });
+  testProduct = await prisma.product.create({
+    data: {
+      // Suffixed so an interrupted run that skipped cleanup can't collide with
+      // the next one on the unique sku/slug.
+      sku: `${PRODUCT_SKU_PREFIX}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      slug: `${PRODUCT_SKU_PREFIX}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      nameEn: "Test Product For Fitment Item Route",
+      nameFa: "محصول آزمایشی",
+      categoryId: engineOilCategory.id,
+      brandId: brand.id,
+      price: 1000,
+      discountPercent: 0,
+      tags: [],
+      oemPartNumbers: [],
+      shortDescriptionEn: "Short",
+      shortDescriptionFa: "کوتاه",
+      longDescriptionEn: "Long",
+      longDescriptionFa: "بلند",
+      status: "ACTIVE",
+    },
+  });
 });
 
 afterAll(async () => {
@@ -84,6 +114,8 @@ afterAll(async () => {
     where: { profile: { label: { startsWith: LABEL_PREFIX } } },
   });
   await prisma.fitmentProfile.deleteMany({ where: { label: { startsWith: LABEL_PREFIX } } });
+  // After the items, which reference it.
+  await prisma.product.deleteMany({ where: { sku: { startsWith: PRODUCT_SKU_PREFIX } } });
 });
 
 describe("PATCH /api/admin/fitment-profiles/:id/items/:itemId", () => {
@@ -182,7 +214,6 @@ describe("PATCH /api/admin/fitment-profiles/:id/items/:itemId", () => {
   });
 
   it("allows switching from a product back to spec-only by explicitly clearing productId", async () => {
-    const testProduct = await prisma.product.findFirstOrThrow({ where: { status: "ACTIVE" } });
     const item = await createTestItem({ productId: testProduct.id, specNote: null });
 
     const res = await PATCH(
