@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildCartLines, cartBlockingReason, cartHasBlockingIssue, pendingCartLine } from "./cart";
+import {
+  buildCartLines,
+  cartBlockingReason,
+  cartHasBlockingIssue,
+  isPriceHoldActive,
+  pendingCartLine,
+  PRICE_HOLD_MS,
+} from "./cart";
 import type { StorefrontCartProduct } from "@/lib/services/catalog";
 import type { CartItem } from "@/lib/store/cart";
 
@@ -169,5 +176,25 @@ describe("cartBlockingReason", () => {
       cartBlockingReason(buildCartLines([item()], [live({ finalPrice: 5_500_000 })])),
     ).toBeNull();
     expect(cartBlockingReason([])).toBeNull();
+  });
+});
+
+describe("isPriceHoldActive", () => {
+  const now = new Date("2026-08-10T12:00:00.000Z");
+  const ago = (ms: number) => new Date(now.getTime() - ms);
+
+  it("holds a price for 24 hours from when the line was added", () => {
+    expect(isPriceHoldActive(now, now)).toBe(true);
+    expect(isPriceHoldActive(ago(60 * 60 * 1000), now)).toBe(true);
+    expect(isPriceHoldActive(ago(PRICE_HOLD_MS), now)).toBe(true);
+  });
+
+  it("lets the hold lapse a moment past the window", () => {
+    expect(isPriceHoldActive(ago(PRICE_HOLD_MS + 1), now)).toBe(false);
+    expect(isPriceHoldActive(ago(48 * 60 * 60 * 1000), now)).toBe(false);
+  });
+
+  it("gives no hold at all to a timestamp from the future", () => {
+    expect(isPriceHoldActive(new Date(now.getTime() + 1000), now)).toBe(false);
   });
 });

@@ -533,6 +533,50 @@ phone, isGuest }`, with `id: null` for a guest — so the detail screen renders
 
 ---
 
+## Checkout money — `createStorefrontOrder` in `server/order.ts`
+
+**Nothing about money comes from the client.** `storefrontOrderCreateSchema` has
+no price field, no totals and no `customerId`: quantities, `addedAt` and the
+delivery method are the only inputs, every price is resolved server-side, and
+who is ordering comes from the auth cookie. Zod strips anything else the body
+carries, so a tampered payload has nothing to tamper with.
+
+- **The 24-hour price hold (Design Decision 8) is a lookup, not a promise the
+  browser holds.** `priceInEffectAt` reads the latest `ProductPriceLog` row at
+  or before the line's `addedAt` — a row records the price a change moved _to_,
+  so the latest one that had already happened is what was live then. No row
+  means the cart predates the product's first recorded change and the current
+  price stands. `isPriceHoldActive` (`lib/storefront/cart.ts`) decides whether
+  that looked-up price still applies; a future `addedAt` gets no hold, so a
+  skewed clock can only fall through to the current price.
+- **The hold caps the price, it never raises it.** Inside the window the
+  customer is charged the _cheaper_ of the held and current prices. The cart
+  screen shows the live price, so honouring a higher held one would charge more
+  than the number they were looking at. Either way the response flags the line
+  with `repriced` + `previousUnitPrice` so checkout can say what changed.
+- **`subtotal` is gross and `discount` is what the product discounts took off**,
+  which makes `subtotal - discount` the sum of the line totals and keeps the
+  admin Totals card adding up top to bottom. The list price and the charged
+  price always come from the _same_ quote — mixing a held final price with a
+  current list price would put the two columns out of step.
+- **`tax` is 0 on purpose.** VAT (9%) is included in every price shown and
+  charged, not added on top (design brief), so the storefront renders it as an
+  informational line and there is nothing to add to the total. Storing the
+  included portion would break the admin card's
+  `subtotal − discount + shipping + tax = total` reading.
+- **`deliveryMethod` isn't stored** — the schema keeps the `shippingCost` it
+  produced, not which button was pressed. Rates live in
+  `lib/storefront/delivery.ts` as flat constants (Design Decision 10); the
+  labels and ETAs are locale copy and belong to the checkout screen.
+- **Stock is re-checked twice.** Once up front, so every bad line can be
+  reported at once, and again inside the transaction as `stock >= quantity` in
+  the `updateMany` WHERE — that's what stops two simultaneous checkouts both
+  taking the last unit. A miss throws `CheckoutRejectedError` and rolls the
+  whole order back; the route answers **409, not 400**, because the payload was
+  fine and the catalog moved underneath it.
+
+---
+
 ## Everything else
 
 Tech stack, architectural principles, TypeScript/React/API/auth rules, styling,

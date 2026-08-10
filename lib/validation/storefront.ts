@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { MAX_CART_QUANTITY } from "@/lib/storefront/cart";
+import { DELIVERY_METHODS } from "@/lib/storefront/delivery";
 import { pageSchema, pageSizeSchema, slugSchema } from "./common";
 import { filterKindSchema, partTypeSchema } from "./enums";
 
@@ -220,3 +222,78 @@ export type StorefrontFitmentInquiryCreateInput = z.infer<
 export type StorefrontFitmentInquiryFormValues = z.input<
   typeof storefrontFitmentInquiryCreateSchema
 >;
+
+// --- Checkout ----------------------------------------------------------------
+
+// Notice what a checkout line does *not* carry: a price. The browser's cart
+// stores one (`CartItem.price`) and it is advisory — the server resolves every
+// price itself, so there is nothing here for a tampered payload to inflate or
+// discount. Same reasoning for the absent `customerId`: who is ordering comes
+// from the auth cookie, never from the body.
+export const storefrontOrderItemSchema = z.object({
+  productId: z.string().trim().min(1, "productId is required"),
+  quantity: z.coerce
+    .number()
+    .int("quantity must be a whole number")
+    .min(1, "quantity must be at least 1")
+    .max(MAX_CART_QUANTITY, `quantity must be ${MAX_CART_QUANTITY} or fewer`),
+  // When the line went into the cart — the timestamp the 24-hour price hold is
+  // measured from (Design Decision 8). The worst a forged one can do is move
+  // the line onto the current price; see isPriceHoldActive.
+  addedAt: z.coerce.date({ error: "addedAt must be a valid date" }),
+});
+
+export const storefrontOrderCreateSchema = z.object({
+  // A checkout is one cart, so it inherits the cart lookup's ceiling rather
+  // than inventing a second limit that could disagree with it.
+  items: z
+    .array(storefrontOrderItemSchema)
+    .min(1, "items is required")
+    .max(CART_LOOKUP_MAX_IDS, `items must list at most ${CART_LOOKUP_MAX_IDS} products`)
+    .refine(
+      (items) => new Set(items.map((item) => item.productId)).size === items.length,
+      "items must not repeat a product",
+    ),
+  // Collected on every order, signed in or not: the courier calls this number,
+  // and it's what a guest order stores as its contact details. For a signed-in
+  // customer the account already holds the contact block, so these are only
+  // persisted when there is no account behind the order.
+  contactName: z
+    .string()
+    .trim()
+    .min(1, "contactName is required")
+    .max(150, "contactName must be 150 characters or fewer"),
+  contactPhone: z
+    .string()
+    .trim()
+    .min(6, "contactPhone is required")
+    .max(30, "contactPhone must be 30 characters or fewer")
+    .regex(PHONE_PATTERN, "contactPhone must be a valid phone number"),
+  contactEmail: z.preprocess(
+    blankToUndefined,
+    z.string().trim().email("contactEmail must be a valid email address").max(150).optional(),
+  ),
+  // One field, not an address book: nothing is saved between orders (design
+  // brief), so province/city/street are the checkout form's layout decision
+  // and reach the API as the single line the schema stores.
+  shippingAddress: z
+    .string()
+    .trim()
+    .min(10, "shippingAddress is required")
+    .max(500, "shippingAddress must be 500 characters or fewer"),
+  postalCode: z
+    .string()
+    .trim()
+    // Iranian postal codes are ten digits, written with or without a separator
+    // — the separator is stripped rather than rejected, since both spellings
+    // are the same code to the courier.
+    .transform((value) => value.replace(/[\s-]/g, ""))
+    .refine((value) => /^\d{10}$/.test(value), "postalCode must be 10 digits"),
+  deliveryMethod: z.enum(DELIVERY_METHODS, { error: "deliveryMethod is invalid" }),
+});
+
+export type StorefrontOrderCreateInput = z.infer<typeof storefrontOrderCreateSchema>;
+
+// The checkout form's own value shape — `contactEmail` goes through
+// `z.preprocess`, same reason as the two form-values types above.
+export type StorefrontOrderFormValues = z.input<typeof storefrontOrderCreateSchema>;

@@ -86,3 +86,14 @@ const fitmentInquiryBucket = bucket(60 * 60 * 1000, 5);
 export function checkFitmentInquiryRateLimit(ip: string): RateLimitResult {
   return consume(fitmentInquiryBucket, ip);
 }
+
+// Checkout writes an order and moves stock, so it can't be the one public POST
+// without a limit. The allowance is looser than the others because a real
+// customer can legitimately place a few orders in a row and a household or an
+// office shares one IP — it's here to stop a script from draining the warehouse
+// into a hundred pending orders, not to ration ordering.
+const checkoutBucket = bucket(60 * 60 * 1000, 10);
+
+export function checkCheckoutRateLimit(ip: string): RateLimitResult {
+  return consume(checkoutBucket, ip);
+}

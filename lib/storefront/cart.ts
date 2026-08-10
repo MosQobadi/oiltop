@@ -15,6 +15,21 @@ import type { CartItem } from "@/lib/store/cart";
 // clamps its published stock figure to (see StorefrontCartProduct.maxQuantity).
 export const MAX_CART_QUANTITY = 99;
 
+// Design Decision 8: the price a line was added at is honoured for 24 hours.
+// The window is measured from `addedAt` alone — the captured *price* is never
+// trusted, checkout looks up what the product actually cost at that moment in
+// ProductPriceLog (see createStorefrontOrder in server/order.ts).
+export const PRICE_HOLD_MS = 24 * 60 * 60 * 1000;
+
+// A future `addedAt` deliberately reads as "no hold" rather than as a fresh
+// one: the timestamp comes from the customer's own clock, and a skewed or
+// hand-edited browser must not be able to hold a price it was never quoted.
+// Falling through to the current price is the safe answer either way.
+export function isPriceHoldActive(addedAt: Date, now: Date = new Date()): boolean {
+  const age = now.getTime() - addedAt.getTime();
+  return age >= 0 && age <= PRICE_HOLD_MS;
+}
+
 export interface CartLine {
   item: CartItem;
   /**
