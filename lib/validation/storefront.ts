@@ -170,6 +170,12 @@ export const storefrontRegisterSchema = z.object({
 
 export type StorefrontRegisterInput = z.infer<typeof storefrontRegisterSchema>;
 
+// The register form's own value shape — same reason as
+// `StorefrontFitmentInquiryFormValues` below: `email` goes through
+// `z.preprocess`, which types its *input* as unknown, so the form is generic
+// over this and produces the parsed `StorefrontRegisterInput`.
+export type StorefrontRegisterFormValues = z.input<typeof storefrontRegisterSchema>;
+
 // --- Fitment inquiry (lead capture) ----------------------------------------
 
 // Deliberately leaner than the admin fitmentInquiryCreateSchema: a customer

@@ -2,25 +2,34 @@ import { describe, expect, it } from "vitest";
 import { loginSchema, userIdentifiersSchema } from "./auth";
 
 describe("loginSchema", () => {
-  it("accepts a valid login", () => {
+  it("accepts an email identifier", () => {
     expect(
       loginSchema.safeParse({
-        email: "admin@topoil.com",
+        identifier: "admin@topoil.com",
         password: "password123",
       }).success,
     ).toBe(true);
   });
 
-  it("rejects an invalid email", () => {
-    expect(loginSchema.safeParse({ email: "not-an-email", password: "password123" }).success).toBe(
+  it("accepts a phone identifier", () => {
+    expect(
+      loginSchema.safeParse({
+        identifier: "0912 445 8890",
+        password: "password123",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects an empty identifier", () => {
+    expect(loginSchema.safeParse({ identifier: "   ", password: "password123" }).success).toBe(
       false,
     );
   });
 
   it("rejects a too-short password", () => {
-    expect(loginSchema.safeParse({ email: "admin@topoil.com", password: "short" }).success).toBe(
-      false,
-    );
+    expect(
+      loginSchema.safeParse({ identifier: "admin@topoil.com", password: "short" }).success,
+    ).toBe(false);
   });
 });
 

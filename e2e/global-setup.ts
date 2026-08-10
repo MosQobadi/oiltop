@@ -23,10 +23,17 @@ export default async function globalSetup() {
   for (;;) {
     try {
       const response = await context.post("/api/auth/login", {
-        data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+        // `identifier`, not `email`: the route takes a phone-or-email
+        // credential now that the storefront shares it (Task 7.1).
+        data: { identifier: ADMIN_EMAIL, password: ADMIN_PASSWORD },
       });
       result = await response.json();
       if (result?.success) break;
+      // A rejected *body* will never start succeeding, and retrying it once a
+      // second only burns the route's rate limit until the real error is
+      // replaced by a 429. Anything else (route not compiled yet, connection
+      // refused) is still worth waiting out.
+      if (response.status() === 400) break;
     } catch {
       // server not ready yet
     }

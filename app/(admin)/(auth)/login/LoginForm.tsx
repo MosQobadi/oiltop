@@ -48,6 +48,17 @@ export default function LoginForm() {
       return;
     }
 
+    // The login route is shared with the storefront and no longer rejects
+    // customers (Task 7.1), so the ADMIN-only rule for *this* screen lives
+    // here. The session it just created is a valid customer session — dropping
+    // it is what stops the redirect loop with proxy.ts, which would otherwise
+    // bounce them straight back to this page from /admin/dashboard.
+    if (result.data.user.role !== "ADMIN") {
+      await fetch("/api/auth/logout", { method: "POST" });
+      setFormError("Only administrators can access this panel");
+      return;
+    }
+
     setUser(result.data.user);
     router.push("/admin/dashboard");
   };
@@ -60,10 +71,13 @@ export default function LoginForm() {
       </CardHeader>
       <CardContent>
         <form className="flex flex-col gap-4" noValidate onSubmit={handleSubmit(onSubmit)}>
-          <TextField isInvalid={!!errors.email} fullWidth>
+          {/* The shared login route takes a phone-or-email `identifier`, but
+              an admin always signs in with an email — so this stays labelled
+              and typed as one rather than offering a credential no admin has. */}
+          <TextField isInvalid={!!errors.identifier} fullWidth>
             <Label>Email</Label>
-            <Input type="email" autoComplete="email" {...register("email")} />
-            <FieldError>{errors.email?.message}</FieldError>
+            <Input type="email" autoComplete="email" {...register("identifier")} />
+            <FieldError>{errors.identifier?.message}</FieldError>
           </TextField>
 
           <TextField isInvalid={!!errors.password} fullWidth>

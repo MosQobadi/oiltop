@@ -1,10 +1,15 @@
 import { z } from "zod";
 import { userRoleSchema } from "./enums";
 
-// Admin panel login. Admins always have an email, so this stays email-only —
-// the storefront's phone-or-email login is a separate schema (Phase 10).
+// One login route serves both the admin panel and the storefront, so the
+// credential is a single free-form `identifier` rather than an `email`: an
+// admin types the email they always have, a customer types the phone they
+// registered with (or an email, if they added one). Which of the two it is is
+// `loginIdentifierKind`'s job in lib/auth/identifier.ts — validating the shape
+// here would only turn a wrong credential into a different 4xx, and the two
+// formats have no common shape worth asserting anyway.
 export const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  identifier: z.string().trim().min(1, "Email or phone number is required").max(150),
   password: z.string().min(8).max(100),
 });
 

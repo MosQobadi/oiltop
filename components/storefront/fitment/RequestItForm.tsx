@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Field } from "@/components/storefront/FormField";
 import { pickLocale, type Locale } from "@/lib/i18n";
 import {
   storefrontFitmentInquiryCreateSchema,
@@ -210,47 +211,5 @@ export function RequestItForm({
           : pickLocale(locale, "Send request", "ارسال درخواست")}
       </button>
     </form>
-  );
-}
-
-const CONTROL_CLASS =
-  "focus-visible:border-accent focus-visible:ring-accent min-h-11 w-full rounded-[10px] border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus-visible:ring-1 focus-visible:outline-none";
-
-// Label + control + error, wired together by id. The control is a render prop
-// rather than a `type` switch so the input and the textarea can each keep their
-// own attributes without this growing a props passthrough for every one of them.
-function Field({
-  id,
-  label,
-  error,
-  children,
-}: {
-  id: string;
-  label: string;
-  error: string | false | undefined;
-  children: (props: {
-    id: string;
-    "aria-invalid": true | undefined;
-    "aria-describedby": string | undefined;
-    className: string;
-  }) => React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-[12.5px] text-neutral-600">
-        {label}
-      </label>
-      {children({
-        id,
-        "aria-invalid": error ? true : undefined,
-        "aria-describedby": error ? `${id}-error` : undefined,
-        className: CONTROL_CLASS,
-      })}
-      {error && (
-        <p id={`${id}-error`} role="alert" className="text-[12.5px] text-red-600">
-          {error}
-        </p>
-      )}
-    </div>
   );
 }

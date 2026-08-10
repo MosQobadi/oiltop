@@ -67,6 +67,17 @@ export function checkLoginRateLimit(ip: string): RateLimitResult {
   return consume(loginBucket, ip);
 }
 
+// Sign-up is a public write that creates a row and hashes a password, so it
+// gets its own bucket rather than sharing login's: a customer registers once,
+// and a household behind one IP is not going to need a sixth account in an
+// hour. Separate from login's window so a failed sign-up can't lock the
+// customer out of signing in.
+const registerBucket = bucket(60 * 60 * 1000, 5);
+
+export function checkRegisterRateLimit(ip: string): RateLimitResult {
+  return consume(registerBucket, ip);
+}
+
 // Lead capture is public and unauthenticated, so the window is longer than
 // login's: a real customer submits one inquiry, and five an hour is generous
 // for a household behind one IP while still making a spam run pointless.

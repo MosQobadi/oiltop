@@ -37,6 +37,16 @@ export const CART_PATH = "/cart";
 // to go looking for a hardcoded string.
 export const CHECKOUT_PATH = "/checkout";
 
+// The `app/[locale]/(account)/*` screens. The group's parentheses don't appear
+// in a URL, so `/en/login` and `/en/orders` are the real paths — named here for
+// the same reason as CHECKOUT_PATH, so the auth forms and Phase 7.2's route
+// guard point at one definition instead of a string each.
+export const LOGIN_PATH = "/login";
+export const REGISTER_PATH = "/register";
+
+// Where signing in lands. The screen itself is Task 9.1.
+export const ACCOUNT_ORDERS_PATH = "/orders";
+
 export function navHref(locale: Locale, path: string): string {
   return `/${locale}${path}`;
 }

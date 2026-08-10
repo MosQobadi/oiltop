@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { loginSchema } from "@/lib/validation";
 import { setAuthCookie } from "@/lib/auth/cookies";
-import { authenticateAdmin, AuthError } from "@/server/auth";
+import { AccountDeactivatedError, authenticate, AuthError } from "@/server/auth";
 import { checkLoginRateLimit, getClientIp } from "@/server/rateLimit";
 
 export async function POST(request: NextRequest) {
@@ -26,10 +26,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { user, token } = await authenticateAdmin(parsed.data.email, parsed.data.password);
+    const { user, token } = await authenticate(parsed.data.identifier, parsed.data.password);
     await setAuthCookie(token);
     return NextResponse.json({ success: true, data: { user } });
   } catch (error) {
+    if (error instanceof AccountDeactivatedError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 403 });
+    }
     if (error instanceof AuthError) {
       return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
