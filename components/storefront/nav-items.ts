@@ -47,8 +47,38 @@ export const REGISTER_PATH = "/register";
 // Where signing in lands. The screen itself is Task 9.1.
 export const ACCOUNT_ORDERS_PATH = "/orders";
 
+// The account screens that require a signed-in CUSTOMER. /login and /register
+// sit in the same route group and must stay public, so the guard works from
+// this list rather than from the group — see `proxy.ts`, whose matcher spells
+// out the locale-prefixed form of each of these and has to be kept in sync.
+export const PROTECTED_ACCOUNT_PATHS: readonly string[] = [ACCOUNT_ORDERS_PATH];
+
 export function navHref(locale: Locale, path: string): string {
   return `/${locale}${path}`;
+}
+
+// True for a locale-relative path that the guard protects, and for anything
+// nested under it: /orders/ord_123 is as private as /orders.
+export function isProtectedAccountPath(path: string): boolean {
+  return PROTECTED_ACCOUNT_PATHS.some(
+    (protectedPath) => path === protectedPath || path.startsWith(`${protectedPath}/`),
+  );
+}
+
+// Where the auth forms send a customer once they're signed in: back to the page
+// the guard bounced them off, or to their orders if they came on their own.
+//
+// `from` arrives in a query string, which anyone can write, so only a path
+// inside *this* locale's storefront tree is honored — an absolute URL would be
+// an open redirect, and `/en/login` would bounce them back to the form they
+// just submitted. Anything else falls back rather than failing.
+export function accountReturnPath(from: string | null | undefined, locale: Locale): string {
+  const fallback = navHref(locale, ACCOUNT_ORDERS_PATH);
+  if (!from || !from.startsWith(`${navHref(locale, "")}/`)) return fallback;
+
+  const authPaths = [navHref(locale, LOGIN_PATH), navHref(locale, REGISTER_PATH)];
+  const [pathOnly] = from.split("?");
+  return authPaths.includes(pathOnly!) ? fallback : from;
 }
 
 export function categoryHref(locale: Locale, slug: string): string {

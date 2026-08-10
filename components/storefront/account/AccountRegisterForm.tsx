@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Field } from "@/components/storefront/FormField";
-import { ACCOUNT_ORDERS_PATH, navHref } from "@/components/storefront/nav-items";
+import { accountReturnPath } from "@/components/storefront/nav-items";
 import { pickLocale, type Locale } from "@/lib/i18n";
+import { useAuthStore } from "@/lib/store/auth";
 import {
   storefrontRegisterSchema,
   type StorefrontRegisterFormValues,
@@ -22,9 +23,10 @@ import {
 // because `User` stores firstName/lastName separately and splitting a typed
 // string on a space guesses wrong often enough to be worth not doing.
 
-export function AccountRegisterForm({ locale }: { locale: Locale }) {
+export function AccountRegisterForm({ locale, from }: { locale: Locale; from?: string }) {
   const router = useRouter();
   const fieldId = useId();
+  const setUser = useAuthStore((state) => state.setUser);
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -73,9 +75,13 @@ export function AccountRegisterForm({ locale }: { locale: Locale }) {
       }
 
       // The route signs the new account in, so this lands on the same screen
-      // as a login rather than sending the customer back to type it all again.
+      // as a login rather than sending the customer back to type it all again —
+      // including honoring a `from` carried over from a guarded page. The role
+      // is always CUSTOMER here, so there is no counterpart to the login form's
+      // admin check.
+      setUser(result.data.user);
       router.refresh();
-      router.push(navHref(locale, ACCOUNT_ORDERS_PATH));
+      router.push(accountReturnPath(from, locale));
     } catch {
       setFormError(
         pickLocale(locale, "Something went wrong. Try again.", "خطایی رخ داد. دوباره تلاش کنید."),

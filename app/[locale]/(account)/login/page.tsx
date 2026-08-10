@@ -19,8 +19,18 @@ export async function generateMetadata({
   };
 }
 
-export default async function LoginPage({ params }: { params: Promise<{ locale: Locale }> }) {
-  const { locale } = await params;
+export default async function LoginPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: Locale }>;
+  // `from` is set by the route guard in `proxy.ts`. Read here rather than with
+  // `useSearchParams()` in the form, so the form stays a plain-props component
+  // and there is no Suspense boundary to keep in sync with it. It makes the
+  // screen dynamic, which a noindex sign-in form has nothing to lose by.
+  searchParams: Promise<{ from?: string }>;
+}) {
+  const [{ locale }, { from }] = await Promise.all([params, searchParams]);
 
   return (
     <div className="mx-auto w-full max-w-[1180px] px-4 py-10 sm:px-6">
@@ -36,6 +46,7 @@ export default async function LoginPage({ params }: { params: Promise<{ locale: 
       <AuthCard
         locale={locale}
         active="login"
+        from={from}
         title={pickLocale(locale, "Welcome back", "خوش آمدید")}
         subtitle={pickLocale(
           locale,
@@ -43,7 +54,7 @@ export default async function LoginPage({ params }: { params: Promise<{ locale: 
           "وارد شوید تا تاریخچه سفارش‌ها را ببینید و با یک لمس دوباره سفارش دهید.",
         )}
       >
-        <AccountLoginForm locale={locale} />
+        <AccountLoginForm locale={locale} from={from} />
       </AuthCard>
     </div>
   );

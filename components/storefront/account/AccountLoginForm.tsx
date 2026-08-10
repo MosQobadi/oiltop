@@ -5,18 +5,28 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Field } from "@/components/storefront/FormField";
-import { ACCOUNT_ORDERS_PATH, navHref } from "@/components/storefront/nav-items";
+import { accountReturnPath } from "@/components/storefront/nav-items";
 import { pickLocale, type Locale } from "@/lib/i18n";
+import { useAuthStore } from "@/lib/store/auth";
 import { loginSchema, type LoginInput } from "@/lib/validation";
 
 // Storefront sign-in. It posts to the same /api/auth/login the admin panel
 // uses — one session mechanism for the whole app (design brief Section 6) —
 // which is why the credential is a single `identifier` field: a customer
 // registered with a phone number and may have added an email since.
+//
+// `from` is the page the Task 7.2 route guard bounced them off, passed down by
+// the page from its own `searchParams` rather than read with
+// `useSearchParams()` — this form is the whole reason the screen is dynamic, so
+// there is nothing to gain from a Suspense boundary around it.
 
-export function AccountLoginForm({ locale }: { locale: Locale }) {
+export function AccountLoginForm({ locale, from }: { locale: Locale; from?: string }) {
   const router = useRouter();
   const fieldId = useId();
+  // Set here rather than left to the store's own /api/auth/me hydration, which
+  // only runs on a page load — without this the header would still read "Sign
+  // in" after a client-side navigation away from this form.
+  const setUser = useAuthStore((state) => state.setUser);
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -65,11 +75,31 @@ export function AccountLoginForm({ locale }: { locale: Locale }) {
         return;
       }
 
+      // The mirror of the admin login form's ADMIN-only check. An admin has no
+      // customer data here, and letting the session stand would loop: the
+      // account guard would bounce them straight back to this form. So the
+      // session it just created is dropped, exactly as the admin form drops a
+      // customer's.
+      if (result.data.user.role !== "CUSTOMER") {
+        await fetch("/api/auth/logout", { method: "POST" });
+        setUser(null);
+        setFormError(
+          pickLocale(
+            locale,
+            "Administrators sign in through the admin panel.",
+            "مدیران از طریق پنل مدیریت وارد می‌شوند.",
+          ),
+        );
+        return;
+      }
+
+      setUser(result.data.user);
+
       // refresh() before push so the server components of the page being
       // navigated to are rendered with the new session cookie, not the
       // signed-out render still in the router cache.
       router.refresh();
-      router.push(navHref(locale, ACCOUNT_ORDERS_PATH));
+      router.push(accountReturnPath(from, locale));
     } catch {
       setFormError(
         pickLocale(locale, "Something went wrong. Try again.", "خطایی رخ داد. دوباره تلاش کنید."),

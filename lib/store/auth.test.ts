@@ -56,9 +56,25 @@ describe("useAuthStore.logout", () => {
     vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ success: true, data: null })));
     useAuthStore.setState({ user: testUser, loading: false });
 
-    await useAuthStore.getState().logout();
+    await useAuthStore.getState().logout("/login");
 
     expect(fetch).toHaveBeenCalledWith("/api/auth/logout", { method: "POST" });
     expect(useAuthStore.getState()).toMatchObject({ user: null, loading: false });
+  });
+
+  // The store is shared by the admin panel and the storefront, so where a
+  // sign-out lands is the caller's to say — /login for one tree, that locale's
+  // root for the other.
+  it("sends the browser to the destination the caller gave it", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ success: true, data: null })));
+    // These tests run in Vitest's node environment, so there is no real
+    // `window` for the store's redirect to touch — this stands in for one.
+    const location = { href: "" };
+    vi.stubGlobal("window", { location });
+    useAuthStore.setState({ user: { ...testUser, role: "CUSTOMER" }, loading: false });
+
+    await useAuthStore.getState().logout("/fa");
+
+    expect(location.href).toBe("/fa");
   });
 });

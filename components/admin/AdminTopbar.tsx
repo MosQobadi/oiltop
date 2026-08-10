@@ -32,7 +32,7 @@ export function AdminTopbar() {
             size="sm"
             isIconOnly
             aria-label="Logout"
-            onPress={() => void logout()}
+            onPress={() => void logout("/login")}
           >
             <LogoutIcon className="h-4 w-4" />
           </Button>

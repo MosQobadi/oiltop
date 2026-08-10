@@ -68,6 +68,76 @@ describe("proxy (route protection for /admin/*)", () => {
   });
 });
 
+function accountRequest(url: string, cookieValue?: string) {
+  const headers = new Headers();
+  if (cookieValue) {
+    headers.set("cookie", `${process.env.COOKIE_NAME}=${cookieValue}`);
+  }
+  return new NextRequest(`http://localhost${url}`, { headers });
+}
+
+describe("proxy (route protection for the account routes)", () => {
+  it("redirects to the locale's login with a from param when there is no auth cookie", async () => {
+    const res = await proxy(accountRequest("/en/orders"));
+
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location")!);
+    expect(location.pathname).toBe("/en/login");
+    expect(location.searchParams.get("from")).toBe("/en/orders");
+  });
+
+  it("keeps the query string in the from param", async () => {
+    const res = await proxy(accountRequest("/en/orders?page=2"));
+
+    const location = new URL(res.headers.get("location")!);
+    expect(location.searchParams.get("from")).toBe("/en/orders?page=2");
+  });
+
+  it("redirects into the same locale tree the request came from", async () => {
+    const res = await proxy(accountRequest("/fa/orders"));
+
+    expect(new URL(res.headers.get("location")!).pathname).toBe("/fa/login");
+  });
+
+  it("protects paths nested under an account route", async () => {
+    const res = await proxy(accountRequest("/en/orders/ord_123"));
+
+    const location = new URL(res.headers.get("location")!);
+    expect(location.pathname).toBe("/en/login");
+    expect(location.searchParams.get("from")).toBe("/en/orders/ord_123");
+  });
+
+  it("redirects to login when the token is expired", async () => {
+    const res = await proxy(accountRequest("/en/orders", await signExpiredToken("CUSTOMER")));
+
+    expect(new URL(res.headers.get("location")!).pathname).toBe("/en/login");
+  });
+
+  // An admin session is real but opens no account screen — AccountLoginForm
+  // turns an admin away rather than letting the two loop.
+  it("redirects to login when the role is not CUSTOMER", async () => {
+    const res = await proxy(accountRequest("/en/orders", await signToken("ADMIN")));
+
+    expect(new URL(res.headers.get("location")!).pathname).toBe("/en/login");
+  });
+
+  it("allows the request through for a valid customer token", async () => {
+    const res = await proxy(accountRequest("/en/orders", await signToken("CUSTOMER")));
+
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.status).toBe(200);
+  });
+
+  it("leaves the public auth screens alone", async () => {
+    for (const path of ["/en/login", "/fa/register"]) {
+      const res = await proxy(accountRequest(path));
+
+      expect(res.headers.get("location")).toBeNull();
+      expect(res.status).toBe(200);
+    }
+  });
+});
+
 function rootRequest() {
   return new NextRequest("http://localhost/");
 }

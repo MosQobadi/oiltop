@@ -5,17 +5,23 @@ import { pickLocale, type Locale } from "@/lib/i18n";
 // The prototype's account card: a two-tab pill switcher over a titled form.
 // The tabs are `Link`s to two real routes rather than client state over one —
 // /login and /register each deserve a URL a customer can be sent to, which is
-// what the route guard in Task 7.2 will redirect to.
+// what the Task 7.2 route guard redirects to.
 
 export interface AuthCardProps {
   locale: Locale;
   active: "login" | "register";
   title: string;
   subtitle: string;
+  // The guard's return path, carried onto both tab links so that a customer who
+  // arrives at /login and decides to register still lands back where they were
+  // headed. Without this the switch would silently drop it.
+  from?: string;
   children: React.ReactNode;
 }
 
-export function AuthCard({ locale, active, title, subtitle, children }: AuthCardProps) {
+export function AuthCard({ locale, active, title, subtitle, from, children }: AuthCardProps) {
+  const query = from ? `?from=${encodeURIComponent(from)}` : "";
+
   return (
     <div className="mx-auto w-full max-w-[460px] rounded-2xl border border-neutral-200 bg-white p-6">
       <div
@@ -25,13 +31,13 @@ export function AuthCard({ locale, active, title, subtitle, children }: AuthCard
       >
         <Tab
           locale={locale}
-          href={navHref(locale, LOGIN_PATH)}
+          href={`${navHref(locale, LOGIN_PATH)}${query}`}
           active={active === "login"}
           label={pickLocale(locale, "Log in", "ورود")}
         />
         <Tab
           locale={locale}
-          href={navHref(locale, REGISTER_PATH)}
+          href={`${navHref(locale, REGISTER_PATH)}${query}`}
           active={active === "register"}
           label={pickLocale(locale, "Register", "ثبت‌نام")}
         />

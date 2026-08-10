@@ -17,8 +17,16 @@ export async function generateMetadata({
   };
 }
 
-export default async function RegisterPage({ params }: { params: Promise<{ locale: Locale }> }) {
-  const { locale } = await params;
+export default async function RegisterPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: Locale }>;
+  // Carried over from /login's tab switch, so a customer the guard sent here
+  // still ends up on the page they were trying to reach — see the login page.
+  searchParams: Promise<{ from?: string }>;
+}) {
+  const [{ locale }, { from }] = await Promise.all([params, searchParams]);
 
   return (
     <div className="mx-auto w-full max-w-[1180px] px-4 py-10 sm:px-6">
@@ -34,6 +42,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ local
       <AuthCard
         locale={locale}
         active="register"
+        from={from}
         title={pickLocale(locale, "Create an account", "ساخت حساب کاربری")}
         subtitle={pickLocale(
           locale,
@@ -41,7 +50,7 @@ export default async function RegisterPage({ params }: { params: Promise<{ local
           "فقط یک شماره موبایل و گذرواژه لازم است.",
         )}
       >
-        <AccountRegisterForm locale={locale} />
+        <AccountRegisterForm locale={locale} from={from} />
       </AuthCard>
     </div>
   );

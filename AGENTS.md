@@ -168,7 +168,7 @@ shape regardless of field type:
 ### `components/storefront/`
 
 The customer-facing counterpart to `components/admin/`: the shell (`StorefrontShell`,
-`StorefrontHeader`, `StorefrontFooter`, `LocaleSwitcher`, `CartLink`,
+`StorefrontHeader`, `StorefrontFooter`, `LocaleSwitcher`, `MiniCart`, `AccountLink`,
 `MobileNavDrawer`) plus the catalog primitives below, which the PLP, the category
 landing pages, the PDP, the fitment results and the cart all build on. Don't
 hand-roll a product tile, a price line or a stock chip — every screen that shows
@@ -257,6 +257,22 @@ The product page's own three pieces. Everything else on it — `PriceDisplay`,
   the rest go behind a native `<details>` — still in the HTML, so a crawler
   reads the whole list — and the `?fit=` car's row is floated to the top and
   tagged, because that's the one row the customer came for.
+
+### `components/storefront/account/`
+
+The `/[locale]/login` and `/[locale]/register` screens' pieces, plus the header's
+account affordance.
+
+- **`AuthCard`** — the two-tab pill switcher over a titled form that both auth
+  screens are built on. The tabs are `Link`s to two real routes, not client
+  state over one, and they carry the guard's `from` param across the switch.
+- **`AccountLoginForm`** / **`AccountRegisterForm`** — `locale` plus an optional
+  `from`. Both take `from` as a prop from the page's `searchParams` rather than
+  reading `useSearchParams()`, so neither needs a Suspense boundary, and both
+  route the value through `accountReturnPath` instead of trusting it.
+- **`AccountLink`** — the header pill: "Account" → `/[locale]/orders` for a
+  signed-in CUSTOMER, "Sign in" → `/[locale]/login` otherwise. The storefront's
+  one reader of the session store below; sign-out lives on the orders screen.
 
 ### `components/storefront/fitment/`
 
@@ -402,6 +418,46 @@ storefront tree (`app/[locale]/`) and anything it renders.
   routing primitives. Note the case split: the URL segment is lowercase
   (`"en"`), the stored Settings value is uppercase (`"EN"`), and
   `localeFromSetting` is the only bridge.
+
+---
+
+## Session — `lib/store/auth.ts` and the account guard
+
+**The admin panel and the storefront share one session store**, not one each.
+There is a single JWT in a single HTTP-only cookie read back through a single
+`/api/auth/me` (design brief Section 6), so a second store would be a second
+mirror of the same source of truth, free to disagree with the first inside one
+tab. `user.role` is what tells the two surfaces apart. Consequences worth
+knowing:
+
+- `logout(redirectTo)` takes its destination — `/login` from the admin chrome,
+  that locale's tree from the storefront. The store knows no route names.
+- The store hydrates in the browser, not from server props: `app/[locale]/layout.tsx`
+  is cached (`revalidate = 300`), so rendering the signed-in customer into the
+  shell would serve one customer's name to everyone. Anything session-dependent
+  in the storefront chrome is therefore a Client Component reading this store.
+- The auth forms call `setUser` on success. Hydration only runs on a page load,
+  so without it the header would still say "Sign in" after a client-side
+  navigation away from the form.
+
+**`proxy.ts` guards both trees**, `/admin/*` for ADMIN and the account screens
+for CUSTOMER, redirecting to the right login with `from` set to the path *and*
+query it turned away. Two rules keep it honest:
+
+- The protected paths come from `PROTECTED_ACCOUNT_PATHS` in
+  `components/storefront/nav-items.ts`, not from the `(account)` route group —
+  `/login` and `/register` sit in that group and must stay public. Next needs
+  `config.matcher` to be statically analyzable, so it spells out the
+  locale-prefixed form of each; **adding an account screen means adding it in
+  both places.**
+- The edge has no Prisma, so the proxy only verifies the JWT — whether that user
+  still exists and is ACTIVE is re-checked by `getCurrentUser()` inside the
+  route handlers. The guard is routing convenience, not the security boundary.
+
+An ADMIN is turned away from the account screens too, and `AccountLoginForm`
+drops an admin's session with an error rather than letting it stand — the mirror
+of the admin login form's CUSTOMER rejection, and what stops form and guard from
+bouncing a signed-in admin between each other forever.
 
 ---
 

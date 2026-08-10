@@ -79,7 +79,7 @@ export function AdminSidebar() {
       <div className="border-t border-neutral-200 px-3 py-3">
         <button
           type="button"
-          onClick={() => void logout()}
+          onClick={() => void logout("/login")}
           className={`${linkClasses(false)} w-full`}
         >
           <LogoutIcon className="h-5 w-5 shrink-0" />

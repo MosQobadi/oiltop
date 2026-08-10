@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AccountLink } from "./account/AccountLink";
 import { MiniCart } from "./cart/MiniCart";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import { MobileNavDrawer } from "./MobileNavDrawer";
@@ -48,6 +49,8 @@ export function StorefrontHeader({ locale, storeName }: { locale: Locale; storeN
         </nav>
 
         <div className="ms-auto flex shrink-0 items-center gap-2">
+          <AccountLink locale={locale} />
+
           {/* Opens the mini-cart rather than navigating — the panel carries the
               link to /cart, and the mobile drawer lists it too, so the full
               page is one predictable step away at every width. */}
