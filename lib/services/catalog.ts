@@ -46,8 +46,24 @@ const brandSelect = {
   logo: true,
 } satisfies Prisma.BrandSelect;
 
+// The category landing page needs more than a filter option does: hero copy and
+// the SEO pair. Kept separate from categorySelect so the PLP sidebar doesn't
+// drag description columns along for every category it lists.
+const categoryDetailSelect = {
+  ...categorySelect,
+  shortDescriptionEn: true,
+  shortDescriptionFa: true,
+  metaTitleEn: true,
+  metaTitleFa: true,
+  metaDescriptionEn: true,
+  metaDescriptionFa: true,
+} satisfies Prisma.CategorySelect;
+
 export type StorefrontCategory = Prisma.CategoryGetPayload<{
   select: typeof categorySelect;
+}>;
+export type StorefrontCategoryDetail = Prisma.CategoryGetPayload<{
+  select: typeof categoryDetailSelect;
 }>;
 export type StorefrontBrand = Prisma.BrandGetPayload<{
   select: typeof brandSelect;
@@ -111,6 +127,18 @@ export async function listActiveCategories(): Promise<StorefrontCategory[]> {
     where: { status: "ACTIVE" },
     select: categorySelect,
     orderBy: { nameEn: "asc" },
+  });
+}
+
+// The landing page's lookup. An inactive category is a 404 rather than an empty
+// page, the same rule getStorefrontProductBySlug applies to a deactivated
+// product — an unlisted category shouldn't keep answering 200 to a crawler.
+export async function getStorefrontCategoryBySlug(
+  slug: string,
+): Promise<StorefrontCategoryDetail | null> {
+  return prisma.category.findFirst({
+    where: { slug, status: "ACTIVE" },
+    select: categoryDetailSelect,
   });
 }
 

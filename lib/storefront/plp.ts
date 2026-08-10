@@ -1,4 +1,5 @@
 import { FIT_PARAM } from "./fitment";
+import { formatNumber } from "./pricing";
 import { pickLocale, type Locale } from "@/lib/i18n";
 import { filterKindSchema, partTypeSchema } from "@/lib/validation/enums";
 import {
@@ -146,6 +147,13 @@ export function filterKindLabel(locale: Locale, filterKind: FilterKindValue): st
 export function productSortLabel(locale: Locale, sort: StorefrontProductSort): string {
   const label = PRODUCT_SORT_LABELS[sort];
   return pickLocale(locale, label.en, label.fa);
+}
+
+/** The "12 products" line above a grid — the PLP's and the category page's. */
+export function productCountLabel(locale: Locale, total: number): string {
+  const count = formatNumber(total, locale);
+  if (locale === "fa") return `${count} محصول`;
+  return total === 1 ? `${count} product` : `${count} products`;
 }
 
 // --- Pagination ------------------------------------------------------------

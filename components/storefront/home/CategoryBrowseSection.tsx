@@ -1,14 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronIcon } from "../icons";
-import { navHref, PRODUCTS_PATH } from "../nav-items";
+import { categoryHref, navHref, PRODUCTS_PATH } from "../nav-items";
 import { pickLocale, type Locale } from "@/lib/i18n";
 import type { StorefrontCategory } from "@/lib/services/catalog";
 
 // The escape hatch from the car-finder: a customer who already knows they want
 // air filters shouldn't have to answer four questions about their car first.
-// Every card is a pre-filtered PLP link, not a category page of its own — the
-// catalog is one filterable list (see PRODUCTS_PATH).
+// Each card goes to that category's landing page rather than a pre-filtered PLP
+// URL — same grid either way, but the landing page is the one with the copy and
+// the SEO pair, and linking it from the homepage is what keeps it crawlable.
 
 const CARD_IMAGE_SIZES = "(min-width: 1024px) 360px, (min-width: 640px) 46vw, 92vw";
 
@@ -65,7 +66,7 @@ export function CategoryBrowseSection({
         <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((category) => (
             <li key={category.id}>
-              <CategoryCard locale={locale} category={category} browseHref={browseHref} />
+              <CategoryCard locale={locale} category={category} />
             </li>
           ))}
         </ul>
@@ -74,15 +75,7 @@ export function CategoryBrowseSection({
   );
 }
 
-function CategoryCard({
-  locale,
-  category,
-  browseHref,
-}: {
-  locale: Locale;
-  category: StorefrontCategory;
-  browseHref: string;
-}) {
+function CategoryCard({ locale, category }: { locale: Locale; category: StorefrontCategory }) {
   const primaryName = pickLocale(locale, category.nameEn, category.nameFa);
   // The other language's name, same as ProductCard: shoppers here recognise
   // "Oil Filter" and "فیلتر روغن" interchangeably.
@@ -91,7 +84,7 @@ function CategoryCard({
 
   return (
     <Link
-      href={`${browseHref}?category=${category.slug}`}
+      href={categoryHref(locale, category.slug)}
       className="focus-visible:ring-accent hover:border-accent/50 block h-full rounded-2xl border border-neutral-200 bg-white p-3.5 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
     >
       <div className="relative h-[132px] overflow-hidden rounded-xl bg-neutral-100">

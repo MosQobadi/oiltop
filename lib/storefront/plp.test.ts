@@ -10,6 +10,7 @@ import {
   parsePartType,
   parseProductSort,
   partTypeLabel,
+  productCountLabel,
   productPageCount,
   productSortLabel,
 } from "./plp";
@@ -110,6 +111,12 @@ describe("labels", () => {
     expect(partTypeLabel("fa", "ENGINE_OIL")).toBe("روغن موتور");
     expect(filterKindLabel("fa", "CABIN_FILTER")).toBe("فیلتر کابین");
     expect(productSortLabel("en", "price-asc")).toBe("Price: low to high");
+  });
+
+  it("counts products in the reader's digits, and singular only in English", () => {
+    expect(productCountLabel("en", 1)).toBe("1 product");
+    expect(productCountLabel("en", 12)).toBe("12 products");
+    expect(productCountLabel("fa", 12)).toBe("۱۲ محصول");
   });
 });
 

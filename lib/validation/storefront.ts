@@ -74,6 +74,8 @@ export type StorefrontProductListPageQuery = z.infer<typeof storefrontProductLis
 
 export const storefrontProductSlugParamSchema = slugSchema;
 
+export const storefrontCategorySlugParamSchema = slugSchema;
+
 // The storefront's out-of-stock form asks for one field and accepts either an
 // email or a phone number, so this can't be z.email() — it's a loose shape
 // check to keep obvious junk out of the table, not an identity check. The

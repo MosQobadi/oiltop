@@ -31,13 +31,24 @@ export interface ProductFilterOption {
   label: string;
 }
 
+/**
+ * A control the route itself already pins. The category landing page *is* one
+ * category, and with it the one part type that category carries — rendering
+ * either select there would offer the customer a filter that does nothing or
+ * quietly navigates them off the page they picked.
+ */
+export type PinnedProductFilter = "category" | "partType";
+
 export interface ProductFiltersProps {
   locale: Locale;
   /** The PLP's own path, e.g. `/en/products`. */
   basePath: string;
   params: ProductListParams;
-  categories: ProductFilterOption[];
+  /** Not needed — and not worth fetching — when `category` is pinned. */
+  categories?: ProductFilterOption[];
   brands: ProductFilterOption[];
+  /** Controls to leave out — see `PinnedProductFilter`. Defaults to none. */
+  pinned?: readonly PinnedProductFilter[];
   className?: string;
 }
 
@@ -50,10 +61,12 @@ export function ProductFilters({
   locale,
   basePath,
   params,
-  categories,
+  categories = [],
   brands,
+  pinned = [],
   className = "",
 }: ProductFiltersProps) {
+  const isPinned = (filter: PinnedProductFilter) => pinned.includes(filter);
   const router = useRouter();
   const baseId = useId();
   const [open, setOpen] = useState(false);
@@ -79,8 +92,10 @@ export function ProductFilters({
   };
 
   // Shown under FILTER, and also whenever a kind is already applied — otherwise
-  // a hand-edited URL would filter the grid with no control to undo it.
-  const showFilterKind = params.partType === "FILTER" || params.filterKind !== undefined;
+  // a hand-edited URL would filter the grid with no control to undo it. Pinning
+  // the part type pins the kind with it: a category is one or the other.
+  const showFilterKind =
+    !isPinned("partType") && (params.partType === "FILTER" || params.filterKind !== undefined);
 
   const activeCount = activeProductFilterCount(params);
   const anyLabel = pickLocale(locale, "All", "همه");
@@ -135,14 +150,16 @@ export function ProductFilters({
         </form>
 
         <div className="mt-4 flex flex-col gap-4">
-          <FilterSelect
-            id={`${baseId}-category`}
-            label={pickLocale(locale, "Category", "دسته‌بندی")}
-            anyLabel={anyLabel}
-            value={params.category ?? ""}
-            options={categories}
-            onChange={(value) => apply({ category: value === "" ? undefined : value })}
-          />
+          {!isPinned("category") && (
+            <FilterSelect
+              id={`${baseId}-category`}
+              label={pickLocale(locale, "Category", "دسته‌بندی")}
+              anyLabel={anyLabel}
+              value={params.category ?? ""}
+              options={categories}
+              onChange={(value) => apply({ category: value === "" ? undefined : value })}
+            />
+          )}
 
           <FilterSelect
             id={`${baseId}-brand`}
@@ -153,17 +170,19 @@ export function ProductFilters({
             onChange={(value) => apply({ brand: value === "" ? undefined : value })}
           />
 
-          <FilterSelect
-            id={`${baseId}-part-type`}
-            label={pickLocale(locale, "Part type", "نوع قطعه")}
-            anyLabel={anyLabel}
-            value={params.partType ?? ""}
-            options={PART_TYPE_OPTIONS.map((partType) => ({
-              value: partType,
-              label: partTypeLabel(locale, partType),
-            }))}
-            onChange={handlePartTypeChange}
-          />
+          {!isPinned("partType") && (
+            <FilterSelect
+              id={`${baseId}-part-type`}
+              label={pickLocale(locale, "Part type", "نوع قطعه")}
+              anyLabel={anyLabel}
+              value={params.partType ?? ""}
+              options={PART_TYPE_OPTIONS.map((partType) => ({
+                value: partType,
+                label: partTypeLabel(locale, partType),
+              }))}
+              onChange={handlePartTypeChange}
+            />
+          )}
 
           {showFilterKind && (
             <FilterSelect

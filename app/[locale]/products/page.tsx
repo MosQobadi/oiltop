@@ -20,10 +20,10 @@ import {
   clearProductFilters,
   collapseSearchParams,
   PLP_PAGE_SIZE,
+  productCountLabel,
   productPageCount,
   type ProductListParams,
 } from "@/lib/storefront/plp";
-import { formatNumber } from "@/lib/storefront/pricing";
 import { storefrontProductListPageQuerySchema } from "@/lib/validation";
 
 // General browsing: the whole catalog, narrowed by whatever the query string
@@ -119,7 +119,7 @@ export default async function ProductsPage({
         <div>
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
             <p aria-live="polite" className="text-[13px] text-neutral-500">
-              {formatProductCount(locale, total)}
+              {productCountLabel(locale, total)}
             </p>
             <ProductSortSelect locale={locale} basePath={basePath} params={currentParams} />
           </div>
@@ -181,10 +181,4 @@ export default async function ProductsPage({
       </div>
     </div>
   );
-}
-
-function formatProductCount(locale: Locale, total: number): string {
-  const count = formatNumber(total, locale);
-  if (locale === "fa") return `${count} محصول`;
-  return total === 1 ? `${count} product` : `${count} products`;
 }

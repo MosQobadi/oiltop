@@ -15,10 +15,14 @@ export interface StorefrontNavItem {
 // results live.
 export const FITMENT_PATH = "/fitment";
 
-// The catalog is one filterable list rather than a separate category index, so
-// every "browse" affordance — the nav item, the homepage category cards — points
-// here and narrows with a query string.
+// The whole catalog as one filterable list — where the nav's "Categories" item
+// and every "see everything" affordance points, narrowing with a query string.
 export const PRODUCTS_PATH = "/products";
+
+// One landing page per category, the crawlable counterpart to
+// `/products?category=<slug>`: same grid, but a URL a search engine can rank and
+// a place for the category's own copy and SEO pair to live.
+export const CATEGORIES_PATH = "/categories";
 
 export const storefrontNavItems: StorefrontNavItem[] = [
   { key: "home", labelEn: "Home", labelFa: "خانه", path: "" },
@@ -30,6 +34,10 @@ export const CART_PATH = "/cart";
 
 export function navHref(locale: Locale, path: string): string {
   return `/${locale}${path}`;
+}
+
+export function categoryHref(locale: Locale, slug: string): string {
+  return navHref(locale, `${CATEGORIES_PATH}/${slug}`);
 }
 
 // A section is active for its own URL and anything nested under it, so
