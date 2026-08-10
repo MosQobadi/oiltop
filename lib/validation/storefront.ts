@@ -76,6 +76,37 @@ export const storefrontProductSlugParamSchema = slugSchema;
 
 export const storefrontCategorySlugParamSchema = slugSchema;
 
+// --- Cart --------------------------------------------------------------------
+
+// The cart lookup takes every line's product id at once — one request per cart,
+// not one per line. The ceiling is a guard on an unauthenticated `IN (...)`
+// query, not a cart-size rule; a real cart is a handful of lines.
+export const CART_LOOKUP_MAX_IDS = 50;
+
+export const storefrontCartLookupQuerySchema = z.object({
+  ids: z
+    .string()
+    .transform((value) =>
+      // Duplicates are dropped rather than rejected: the client builds this
+      // from its own line ids, and one repeated id is a bug worth surviving.
+      Array.from(
+        new Set(
+          value
+            .split(",")
+            .map((id) => id.trim())
+            .filter(Boolean),
+        ),
+      ),
+    )
+    .refine((ids) => ids.length > 0, "ids is required")
+    .refine(
+      (ids) => ids.length <= CART_LOOKUP_MAX_IDS,
+      `ids must list at most ${CART_LOOKUP_MAX_IDS} products`,
+    ),
+});
+
+export type StorefrontCartLookupQuery = z.infer<typeof storefrontCartLookupQuerySchema>;
+
 // The storefront's out-of-stock form asks for one field and accepts either an
 // email or a phone number, so this can't be z.email() — it's a loose shape
 // check to keep obvious junk out of the table, not an identity check. The

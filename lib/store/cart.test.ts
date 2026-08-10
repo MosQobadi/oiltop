@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { selectCartItemCount, useCartStore, type NewCartItem } from "./cart";
+import { selectCartItemCount, selectCartSubtotal, useCartStore, type NewCartItem } from "./cart";
+import { MAX_CART_QUANTITY } from "@/lib/storefront/cart";
 
 const oil: NewCartItem = {
   productId: "prod_1",
@@ -50,6 +51,25 @@ describe("useCartStore", () => {
     expect(useCartStore.getState().items.map((line) => line.productId)).toEqual(["prod_2"]);
   });
 
+  it("caps a line at the per-line ceiling, however it gets there", () => {
+    useCartStore.getState().addItem(oil, MAX_CART_QUANTITY + 40);
+    expect(useCartStore.getState().items[0]!.quantity).toBe(MAX_CART_QUANTITY);
+
+    useCartStore.getState().addItem(oil, 5);
+    expect(useCartStore.getState().items[0]!.quantity).toBe(MAX_CART_QUANTITY);
+
+    useCartStore.getState().updateQuantity("prod_1", 1_000);
+    expect(useCartStore.getState().items[0]!.quantity).toBe(MAX_CART_QUANTITY);
+  });
+
+  it("stores whole quantities, whatever a number input hands over", () => {
+    useCartStore.getState().addItem(oil, 2.7);
+    expect(useCartStore.getState().items[0]!.quantity).toBe(2);
+
+    useCartStore.getState().updateQuantity("prod_1", Number.NaN);
+    expect(useCartStore.getState().items[0]!.quantity).toBe(1);
+  });
+
   it("removes and clears", () => {
     useCartStore.getState().addItem(oil);
     useCartStore.getState().addItem(filter);
@@ -72,5 +92,18 @@ describe("selectCartItemCount", () => {
 
   it("is 0 for an empty cart", () => {
     expect(selectCartItemCount(useCartStore.getState())).toBe(0);
+  });
+});
+
+describe("selectCartSubtotal", () => {
+  it("adds up the captured prices times their quantities", () => {
+    useCartStore.getState().addItem(oil, 2);
+    useCartStore.getState().addItem(filter);
+
+    expect(selectCartSubtotal(useCartStore.getState())).toBe(4_850_000 * 2 + 620_000);
+  });
+
+  it("is 0 for an empty cart", () => {
+    expect(selectCartSubtotal(useCartStore.getState())).toBe(0);
   });
 });

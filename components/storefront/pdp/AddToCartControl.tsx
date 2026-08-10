@@ -5,6 +5,7 @@ import Link from "next/link";
 import { NotifyMeForm } from "../NotifyMeForm";
 import { CART_PATH, navHref } from "../nav-items";
 import { pickLocale, type Locale } from "@/lib/i18n";
+import { MAX_CART_QUANTITY } from "@/lib/storefront/cart";
 import { useCartStore, type NewCartItem } from "@/lib/store/cart";
 
 // The PDP's buy control. `ProductCard` adds one of a thing in a single tap
@@ -24,11 +25,9 @@ export interface AddToCartControlProps {
   className?: string;
 }
 
-// The cart is the only place a real limit can be enforced (Task 6.1 checks the
-// line against live stock), and exact stock never leaves the admin panel — so
-// this cap is only here to keep a stray key-repeat out of the store.
-const MAX_QUANTITY = 99;
-
+// The PDP knows a product is in stock, not by how much — the cart is where a
+// line meets the live figure (useCartLines), so the only cap this screen can
+// apply is the store's own per-line ceiling.
 const STEPPER_BUTTON_CLASS =
   "focus-visible:ring-accent inline-flex size-11 shrink-0 items-center justify-center rounded-[9px] text-[17px] leading-none text-neutral-600 transition-colors hover:bg-neutral-100 focus-visible:ring-2 focus-visible:outline-none disabled:text-neutral-300 disabled:hover:bg-transparent";
 
@@ -66,7 +65,7 @@ export function AddToCartControl({
   // Any change to the quantity retires the confirmation: it named an amount
   // that is no longer the one the button would add.
   const changeQuantity = (next: number) => {
-    setQuantity(Math.min(Math.max(next, 1), MAX_QUANTITY));
+    setQuantity(Math.min(Math.max(next, 1), MAX_CART_QUANTITY));
     setAdded(false);
   };
 
@@ -94,7 +93,7 @@ export function AddToCartControl({
             type="number"
             inputMode="numeric"
             min={1}
-            max={MAX_QUANTITY}
+            max={MAX_CART_QUANTITY}
             value={quantity}
             onChange={(event) => {
               const next = Number.parseInt(event.target.value, 10);
@@ -106,7 +105,7 @@ export function AddToCartControl({
           <button
             type="button"
             onClick={() => changeQuantity(quantity + 1)}
-            disabled={quantity >= MAX_QUANTITY}
+            disabled={quantity >= MAX_CART_QUANTITY}
             aria-label={pickLocale(locale, "Increase quantity", "افزایش تعداد")}
             className={STEPPER_BUTTON_CLASS}
           >

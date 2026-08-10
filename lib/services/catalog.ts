@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
+import { MAX_CART_QUANTITY } from "@/lib/storefront/cart";
 import type { StorefrontProductListQuery, StorefrontProductSort } from "@/lib/validation";
 
 // Public catalog reads — the PLP list, the PDP lookup, and the back-in-stock
@@ -351,6 +352,78 @@ export async function getStorefrontProductBySlug(
     ...toPublicProduct(product),
     fitsCarEngines: await getFittingCarEngines(product.id),
   };
+}
+
+// --- Cart line lookup ------------------------------------------------------
+
+// What a stored cart line has to be re-read against. Deliberately narrow: the
+// cart already has the snapshot it took on add, and re-reads it only to answer
+// "can this still be bought, at what price, and how many".
+export interface StorefrontCartProduct {
+  productId: string;
+  slug: string;
+  nameEn: string;
+  nameFa: string;
+  image: string | null;
+  price: number;
+  finalPrice: number;
+  stockStatus: StorefrontStockStatus | null;
+  /**
+   * How many units of this line an order may actually contain — the real stock
+   * count, capped at MAX_CART_QUANTITY.
+   *
+   * This is the one place the storefront publishes a stock *number*, and it's a
+   * deliberate exception to the rule above: a cart that can't tell the customer
+   * "only 3 left" can only let them build an order checkout will reject. The
+   * cap is what keeps the disclosure to the minimum that buys that — a
+   * well-stocked product reports 99 and says nothing about the warehouse.
+   */
+  maxQuantity: number;
+}
+
+const cartProductSelect = {
+  id: true,
+  slug: true,
+  nameEn: true,
+  nameFa: true,
+  image: true,
+  price: true,
+  discountPercent: true,
+  inventory: { select: { stock: true } },
+} satisfies Prisma.ProductSelect;
+
+// Ids come off the client's localStorage cart, so anything that no longer
+// resolves — deleted, deactivated, or sitting under a deactivated category or
+// brand — is simply absent from the result. The caller reads a missing id as
+// "no longer purchasable" rather than as an error, which is the same answer for
+// all of those cases.
+export async function listStorefrontCartProducts(
+  productIds: string[],
+): Promise<StorefrontCartProduct[]> {
+  if (productIds.length === 0) return [];
+
+  const rows = await prisma.product.findMany({
+    where: {
+      id: { in: productIds },
+      status: "ACTIVE",
+      category: { is: { status: "ACTIVE" } },
+      brand: { is: { status: "ACTIVE" } },
+    },
+    select: cartProductSelect,
+  });
+
+  return rows.map(({ id, inventory, price, discountPercent, ...rest }) => {
+    const priceNumber = Number(price);
+    const stock = inventory?.stock ?? 0;
+    return {
+      ...rest,
+      productId: id,
+      price: priceNumber,
+      finalPrice: priceNumber * (1 - discountPercent / 100),
+      stockStatus: deriveStorefrontStockStatus(stock),
+      maxQuantity: Math.min(Math.max(stock, 0), MAX_CART_QUANTITY),
+    };
+  });
 }
 
 // notify-me arrives with the id the PDP payload carried, but the PDP itself is
