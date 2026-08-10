@@ -252,6 +252,17 @@ the whole tree and only the interactive leaves ship to the browser.
   disclosure. Informational styling, never error styling. `categoryName: null`
   is the whole-car case (an engine with no fitment profile), which reuses the
   same card so a customer is never left at a dead end.
+- **`RequestItForm`** is what that disclosure opens: name and phone required,
+  email and message optional, the message pre-filled from
+  `buildFitmentRequestMessage` so the customer isn't asked to describe a spec
+  we already know. It POSTs to `/api/storefront/fitment-inquiries` and validates
+  with `storefrontFitmentInquiryCreateSchema` — the same schema that route runs,
+  so the client can't send something the server then rejects. `carEngineId` and
+  `categoryId` are default values rather than rendered fields: context the
+  customer never types, but part of the payload the schema checks. On success
+  the form is _replaced_ by a confirmation panel that says who will call and
+  when, and `onSubmitted` tells the card to drop its toggle — a disclosure that
+  could be collapsed would throw that confirmation away.
 
 `app/[locale]/fitment/page.tsx` is both states of that screen, told apart by
 `?fit=`: no car means the wizard, a resolved car means its results. It reads

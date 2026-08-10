@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { RequestItForm } from "./RequestItForm";
 import { pickLocale, type Locale } from "@/lib/i18n";
 import { buildFitmentRequestMessage, formatSpecAttributes } from "@/lib/storefront/fitment";
 
@@ -18,6 +19,9 @@ export interface SpecOnlyCardProps {
   locale: Locale;
   /** The resolved car, already localized — goes into the request message. */
   carLabel: string;
+  /** Attached to the inquiry so the admin sees which car it was about. */
+  carEngineId: string | null;
+  categoryId: string | null;
   categoryName: string | null;
   specNote: string | null;
   /** Free-form `FitmentProfileItem.specAttributes`; shape is proven, not trusted. */
@@ -28,12 +32,17 @@ export interface SpecOnlyCardProps {
 export function SpecOnlyCard({
   locale,
   carLabel,
+  carEngineId,
+  categoryId,
   categoryName,
   specNote,
   specAttributes,
   className = "",
 }: SpecOnlyCardProps) {
   const [requestOpen, setRequestOpen] = useState(false);
+  // Once the request is in, the panel stops being a disclosure: collapsing it
+  // would throw away the confirmation the customer just earned.
+  const [requested, setRequested] = useState(false);
   const panelId = useId();
 
   const rows = formatSpecAttributes(specAttributes);
@@ -99,48 +108,51 @@ export function SpecOnlyCard({
       )}
 
       <div className="mt-auto pt-1">
-        <button
-          type="button"
-          onClick={() => setRequestOpen((open) => !open)}
-          aria-expanded={requestOpen}
-          aria-controls={panelId}
-          className="focus-visible:ring-accent border-accent/40 text-accent min-h-11 w-full rounded-[9px] border bg-white px-3 text-[13px] font-medium transition-colors hover:bg-[oklch(0.978_0.011_45)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-        >
-          {categoryName
-            ? pickLocale(
-                locale,
-                "We don't carry this yet — Request it",
-                "این را نداریم — درخواست دهید",
-              )
-            : pickLocale(locale, "Ask us about this car", "درباره‌ی این خودرو بپرسید")}
-        </button>
+        {!requested && (
+          <button
+            type="button"
+            onClick={() => setRequestOpen((open) => !open)}
+            aria-expanded={requestOpen}
+            aria-controls={panelId}
+            className="focus-visible:ring-accent border-accent/40 text-accent min-h-11 w-full rounded-[9px] border bg-white px-3 text-[13px] font-medium transition-colors hover:bg-[oklch(0.978_0.011_45)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          >
+            {categoryName
+              ? pickLocale(
+                  locale,
+                  "We don't carry this yet — Request it",
+                  "این را نداریم — درخواست دهید",
+                )
+              : pickLocale(locale, "Ask us about this car", "درباره‌ی این خودرو بپرسید")}
+          </button>
+        )}
 
-        {requestOpen && (
+        {(requestOpen || requested) && (
           <div
             id={panelId}
-            className="mt-2.5 rounded-[14px] border border-[oklch(0.9_0.03_45)] bg-[oklch(0.978_0.011_45)] p-4"
+            className={`rounded-[14px] border border-[oklch(0.9_0.03_45)] bg-[oklch(0.978_0.011_45)] p-4 ${requested ? "" : "mt-2.5"}`}
           >
-            <p className="text-[15px] font-semibold text-neutral-900">
-              {pickLocale(locale, "Request this part", "درخواست این قطعه")}
-            </p>
-            <p className="mt-1 text-[13px] leading-relaxed text-[oklch(0.42_0.03_45)]">
-              {pickLocale(
-                locale,
-                "Leave a number. A parts advisor confirms price and availability before anything is charged.",
-                "شماره تماس خود را بگذارید. کارشناس ما قیمت و موجودی را قبل از هر پرداختی تأیید می‌کند.",
-              )}
-            </p>
-            {/* Task 3.3 mounts the lead form here, pre-filled with this exact
-                message (buildFitmentRequestMessage) and POSTing to
-                /api/storefront/fitment-inquiries with the car engine and
-                category attached. Until then the panel states the request the
-                customer is about to make. */}
-            <p
-              dir="auto"
-              className="mt-3 rounded-[10px] border border-[oklch(0.9_0.03_45)] bg-white px-3.5 py-2.5 text-[13px] text-neutral-700"
-            >
-              {requestMessage}
-            </p>
+            {!requested && (
+              <>
+                <p className="text-[15px] font-semibold text-neutral-900">
+                  {pickLocale(locale, "Request this part", "درخواست این قطعه")}
+                </p>
+                <p className="mt-1 mb-3 text-[13px] leading-relaxed text-[oklch(0.42_0.03_45)]">
+                  {pickLocale(
+                    locale,
+                    "Leave a number. A parts advisor confirms price and availability before anything is charged.",
+                    "شماره تماس خود را بگذارید. کارشناس ما قیمت و موجودی را قبل از هر پرداختی تأیید می‌کند.",
+                  )}
+                </p>
+              </>
+            )}
+
+            <RequestItForm
+              locale={locale}
+              carEngineId={carEngineId}
+              categoryId={categoryId}
+              defaultMessage={requestMessage}
+              onSubmitted={() => setRequested(true)}
+            />
           </div>
         )}
       </div>

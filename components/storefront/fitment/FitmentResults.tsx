@@ -48,6 +48,8 @@ export function FitmentResults({ locale, car, groups, className = "" }: FitmentR
         <SpecOnlyCard
           locale={locale}
           carLabel={carLabel}
+          carEngineId={car.carEngine.id}
+          categoryId={null}
           categoryName={null}
           specNote={null}
           specAttributes={null}
@@ -64,6 +66,7 @@ export function FitmentResults({ locale, car, groups, className = "" }: FitmentR
           key={group.category.id}
           locale={locale}
           carLabel={carLabel}
+          carEngineId={car.carEngine.id}
           group={group}
         />
       ))}
@@ -74,10 +77,12 @@ export function FitmentResults({ locale, car, groups, className = "" }: FitmentR
 function CategorySection({
   locale,
   carLabel,
+  carEngineId,
   group,
 }: {
   locale: Locale;
   carLabel: string;
+  carEngineId: string;
   group: FitmentCategoryGroup;
 }) {
   const categoryName = pickLocale(locale, group.category.nameEn, group.category.nameFa);
@@ -98,6 +103,8 @@ function CategorySection({
         key={item.id}
         locale={locale}
         carLabel={carLabel}
+        carEngineId={carEngineId}
+        categoryId={group.category.id}
         categoryName={categoryName}
         specNote={item.specNote}
         specAttributes={item.specAttributes}

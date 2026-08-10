@@ -152,3 +152,12 @@ export const storefrontFitmentInquiryCreateSchema = z.object({
 export type StorefrontFitmentInquiryCreateInput = z.infer<
   typeof storefrontFitmentInquiryCreateSchema
 >;
+
+// What the "Request it" form holds before the schema runs. The optional fields
+// go through `z.preprocess`, which types their *input* as unknown, so a React
+// Hook Form has to be generic over this shape and produce the parsed
+// `...CreateInput` — one schema, both ends, without the form pretending its
+// blank strings are already the API's payload.
+export type StorefrontFitmentInquiryFormValues = z.input<
+  typeof storefrontFitmentInquiryCreateSchema
+>;
