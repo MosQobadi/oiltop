@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/storefront/Breadcrumbs";
 import { FitContextBanner } from "@/components/storefront/FitContextBanner";
@@ -24,7 +25,23 @@ import {
   productPageCount,
   type ProductListParams,
 } from "@/lib/storefront/plp";
+import { localeAlternates } from "@/lib/storefront/seo";
 import { storefrontProductListPageQuerySchema } from "@/lib/validation";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: Locale }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return {
+    // One listing, however it's filtered: the canonical drops the query string
+    // so a facet combination doesn't compete with the page it narrows, and the
+    // products themselves stay individually indexed through the sitemap and
+    // their category landing pages.
+    alternates: localeAlternates(locale, PRODUCTS_PATH),
+  };
+}
 
 // General browsing: the whole catalog, narrowed by whatever the query string
 // says. The filters are in the URL rather than a store, so a filtered view is
@@ -74,6 +91,7 @@ export default async function ProductsPage({
     <div className="mx-auto w-full max-w-[1180px] px-4 py-10 sm:px-6">
       <Breadcrumbs
         locale={locale}
+        structuredData
         items={[
           { label: pickLocale(locale, "Home", "خانه"), href: navHref(locale, "") },
           { label: productsLabel },

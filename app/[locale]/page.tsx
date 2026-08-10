@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import { FitmentWizard } from "@/components/storefront/fitment/FitmentWizard";
 import { CategoryBrowseSection } from "@/components/storefront/home/CategoryBrowseSection";
 import { TrustStrip } from "@/components/storefront/home/TrustStrip";
 import { pickLocale, type Locale } from "@/lib/i18n";
 import { listActiveCategories } from "@/lib/services/catalog";
+import { localeAlternates } from "@/lib/storefront/seo";
 import { getPublicSettings } from "@/server/setting";
 
 // The homepage is the car-finder with a sentence of context around it: the
@@ -23,6 +25,17 @@ const HERO_STYLE = {
   backgroundColor: "oklch(0.24 0.012 55)",
   backgroundImage: "radial-gradient(120% 90% at 80% 0%, oklch(0.32 0.03 45) 0%, transparent 60%)",
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: Locale }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  // The site root of each tree — the path is empty, the pair is still `/en` and
+  // `/fa` naming each other.
+  return { alternates: localeAlternates(locale, "") };
+}
 
 export default async function StorefrontHome({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;

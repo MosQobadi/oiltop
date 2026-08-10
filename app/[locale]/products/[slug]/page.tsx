@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/storefront/Breadcrumbs";
+import { JsonLd } from "@/components/storefront/JsonLd";
 import { categoryHref, navHref, PRODUCTS_PATH } from "@/components/storefront/nav-items";
 import { AddToCartControl } from "@/components/storefront/pdp/AddToCartControl";
 import { CompatibleVehicles } from "@/components/storefront/pdp/CompatibleVehicles";
@@ -16,7 +17,9 @@ import { getActiveCarEngineContext } from "@/lib/services/fitment";
 import { FIT_PARAM, withFitContext } from "@/lib/storefront/fitment";
 import { buildProductListHref } from "@/lib/storefront/plp";
 import { groupFittingEnginesByModel } from "@/lib/storefront/pdp";
-import { firstFilled } from "@/lib/storefront/seo";
+import { firstFilled, localeAlternates } from "@/lib/storefront/seo";
+import { absoluteUrl } from "@/lib/storefront/sitemap";
+import { productSchema } from "@/lib/storefront/structured-data";
 import { storefrontProductSlugParamSchema } from "@/lib/validation";
 
 // One product, and the two things the catalog knows about it that a generic
@@ -32,6 +35,10 @@ import { storefrontProductSlugParamSchema } from "@/lib/validation";
 // serves, minus an HTTP round-trip to ourselves, and it renders on the server
 // instead of arriving after a spinner. Same pattern as the PLP and the fitment
 // page; the public route still exists for client callers.
+
+// The locale-relative path this page lives at, in the one form both the
+// canonical URL and the hreflang pair are built from.
+const productPagePath = (slug: string) => `${PRODUCTS_PATH}/${slug}`;
 
 export default async function ProductDetailPage({
   params,
@@ -65,6 +72,11 @@ export default async function ProductDetailPage({
   const categoryName = pickLocale(locale, product.category.nameEn, product.category.nameFa);
   const brandName = pickLocale(locale, product.brand.nameEn, product.brand.nameFa);
   const longDescription = pickLocale(locale, product.longDescriptionEn, product.longDescriptionFa);
+  const shortDescription = pickLocale(
+    locale,
+    product.shortDescriptionEn,
+    product.shortDescriptionFa,
+  );
 
   // Every link out of this page keeps the customer's car with them, the same
   // way the PLP hands it over on the way in.
@@ -72,8 +84,26 @@ export default async function ProductDetailPage({
 
   return (
     <div className="mx-auto w-full max-w-[1180px] px-4 py-10 sm:px-6">
+      {/* Everything below stated once more for a crawler: the price the
+          customer is asked to pay, and whether they can have it today. The URL
+          is the canonical one — `?fit=` never enters it, so the same product
+          reached with and without a car is one offer, not two. */}
+      <JsonLd
+        data={productSchema({
+          name,
+          url: absoluteUrl(navHref(locale, productPagePath(product.slug))),
+          sku: product.sku,
+          brandName,
+          finalPrice: product.finalPrice,
+          stockStatus: product.stockStatus,
+          description: firstFilled(shortDescription, longDescription),
+          image: product.image,
+        })}
+      />
+
       <Breadcrumbs
         locale={locale}
+        structuredData
         items={[
           { label: pickLocale(locale, "Home", "خانه"), href: navHref(locale, "") },
           {
@@ -247,6 +277,9 @@ export async function generateMetadata({
   if (!product) return {};
 
   return {
+    // Same slug in both trees (Design Decision 2), so the pair needs nothing
+    // but the path this page already lives at.
+    alternates: localeAlternates(locale, productPagePath(product.slug)),
     title: firstFilled(
       pickLocale(locale, product.metaTitleEn, product.metaTitleFa),
       pickLocale(locale, product.nameEn, product.nameFa),

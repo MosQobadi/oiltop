@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Vazirmatn } from "next/font/google";
 import { notFound } from "next/navigation";
+import { JsonLd } from "@/components/storefront/JsonLd";
 import { StorefrontShell } from "@/components/storefront/StorefrontShell";
 import { isLocale, localeDir } from "@/lib/i18n";
+import { siteOrigin } from "@/lib/storefront/sitemap";
+import { organizationSchema } from "@/lib/storefront/structured-data";
 import { getPublicSettings } from "@/server/setting";
 import "../globals.css";
 
@@ -17,6 +20,11 @@ const vazirmatn = Vazirmatn({
 });
 
 export const metadata: Metadata = {
+  // The origin every relative URL in a page's metadata resolves against. The
+  // canonical and hreflang links each page emits are already absolute (see
+  // `localeAlternates`), but anything added later — an Open Graph image, say —
+  // would otherwise be resolved against localhost in production.
+  metadataBase: new URL(siteOrigin()),
   title: "Top Oil",
 };
 
@@ -56,9 +64,16 @@ export default async function LocaleLayout({
   // disagree about what a customer is allowed to see.
   const settings = await getPublicSettings();
 
+  // Who the site belongs to, stated once for the whole storefront rather than
+  // per page — the same store name, contact details and social links the shell
+  // renders below, so the markup and the page agree. Null until an admin has
+  // set a store name.
+  const organization = organizationSchema(settings);
+
   return (
     <html lang={locale} dir={localeDir(locale)} className={`${font.variable} h-full antialiased`}>
       <body className={`${font.className} flex min-h-full flex-col`}>
+        {organization && <JsonLd data={organization} />}
         <StorefrontShell locale={locale} settings={settings}>
           {children}
         </StorefrontShell>

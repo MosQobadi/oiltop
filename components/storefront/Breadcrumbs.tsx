@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { pickLocale, type Locale } from "@/lib/i18n";
+import { breadcrumbListSchema } from "@/lib/storefront/structured-data";
+import { JsonLd } from "./JsonLd";
 
 export interface BreadcrumbItem {
   label: string;
@@ -10,12 +12,23 @@ export interface BreadcrumbItem {
 export interface BreadcrumbsProps {
   locale: Locale;
   items: BreadcrumbItem[];
+  /**
+   * Also emit the trail as a BreadcrumbList. Opt-in rather than always-on: the
+   * crawlable pages want it, while the cart, checkout and account screens are
+   * `noindex` and would only be publishing structured data nobody reads.
+   */
+  structuredData?: boolean;
   className?: string;
 }
 
 // Labels arrive already localized (the caller has the data and `pickLocale`), so
 // this only owns the trail's structure and its separator.
-export function Breadcrumbs({ locale, items, className = "" }: BreadcrumbsProps) {
+export function Breadcrumbs({
+  locale,
+  items,
+  structuredData = false,
+  className = "",
+}: BreadcrumbsProps) {
   if (items.length === 0) return null;
 
   // The chevron points the way the reader is going, so it flips with the tree
@@ -28,6 +41,9 @@ export function Breadcrumbs({ locale, items, className = "" }: BreadcrumbsProps)
       data-testid="breadcrumbs"
       className={className}
     >
+      {/* Built from the same `items` the trail below renders, so the two can
+          never describe different paths. */}
+      {structuredData && <JsonLd data={breadcrumbListSchema(items)} />}
       <ol className="flex flex-wrap items-center gap-2 text-[13px] text-neutral-500">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;

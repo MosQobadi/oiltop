@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/storefront/Breadcrumbs";
 import { FitmentResults } from "@/components/storefront/fitment/FitmentResults";
@@ -6,7 +7,19 @@ import { FITMENT_PATH, navHref } from "@/components/storefront/nav-items";
 import { pickLocale, type Locale } from "@/lib/i18n";
 import { getActiveCarEngineContext, resolveFitmentForEngine } from "@/lib/services/fitment";
 import { FIT_PARAM, formatCarName, formatEngineOptionLabel } from "@/lib/storefront/fitment";
+import { localeAlternates } from "@/lib/storefront/seo";
 import { storefrontIdParamSchema } from "@/lib/validation";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: Locale }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  // `?fit=` picks which of this page's two states renders; it doesn't make a
+  // second page, so the canonical is the bare wizard in both.
+  return { alternates: localeAlternates(locale, FITMENT_PATH) };
+}
 
 // One screen, two states, told apart by `?fit=<carEngineId>` (Design Decision
 // 5): no car yet means the wizard, a resolved car means its results. Keeping

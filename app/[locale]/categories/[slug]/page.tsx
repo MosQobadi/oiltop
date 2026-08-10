@@ -5,7 +5,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/storefront/Breadcrumbs";
 import { FitContextBanner } from "@/components/storefront/FitContextBanner";
-import { categoryHref, navHref, PRODUCTS_PATH } from "@/components/storefront/nav-items";
+import {
+  CATEGORIES_PATH,
+  categoryHref,
+  navHref,
+  PRODUCTS_PATH,
+} from "@/components/storefront/nav-items";
 import { Pagination } from "@/components/storefront/Pagination";
 import { ProductCard } from "@/components/storefront/ProductCard";
 import { ProductFilters } from "@/components/storefront/ProductFilters";
@@ -28,7 +33,7 @@ import {
   productPageCount,
   type ProductListParams,
 } from "@/lib/storefront/plp";
-import { firstFilled } from "@/lib/storefront/seo";
+import { firstFilled, localeAlternates } from "@/lib/storefront/seo";
 import {
   storefrontCategorySlugParamSchema,
   storefrontProductListPageQuerySchema,
@@ -108,6 +113,7 @@ export default async function CategoryLandingPage({
     <div className="mx-auto w-full max-w-[1180px] px-4 py-10 sm:px-6">
       <Breadcrumbs
         locale={locale}
+        structuredData
         items={[
           { label: pickLocale(locale, "Home", "خانه"), href: navHref(locale, "") },
           {
@@ -275,6 +281,10 @@ export async function generateMetadata({
   // The admin's meta pair is optional, so the category's own name and short
   // description stand in — an unoptimised <title> beats a blank one.
   return {
+    // Same slug in both trees (Design Decision 2). The canonical drops the
+    // filter and page params: those narrow this listing, they don't make a
+    // second one.
+    alternates: localeAlternates(locale, `${CATEGORIES_PATH}/${category.slug}`),
     title: firstFilled(
       pickLocale(locale, category.metaTitleEn, category.metaTitleFa),
       pickLocale(locale, category.nameEn, category.nameFa),
