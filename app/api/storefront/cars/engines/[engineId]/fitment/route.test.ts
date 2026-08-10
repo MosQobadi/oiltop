@@ -129,6 +129,65 @@ describe("GET /api/storefront/cars/engines/:engineId/fitment", () => {
     expect(body).not.toMatch(/adminNote|internalNote/);
   });
 
+  // A deactivated product must not be recommended to a customer: its PDP already
+  // 404s, so publishing it here would link the car-finder straight into a dead
+  // end. It degrades to the spec-only fallback rather than vanishing, which is
+  // the path that still lets the customer ask for it.
+  //
+  // Restored in `finally` — these tests share the working database, and leaving
+  // a seeded product deactivated would silently bend every later assertion.
+  it("resolves a deactivated product to a spec-only item", async () => {
+    const res = await GET(request(), ctx(corollaDualEngineId));
+    const oilGroup = (await res.json()).data.groups.find(
+      (group: Group) => group.category.partType === "ENGINE_OIL",
+    );
+    const hot = oilGroup.items.find((item: ResolvedItem) => item.climate === "HOT");
+    const productId: string = hot.product.id;
+
+    await prisma.product.update({ where: { id: productId }, data: { status: "INACTIVE" } });
+    try {
+      const after = await GET(request(), ctx(corollaDualEngineId));
+      const json = await after.json();
+      const group = json.data.groups.find(
+        (candidate: Group) => candidate.category.partType === "ENGINE_OIL",
+      );
+      const item = group.items.find((candidate: ResolvedItem) => candidate.climate === "HOT");
+
+      expect(after.status).toBe(200);
+      // Still present, still the HOT recommendation — just without the product.
+      expect(item).toBeDefined();
+      expect(item.product).toBeNull();
+      expect(JSON.stringify(json)).not.toContain(productId);
+    } finally {
+      await prisma.product.update({ where: { id: productId }, data: { status: "ACTIVE" } });
+    }
+  });
+
+  it("resolves a product under a deactivated brand to a spec-only item", async () => {
+    const res = await GET(request(), ctx(corollaDualEngineId));
+    const oilGroup = (await res.json()).data.groups.find(
+      (group: Group) => group.category.partType === "ENGINE_OIL",
+    );
+    const cold = oilGroup.items.find((item: ResolvedItem) => item.climate === "COLD");
+    const { brandId } = await prisma.product.findFirstOrThrow({
+      where: { id: cold.product.id },
+      select: { brandId: true },
+    });
+
+    await prisma.brand.update({ where: { id: brandId }, data: { status: "INACTIVE" } });
+    try {
+      const after = await GET(request(), ctx(corollaDualEngineId));
+      const group = (await after.json()).data.groups.find(
+        (candidate: Group) => candidate.category.partType === "ENGINE_OIL",
+      );
+      const item = group.items.find((candidate: ResolvedItem) => candidate.climate === "COLD");
+
+      expect(item.product).toBeNull();
+    } finally {
+      await prisma.brand.update({ where: { id: brandId }, data: { status: "ACTIVE" } });
+    }
+  });
+
   it("returns 404 for an unknown engine id", async () => {
     const res = await GET(request(), ctx("does-not-exist"));
     expect(res.status).toBe(404);

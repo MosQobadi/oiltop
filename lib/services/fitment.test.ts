@@ -52,6 +52,27 @@ const filterCategory: FitmentCategorySummary = {
   filterKind: "OIL_FILTER",
 };
 
+type FitmentItemProduct = NonNullable<FitmentItemWithRelations["product"]>;
+
+// An ACTIVE, purchasable product by default — the status trio is what decides
+// whether a customer may be recommended it (see `FitmentAudience`).
+function makeProduct(overrides: Partial<FitmentItemProduct> = {}): FitmentItemProduct {
+  return {
+    id: "product_1",
+    slug: "mobil-1-5w30",
+    nameEn: "Mobil 1 5W-30",
+    nameFa: "موبیل ۱ ۵W-۳۰",
+    price: new Prisma.Decimal(1_000_000),
+    discountPercent: 20,
+    image: null,
+    inventory: { stock: 40 },
+    status: "ACTIVE",
+    category: { status: "ACTIVE" },
+    brand: { status: "ACTIVE" },
+    ...overrides,
+  };
+}
+
 // Shaped like the Prisma payload groupFitmentItemsByCategory receives.
 function makeItem(overrides: Partial<FitmentItemWithRelations> = {}): FitmentItemWithRelations {
   return {
@@ -109,19 +130,7 @@ describe("groupFitmentItemsByCategory", () => {
 
   it("computes finalPrice from the product's discount", () => {
     const groups = groupFitmentItemsByCategory([
-      makeItem({
-        productId: "product_1",
-        product: {
-          id: "product_1",
-          slug: "mobil-1-5w30",
-          nameEn: "Mobil 1 5W-30",
-          nameFa: "موبیل ۱ ۵W-۳۰",
-          price: new Prisma.Decimal(1_000_000),
-          discountPercent: 20,
-          image: null,
-          inventory: { stock: 40 },
-        },
-      }),
+      makeItem({ productId: "product_1", product: makeProduct() }),
     ]);
 
     // The card the storefront renders: a PDP link, a charged price, and the
@@ -149,6 +158,58 @@ describe("groupFitmentItemsByCategory", () => {
     expect(groups[0].items[0].product).toBeNull();
     expect(groups[0].items[0].specNote).toBe("5W-30, API SP");
     expect(groups[0].items[0].specAttributes).toEqual({ viscosity: "5W-30" });
+  });
+
+  // A product a customer can't buy must not be recommended to one. It becomes a
+  // spec-only item rather than disappearing, so the requirement is still stated
+  // and the "Request it" path still works — and the item's own spec fields are
+  // untouched on the way through.
+  it.each([
+    ["the product is INACTIVE", { status: "INACTIVE" as const }],
+    ["its category is INACTIVE", { category: { status: "INACTIVE" as const } }],
+    ["its brand is INACTIVE", { brand: { status: "INACTIVE" as const } }],
+  ])("hides a product from the public audience when %s", (_case, overrides) => {
+    const groups = groupFitmentItemsByCategory([
+      makeItem({
+        productId: "product_1",
+        product: makeProduct(overrides),
+        specNote: "5W-30, API SP",
+      }),
+    ]);
+
+    expect(groups[0].items).toHaveLength(1);
+    expect(groups[0].items[0].product).toBeNull();
+    expect(groups[0].items[0].specNote).toBe("5W-30, API SP");
+  });
+
+  it("defaults to the public audience when none is given", () => {
+    const groups = groupFitmentItemsByCategory([
+      makeItem({ productId: "product_1", product: makeProduct({ status: "INACTIVE" }) }),
+    ]);
+
+    expect(groups[0].items[0].product).toBeNull();
+  });
+
+  // The admin Fitment Preview is the QA tool for this data: hiding the product
+  // there would hide the problem an admin is looking at that screen to find.
+  it("keeps a deactivated product for the admin audience", () => {
+    const groups = groupFitmentItemsByCategory(
+      [makeItem({ productId: "product_1", product: makeProduct({ status: "INACTIVE" }) })],
+      "admin",
+    );
+
+    expect(groups[0].items[0].product?.id).toBe("product_1");
+  });
+
+  // The status trio decides visibility; it is never part of the payload.
+  it("never publishes the status fields it decides visibility on", () => {
+    const groups = groupFitmentItemsByCategory([
+      makeItem({ productId: "product_1", product: makeProduct() }),
+    ]);
+
+    expect(groups[0].items[0].product).not.toHaveProperty("status");
+    expect(groups[0].items[0].product).not.toHaveProperty("category");
+    expect(groups[0].items[0].product).not.toHaveProperty("brand");
   });
 
   it("returns no groups for an engine with no fitment items", () => {

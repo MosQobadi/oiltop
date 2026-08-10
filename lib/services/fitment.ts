@@ -6,7 +6,8 @@ import type { Prisma } from "@/lib/generated/prisma/client";
 // CarEngine → CarEngineFitmentProfile → FitmentProfile → FitmentProfileItem
 // lookup behind it. Both the admin Fitment Preview route and the public
 // storefront car-finder routes call in here so the two surfaces can never
-// drift apart on what a given engine resolves to.
+// drift apart on what a given engine resolves to. Their one deliberate
+// difference is how a deactivated product is treated — see `FitmentAudience`.
 //
 // Nothing here is auth-aware: it deliberately returns no admin-only fields
 // (FitmentProfile.internalNote, FitmentProfileItem.adminNote), so the same
@@ -76,6 +77,12 @@ const fitmentItemInclude = {
       discountPercent: true,
       image: true,
       inventory: { select: { stock: true } },
+      // Read to decide whether a customer may see this item's product at all
+      // (see `isPubliclyVisible`), never published — `toResolvedItem` builds
+      // `FitmentProductSummary` field by field and none of these are in it.
+      status: true,
+      category: { select: { status: true } },
+      brand: { select: { status: true } },
     },
   },
 } satisfies Prisma.FitmentProfileItemInclude;
@@ -234,9 +241,34 @@ export async function getEnginesForModelYear(
   });
 }
 
-function toResolvedItem(item: FitmentItemWithRelations): FitmentResolvedItem {
+// Who the resolution is being rendered for. The two surfaces want different
+// answers about a deactivated product: a customer must not be recommended one,
+// while the admin Fitment Preview is the QA tool for exactly this data and has
+// to keep showing that the profile still points at it.
+export type FitmentAudience = "public" | "admin";
+
+// The same chain catalog.ts enforces on every public product read: a product is
+// purchasable only if its own row, its category and its brand are all ACTIVE.
+function isPubliclyVisible(product: NonNullable<FitmentItemWithRelations["product"]>): boolean {
+  return (
+    product.status === "ACTIVE" &&
+    product.category.status === "ACTIVE" &&
+    product.brand.status === "ACTIVE"
+  );
+}
+
+function toResolvedItem(
+  item: FitmentItemWithRelations,
+  audience: FitmentAudience,
+): FitmentResolvedItem {
   const climate = item.climate as FitmentClimate;
-  const product = item.product;
+  // A product a customer can't buy resolves to the spec-only fallback rather
+  // than being dropped: the car's requirement is still known, and SpecOnlyCard
+  // turns it into a Fitment Inquiry. Dropping the item instead would silently
+  // shorten the recommendation, and publishing it would link to a PDP that
+  // 404s (getStorefrontProductBySlug excludes the same rows).
+  const product =
+    item.product && (audience === "admin" || isPubliclyVisible(item.product)) ? item.product : null;
   const price = product ? Number(product.price) : 0;
 
   return {
@@ -271,6 +303,7 @@ function toResolvedItem(item: FitmentItemWithRelations): FitmentResolvedItem {
 // stable, so equal priorities keep their createdAt ordering from the query.
 export function groupFitmentItemsByCategory(
   items: FitmentItemWithRelations[],
+  audience: FitmentAudience = "public",
 ): FitmentCategoryGroup[] {
   const groups: {
     category: FitmentCategoryGroup["category"];
@@ -290,7 +323,9 @@ export function groupFitmentItemsByCategory(
 
   return groups.map((group) => ({
     category: group.category,
-    items: [...group.items].sort((a, b) => a.priority - b.priority).map(toResolvedItem),
+    items: [...group.items]
+      .sort((a, b) => a.priority - b.priority)
+      .map((item) => toResolvedItem(item, audience)),
   }));
 }
 
@@ -300,6 +335,7 @@ export function groupFitmentItemsByCategory(
 // no profiles (or an id that doesn't exist) resolves to an empty list.
 export async function resolveFitmentForEngine(
   carEngineId: string,
+  audience: FitmentAudience = "public",
 ): Promise<FitmentCategoryGroup[]> {
   const links = await prisma.carEngineFitmentProfile.findMany({
     where: { carEngineId },
@@ -316,7 +352,10 @@ export async function resolveFitmentForEngine(
     orderBy: { createdAt: "asc" },
   });
 
-  return groupFitmentItemsByCategory(links.flatMap((link) => link.profile.items));
+  return groupFitmentItemsByCategory(
+    links.flatMap((link) => link.profile.items),
+    audience,
+  );
 }
 
 // --- Car content pages -----------------------------------------------------

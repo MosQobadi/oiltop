@@ -20,6 +20,11 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
   }
 
   const { id } = await params;
-  const groups = await resolveFitmentForEngine(id);
+  // "admin" deliberately: this is the QA tool for the fitment data, so it keeps
+  // showing a product whose row (or category, or brand) has been deactivated.
+  // The storefront resolves the same engine to a spec-only item instead — see
+  // `FitmentAudience` — so the two surfaces differ here by design, and this is
+  // the screen an admin is meant to notice the problem on.
+  const groups = await resolveFitmentForEngine(id, "admin");
   return NextResponse.json({ success: true, data: { groups } });
 }

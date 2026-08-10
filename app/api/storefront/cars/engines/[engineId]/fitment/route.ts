@@ -9,6 +9,11 @@ type RouteContext = { params: Promise<{ engineId: string }> };
 // fitment.ts), so the two surfaces can't drift. Items with a null product are
 // spec-only — the car's requirement is known, the catalog just doesn't carry a
 // match yet — and the storefront turns those into a Fitment Inquiry.
+//
+// Resolved for the default "public" audience, which is what keeps a deactivated
+// product (or one under a deactivated category or brand) out of the results: it
+// arrives here as one of those spec-only items rather than as a link to a PDP
+// that would 404.
 export async function GET(_request: NextRequest, { params }: RouteContext) {
   const parsed = storefrontIdParamSchema.safeParse((await params).engineId);
   const context = parsed.success ? await getActiveCarEngineContext(parsed.data) : null;

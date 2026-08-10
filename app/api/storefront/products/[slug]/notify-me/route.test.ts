@@ -13,10 +13,20 @@ function ctx(slug: string) {
   return { params: Promise.resolve({ slug }) };
 }
 
-function postRequest(body: unknown) {
+// The rate limiter keys on the client IP and its state is process-wide, so each
+// request gets its own by default — otherwise the tests below would share one
+// hourly budget and whichever ran last would start failing with a 429 as soon as
+// anyone added a case. Tests that are *about* the limit pass an explicit ip.
+let ipCounter = 0;
+function nextIp() {
+  ipCounter += 1;
+  return `10.1.0.${ipCounter}`;
+}
+
+function postRequest(body: unknown, ip: string = nextIp()) {
   return new NextRequest("http://localhost/api/storefront/products/x/notify-me", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-forwarded-for": ip },
     body: JSON.stringify(body),
   });
 }
@@ -166,5 +176,32 @@ describe("POST /api/storefront/products/:slug/notify-me", () => {
       404,
     );
     expect((await POST(postRequest({ contact: "a@b.com" }), ctx(inactiveSlug))).status).toBe(404);
+  });
+
+  // Public, unauthenticated and it writes a row — the dedupe only collapses a
+  // repeat of the same contact, so varying the contact is what the limit stops.
+  it("returns 429 once the same IP exceeds 20 signups an hour", async () => {
+    const ip = "10.2.0.1";
+
+    for (let attempt = 1; attempt <= 20; attempt += 1) {
+      const res = await POST(
+        postRequest({ contact: `flood-${attempt}@example.com` }, ip),
+        ctx(outOfStockSlug),
+      );
+      expect(res.status).toBe(201);
+    }
+
+    const blocked = await POST(
+      postRequest({ contact: "flood-21@example.com" }, ip),
+      ctx(outOfStockSlug),
+    );
+
+    expect(blocked.status).toBe(429);
+    expect((await blocked.json()).success).toBe(false);
+    expect(Number(blocked.headers.get("Retry-After"))).toBeGreaterThan(0);
+    // The blocked signup is not written.
+    expect(
+      await prisma.stockNotification.count({ where: { contact: "flood-21@example.com" } }),
+    ).toBe(0);
   });
 });

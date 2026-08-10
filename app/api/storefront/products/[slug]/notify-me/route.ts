@@ -5,6 +5,7 @@ import {
   getActiveProductByIdOrSlug,
 } from "@/lib/services/catalog";
 import { stockNotificationCreateSchema } from "@/lib/validation";
+import { checkStockNotificationRateLimit, getClientIp } from "@/server/rateLimit";
 
 // The task list spells this route as /products/:id/notify-me, but Next.js
 // requires one name per dynamic segment and the sibling PDP route owns
@@ -18,6 +19,19 @@ type RouteContext = { params: Promise<{ slug: string }> };
 // customer who did nothing wrong. The response says which happened so the PDP
 // can adjust its confirmation copy.
 export async function POST(request: NextRequest, { params }: RouteContext) {
+  // Public and unauthenticated like the fitment inquiry route, and it writes a
+  // row too — so it is limited per IP before anything touches the database.
+  const rateLimit = checkStockNotificationRateLimit(getClientIp(request));
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { success: false, error: "Too many requests. Please try again later." },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+      },
+    );
+  }
+
   const { slug } = await params;
 
   const body = await request.json().catch(() => null);

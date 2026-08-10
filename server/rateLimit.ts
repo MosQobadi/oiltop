@@ -87,6 +87,18 @@ export function checkFitmentInquiryRateLimit(ip: string): RateLimitResult {
   return consume(fitmentInquiryBucket, ip);
 }
 
+// Back-in-stock signup is the other public unauthenticated write. The dedupe in
+// `createStockNotification` only collapses a repeat of the *same* contact, so
+// without a limit a script varying the contact string can still append rows for
+// free. Roomier than the inquiry bucket because signing up for several products
+// in one visit is ordinary behaviour — a customer doing a full service checks
+// oil and four filters.
+const stockNotificationBucket = bucket(60 * 60 * 1000, 20);
+
+export function checkStockNotificationRateLimit(ip: string): RateLimitResult {
+  return consume(stockNotificationBucket, ip);
+}
+
 // Checkout writes an order and moves stock, so it can't be the one public POST
 // without a limit. The allowance is looser than the others because a real
 // customer can legitimately place a few orders in a row and a household or an
