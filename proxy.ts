@@ -92,5 +92,12 @@ export const config = {
   // routes are spelled out per locale rather than built from LOCALES ×
   // PROTECTED_ACCOUNT_PATHS. The list above is what actually decides; this is
   // only the filter that keeps the proxy off every other storefront page.
-  matcher: ["/", "/admin/:path*", "/en/orders/:path*", "/fa/orders/:path*"],
+  matcher: [
+    "/",
+    "/admin/:path*",
+    "/en/orders/:path*",
+    "/fa/orders/:path*",
+    "/en/profile/:path*",
+    "/fa/profile/:path*",
+  ],
 };

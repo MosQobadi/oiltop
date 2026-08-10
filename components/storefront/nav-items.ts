@@ -49,11 +49,19 @@ export const REGISTER_PATH = "/register";
 // Where signing in lands. The screen itself is Task 9.1.
 export const ACCOUNT_ORDERS_PATH = "/orders";
 
+// The customer's own details — name, phone, email. The other half of the
+// account area, reached from the orders screen rather than from the header:
+// `AccountLink` stays one pill pointing at one destination.
+export const ACCOUNT_PROFILE_PATH = "/profile";
+
 // The account screens that require a signed-in CUSTOMER. /login and /register
 // sit in the same route group and must stay public, so the guard works from
 // this list rather than from the group — see `proxy.ts`, whose matcher spells
 // out the locale-prefixed form of each of these and has to be kept in sync.
-export const PROTECTED_ACCOUNT_PATHS: readonly string[] = [ACCOUNT_ORDERS_PATH];
+export const PROTECTED_ACCOUNT_PATHS: readonly string[] = [
+  ACCOUNT_ORDERS_PATH,
+  ACCOUNT_PROFILE_PATH,
+];
 
 export function navHref(locale: Locale, path: string): string {
   return `/${locale}${path}`;

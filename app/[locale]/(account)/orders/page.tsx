@@ -9,6 +9,7 @@ import { SignOutButton } from "@/components/storefront/account/SignOutButton";
 import { Breadcrumbs } from "@/components/storefront/Breadcrumbs";
 import {
   ACCOUNT_ORDERS_PATH,
+  ACCOUNT_PROFILE_PATH,
   loginHref,
   navHref,
   PRODUCTS_PATH,
@@ -106,7 +107,17 @@ export default async function AccountOrdersPage({
             .
           </p>
         </div>
-        <SignOutButton locale={locale} />
+        {/* The account area's only other screen, reached from here rather than
+            from the header — `AccountLink` stays one pill with one destination. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={navHref(locale, ACCOUNT_PROFILE_PATH)}
+            className="focus-visible:ring-accent inline-flex min-h-9 items-center rounded-full border border-neutral-200 bg-white px-3.5 py-1.5 text-[12.5px] font-medium text-neutral-700 transition-colors hover:border-neutral-400 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+          >
+            {pickLocale(locale, "Your details", "اطلاعات شما")}
+          </Link>
+          <SignOutButton locale={locale} />
+        </div>
       </div>
 
       {items.length === 0 ? (

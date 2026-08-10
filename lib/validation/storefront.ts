@@ -178,6 +178,35 @@ export type StorefrontRegisterInput = z.infer<typeof storefrontRegisterSchema>;
 // over this and produces the parsed `StorefrontRegisterInput`.
 export type StorefrontRegisterFormValues = z.input<typeof storefrontRegisterSchema>;
 
+// What a signed-in customer may change about themselves: their name, and the two
+// identifiers they can be reached — and sign in — with. Every field is reused
+// from the register schema rather than restated, so the number that opens an
+// account and the number that replaces it pass exactly the same test; a looser
+// rule here could leave an account with a phone `normalizePhone` mangles into
+// something login never finds again.
+//
+// `phone` stays required for the reason spelled out in `userIdentifiersSchema`
+// (lib/validation/auth.ts): a CUSTOMER with neither identifier has locked
+// themselves out permanently. `email` may be blanked, and blank means cleared —
+// the form always posts all four fields, so an empty box is an instruction, not
+// an omission.
+//
+// `password`, `role` and `status` are absent on purpose. A password change needs
+// the current one and is its own flow; the other two are the server's to decide,
+// the same rule the register schema follows.
+export const storefrontProfileUpdateSchema = z.object({
+  firstName: storefrontRegisterSchema.shape.firstName,
+  lastName: storefrontRegisterSchema.shape.lastName,
+  phone: storefrontRegisterSchema.shape.phone,
+  email: storefrontRegisterSchema.shape.email,
+});
+
+export type StorefrontProfileUpdateInput = z.infer<typeof storefrontProfileUpdateSchema>;
+
+// The profile form's own value shape — `email` goes through `z.preprocess`, same
+// reason as `StorefrontRegisterFormValues` above.
+export type StorefrontProfileFormValues = z.input<typeof storefrontProfileUpdateSchema>;
+
 // --- Fitment inquiry (lead capture) ----------------------------------------
 
 // Deliberately leaner than the admin fitmentInquiryCreateSchema: a customer

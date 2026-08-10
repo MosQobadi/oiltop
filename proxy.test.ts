@@ -128,6 +128,20 @@ describe("proxy (route protection for the account routes)", () => {
     expect(res.status).toBe(200);
   });
 
+  // The guard reads PROTECTED_ACCOUNT_PATHS, but the matcher below it is a
+  // hand-written list — a screen added to one and not the other is unprotected
+  // in production and passes every test above, so /profile is checked too.
+  it("guards the profile screen on the same terms as the orders screen", async () => {
+    const anonymous = await proxy(accountRequest("/fa/profile"));
+    expect(new URL(anonymous.headers.get("location")!).pathname).toBe("/fa/login");
+
+    const asAdmin = await proxy(accountRequest("/en/profile", await signToken("ADMIN")));
+    expect(new URL(asAdmin.headers.get("location")!).pathname).toBe("/en/login");
+
+    const asCustomer = await proxy(accountRequest("/en/profile", await signToken("CUSTOMER")));
+    expect(asCustomer.headers.get("location")).toBeNull();
+  });
+
   it("leaves the public auth screens alone", async () => {
     for (const path of ["/en/login", "/fa/register"]) {
       const res = await proxy(accountRequest(path));

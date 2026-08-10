@@ -48,6 +48,10 @@ describe("isProtectedAccountPath", () => {
     expect(isProtectedAccountPath("/orders/ord_123")).toBe(true);
   });
 
+  it("protects every screen in the list, not just the first", () => {
+    expect(isProtectedAccountPath("/profile")).toBe(true);
+  });
+
   it("leaves the public auth screens open", () => {
     expect(isProtectedAccountPath("/login")).toBe(false);
     expect(isProtectedAccountPath("/register")).toBe(false);
