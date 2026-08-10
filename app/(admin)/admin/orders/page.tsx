@@ -9,6 +9,9 @@ interface Order {
   id: string;
   orderNumber: string;
   customerName: string;
+  // A guest checkout leaves no account behind, so customerName is the name the
+  // checkout form collected rather than a Customers-list row.
+  isGuest: boolean;
   itemCount: number;
   total: number;
   status: "PENDING" | "SENDING" | "SENT" | "DELIVERED" | "CANCELLED";
@@ -108,7 +111,20 @@ export default function OrdersPage() {
       label: "Order ID",
       render: (row) => <span title={row.id}>{row.orderNumber}</span>,
     },
-    { key: "customerName", label: "Customer" },
+    {
+      key: "customerName",
+      label: "Customer",
+      render: (row) => (
+        <span className="flex items-center gap-2">
+          {row.customerName}
+          {row.isGuest && (
+            <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-500">
+              Guest
+            </span>
+          )}
+        </span>
+      ),
+    },
     { key: "itemCount", label: "Items" },
     {
       key: "total",

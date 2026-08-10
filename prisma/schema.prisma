@@ -441,11 +441,21 @@ model FitmentInquiry {
 // Orders
 // ---------------------------------------------------------------------------
 
+// A guest checkout produces an order with no account behind it (Design
+// Decision 6), so `customerId` is null and the guest* fields carry the contact
+// details the checkout form collected. Exactly one of the two is ever set.
+// `onDelete: Restrict` is spelled out because Prisma's default for an optional
+// relation is SET NULL, which would quietly turn a deleted customer's order
+// into an unattributable guest order.
 model Order {
   id String @id @default(cuid())
 
-  customerId String
-  customer   User   @relation(fields: [customerId], references: [id])
+  customerId String?
+  customer   User?   @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  guestName  String?
+  guestPhone String?
+  guestEmail String?
 
   status        OrderStatus
   paymentStatus PaymentStatus

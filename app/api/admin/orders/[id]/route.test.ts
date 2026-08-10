@@ -40,6 +40,7 @@ function ctx(id: string) {
 let customer: { id: string; firstName: string; lastName: string };
 let product: { id: string };
 let order: { id: string };
+let guestOrder: { id: string };
 
 beforeAll(async () => {
   const admin = await prisma.user.findUniqueOrThrow({
@@ -106,11 +107,41 @@ beforeAll(async () => {
       },
     },
   });
+
+  guestOrder = await prisma.order.create({
+    data: {
+      customerId: null,
+      guestName: "Guest Tester",
+      guestPhone: "+989120000000",
+      guestEmail: `${PREFIX}-guest@example.com`,
+      status: "PENDING",
+      paymentStatus: "UNPAID",
+      subtotal: 2000,
+      discount: 0,
+      shippingCost: 200_000,
+      tax: 0,
+      total: 202_000,
+      shippingAddress: "43 Guest Ave.",
+      postalCode: "1234567891",
+      items: {
+        create: [
+          {
+            productId: product.id,
+            productNameSnapshot: "Detail test product",
+            priceSnapshot: 2000,
+            quantity: 1,
+            lineTotal: 2000,
+          },
+        ],
+      },
+    },
+  });
 });
 
 afterAll(async () => {
-  await prisma.orderItem.deleteMany({ where: { order: { customerId: customer.id } } });
-  await prisma.order.deleteMany({ where: { customerId: customer.id } });
+  const orderIds = [order.id, guestOrder.id];
+  await prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } });
+  await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
   await prisma.user.delete({ where: { id: customer.id } });
   await prisma.product.delete({ where: { id: product.id } });
 });
@@ -151,9 +182,9 @@ describe("GET /api/admin/orders/:id", () => {
       adminNote: "Initial note",
       customer: {
         id: customer.id,
-        firstName: "Detail",
-        lastName: "Tester",
+        name: "Detail Tester",
         email: `${PREFIX}@example.com`,
+        isGuest: false,
       },
     });
     expect(json.data.order.items).toHaveLength(1);
@@ -163,6 +194,20 @@ describe("GET /api/admin/orders/:id", () => {
       price: 2000,
       quantity: 2,
       lineTotal: 4000,
+    });
+  });
+
+  it("returns a guest order's contact details off the order row", async () => {
+    const res = await GET(getRequest(), ctx(guestOrder.id));
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.data.order.customer).toEqual({
+      id: null,
+      name: "Guest Tester",
+      email: `${PREFIX}-guest@example.com`,
+      phone: "+989120000000",
+      isGuest: true,
     });
   });
 });

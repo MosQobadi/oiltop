@@ -2,17 +2,15 @@ import { prisma } from "@/lib/db";
 import type { OrderStatus, Prisma } from "@/lib/generated/prisma/client";
 import type { OrderListQuery, OrderNoteInput, OrderStatusUpdateInput } from "@/lib/validation";
 
-// Storefront Design Decision 6 — RESOLVED (2026-08-09, Storefront Task 0.5):
-// guest checkout stores a guest order, not a silently-created account.
-// `Order.customerId` becomes nullable and `Order` gains guestName/guestPhone/
-// guestEmail; a guest order carries contact details on the row itself.
+// Storefront Design Decision 6 — RESOLVED (2026-08-09, Storefront Task 0.5)
+// and IMPLEMENTED (2026-08-10, Storefront Task 8.1): guest checkout stores a
+// guest order, not a silently-created account. `Order.customerId` is nullable
+// and `Order` carries guestName/guestPhone/guestEmail, so a guest order holds
+// its contact details on the row itself.
 // Rejected alternative: creating a CUSTOMER `User` per guest order — it would
 // need a junk `passwordHash` that can never log in, litter the admin Customers
 // list with unreachable rows, and collide on the phone-unique constraint that
 // Design Decision 7 / Task 0.6 adds the moment a guest orders twice.
-// Not yet migrated: the schema change and the null-customer handling below
-// (see `toOrderListItem`, which today assumes `order.customer` is present)
-// belong to Phase 10, which owns storefront checkout.
 export class OrderNotFoundError extends Error {}
 export class InvalidOrderTransitionError extends Error {}
 
@@ -27,6 +25,18 @@ const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   CANCELLED: [],
 };
 
+// A guest order has no customer row to read a name off, so it falls back to the
+// name the checkout form collected. The final "Guest" fallback covers a guest
+// order saved without one — nothing enforces guestName at the database level.
+function orderContactName(order: {
+  customer: { firstName: string; lastName: string } | null;
+  guestName: string | null;
+}) {
+  return order.customer
+    ? `${order.customer.firstName} ${order.customer.lastName}`
+    : (order.guestName ?? "Guest");
+}
+
 export function toOrderListItem(
   order: Prisma.OrderGetPayload<{
     include: {
@@ -37,7 +47,8 @@ export function toOrderListItem(
 ) {
   return {
     id: order.id,
-    customerName: `${order.customer.firstName} ${order.customer.lastName}`,
+    customerName: orderContactName(order),
+    isGuest: order.customerId === null,
     itemCount: order._count.items,
     total: Number(order.total),
     status: order.status,
@@ -58,15 +69,18 @@ export async function listOrders(query: OrderListQuery) {
           },
         }
       : {}),
+    // Guest fields are searched alongside the customer relation, otherwise a
+    // guest order would be unreachable from the Customer search box.
     ...(query.search
       ? {
-          customer: {
-            OR: [
-              { firstName: { contains: query.search, mode: "insensitive" } },
-              { lastName: { contains: query.search, mode: "insensitive" } },
-              { email: { contains: query.search, mode: "insensitive" } },
-            ],
-          },
+          OR: [
+            { customer: { firstName: { contains: query.search, mode: "insensitive" } } },
+            { customer: { lastName: { contains: query.search, mode: "insensitive" } } },
+            { customer: { email: { contains: query.search, mode: "insensitive" } } },
+            { guestName: { contains: query.search, mode: "insensitive" } },
+            { guestEmail: { contains: query.search, mode: "insensitive" } },
+            { guestPhone: { contains: query.search, mode: "insensitive" } },
+          ],
         }
       : {}),
   };
@@ -106,7 +120,15 @@ export async function getOrderById(id: string) {
 
   return {
     id: order.id,
-    customer: order.customer,
+    // Normalized so the detail screen renders one contact block either way:
+    // `id` is null and `isGuest` true when nobody was signed in at checkout.
+    customer: {
+      id: order.customer?.id ?? null,
+      name: orderContactName(order),
+      email: order.customer ? order.customer.email : order.guestEmail,
+      phone: order.customer ? order.customer.phone : order.guestPhone,
+      isGuest: order.customerId === null,
+    },
     shippingAddress: order.shippingAddress,
     postalCode: order.postalCode,
     subtotal: Number(order.subtotal),

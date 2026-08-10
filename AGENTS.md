@@ -441,7 +441,7 @@ knowing:
   navigation away from the form.
 
 **`proxy.ts` guards both trees**, `/admin/*` for ADMIN and the account screens
-for CUSTOMER, redirecting to the right login with `from` set to the path *and*
+for CUSTOMER, redirecting to the right login with `from` set to the path _and_
 query it turned away. Two rules keep it honest:
 
 - The protected paths come from `PROTECTED_ACCOUNT_PATHS` in
@@ -458,6 +458,39 @@ An ADMIN is turned away from the account screens too, and `AccountLoginForm`
 drops an admin's session with an error rather than letting it stand — the mirror
 of the admin login form's CUSTOMER rejection, and what stops form and guard from
 bouncing a signed-in admin between each other forever.
+
+---
+
+## Guest orders — Design Decision 6, settled
+
+**A guest checkout creates an order, never an account.** `Order.customerId` is
+nullable, and `guestName` / `guestPhone` / `guestEmail` on the order row carry
+the contact details the checkout form collected. Exactly one side is ever
+populated. Don't re-litigate this: the rejected alternative — silently creating
+a CUSTOMER `User` per guest order — needs a junk `passwordHash` that can never
+log in, fills the admin Customers list with unreachable rows, and collides with
+the unique `phone` constraint (Design Decision 7) the second time a guest
+orders. A guest who later registers gets a normal account; the earlier order
+stays a guest order rather than being retroactively claimed.
+
+Consequences worth knowing:
+
+- **`onDelete: Restrict` is spelled out on the relation** even though it's the
+  behavior a required relation already had. Prisma's default for an _optional_
+  relation is `SET NULL`, which would turn a deleted customer's order into
+  something indistinguishable from a guest order.
+- **`server/order.ts` owns the name resolution**, not the call sites.
+  `orderContactName` reads the account name, falls back to `guestName`, then to
+  the literal `"Guest"`; nothing enforces `guestName` at the database level.
+  `toOrderListItem` and `getOrderById` both return `isGuest` so the admin
+  screens can tag the row without re-deriving it from a null check.
+- **`getOrderById` returns one normalized contact block** — `{ id, name, email,
+phone, isGuest }`, with `id: null` for a guest — so the detail screen renders
+  the Customer card the same way either way rather than branching on which shape
+  arrived.
+- **Order search covers the guest columns too.** A guest order has no `customer`
+  relation to match against, so searching only the relation would make it
+  unreachable from the Orders screen's Customer search box.
 
 ---
 

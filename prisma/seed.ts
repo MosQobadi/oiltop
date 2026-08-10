@@ -778,8 +778,11 @@ async function main() {
   // ---------------------------------------------------------------------
 
   type OrderItemSeed = { product: typeof products.mobilOil5w30; quantity: number };
+  // `customer: null` seeds a guest order (Design Decision 6) — no account, with
+  // the contact details on the order row instead.
   type OrderSeed = {
-    customer: (typeof customers)[number];
+    customer: (typeof customers)[number] | null;
+    guest?: { name: string; phone: string; email?: string };
     status: OrderStatus;
     paymentStatus: PaymentStatus;
     shippingAddress: string;
@@ -844,6 +847,15 @@ async function main() {
         { product: products.mobilOil5w30, quantity: 1 },
       ],
     },
+    {
+      customer: null,
+      guest: { name: "Kaveh Sadeghi", phone: "+989123334455", email: "kaveh.sadeghi@example.com" },
+      status: OrderStatus.SENT,
+      paymentStatus: PaymentStatus.PAID,
+      shippingAddress: "No. 19, Enghelab St., Tabriz",
+      postalCode: "5137733111",
+      items: [{ product: products.castrolOil5w40, quantity: 1 }],
+    },
   ];
 
   for (const orderSeed of orderSeeds) {
@@ -864,7 +876,10 @@ async function main() {
 
     await prisma.order.create({
       data: {
-        customerId: orderSeed.customer.id,
+        customerId: orderSeed.customer?.id ?? null,
+        guestName: orderSeed.guest?.name ?? null,
+        guestPhone: orderSeed.guest?.phone ?? null,
+        guestEmail: orderSeed.guest?.email ?? null,
         status: orderSeed.status,
         paymentStatus: orderSeed.paymentStatus,
         subtotal,

@@ -25,13 +25,15 @@ interface OrderItem {
 interface OrderDetail {
   id: string;
   customer: {
-    id: string;
-    firstName: string;
-    lastName: string;
+    // Null on a guest order — there is no account to link back to
+    // (Design Decision 6); `name` then comes off the order row itself.
+    id: string | null;
+    name: string;
     // Null for a storefront customer who registered with a phone number only
-    // (Design Decision 7).
+    // (Design Decision 7), or a guest who left the field blank.
     email: string | null;
     phone: string | null;
+    isGuest: boolean;
   };
   shippingAddress: string;
   postalCode: string;
@@ -360,9 +362,17 @@ export default function OrderDetailPage() {
             <CardTitle>Customer</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-neutral-900">
-              {order.customer.firstName} {order.customer.lastName}
+            <span className="flex items-center gap-2 font-medium text-neutral-900">
+              {order.customer.name}
+              {order.customer.isGuest && (
+                <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-500">
+                  Guest
+                </span>
+              )}
             </span>
+            {order.customer.isGuest && (
+              <span className="text-neutral-500">Checked out without an account</span>
+            )}
             {order.customer.email && (
               <span className="text-neutral-500">{order.customer.email}</span>
             )}

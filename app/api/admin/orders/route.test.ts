@@ -44,6 +44,7 @@ let customerBeta: { id: string };
 
 let orderAlpha: { id: string };
 let orderBeta: { id: string };
+let orderGuest: { id: string };
 
 async function createCustomer(email: string, firstName: string, lastName: string) {
   return prisma.user.create({
@@ -59,7 +60,9 @@ async function createCustomer(email: string, firstName: string, lastName: string
 }
 
 async function createOrder(opts: {
-  customerId: string;
+  customerId: string | null;
+  guestName?: string;
+  guestEmail?: string;
   status: "PENDING" | "SENDING" | "SENT" | "DELIVERED" | "CANCELLED";
   paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
   createdAt: Date;
@@ -68,6 +71,8 @@ async function createOrder(opts: {
   return prisma.order.create({
     data: {
       customerId: opts.customerId,
+      guestName: opts.guestName ?? null,
+      guestEmail: opts.guestEmail ?? null,
       status: opts.status,
       paymentStatus: opts.paymentStatus,
       subtotal: priceSnapshot,
@@ -136,13 +141,20 @@ beforeAll(async () => {
     paymentStatus: "PAID",
     createdAt: new Date("2026-02-01T00:00:00.000Z"),
   });
+  orderGuest = await createOrder({
+    customerId: null,
+    guestName: "Gamma Guest",
+    guestEmail: `${PREFIX}-gamma@example.com`,
+    status: "SENT",
+    paymentStatus: "PAID",
+    createdAt: new Date("2026-03-01T00:00:00.000Z"),
+  });
 });
 
 afterAll(async () => {
-  await prisma.orderItem.deleteMany({
-    where: { order: { customer: { email: { startsWith: PREFIX } } } },
-  });
-  await prisma.order.deleteMany({ where: { customer: { email: { startsWith: PREFIX } } } });
+  const orderIds = [orderAlpha.id, orderBeta.id, orderGuest.id];
+  await prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } });
+  await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
   await prisma.user.deleteMany({ where: { email: { startsWith: PREFIX } } });
   await prisma.product.deleteMany({ where: { sku: `${PREFIX}-sku` } });
 });
@@ -167,6 +179,7 @@ describe("GET /api/admin/orders", () => {
     const item = json.data.items.find((i: { id: string }) => i.id === orderAlpha.id);
     expect(item).toMatchObject({
       customerName: "Alpha Tester",
+      isGuest: false,
       itemCount: 1,
       status: "PENDING",
       paymentStatus: "UNPAID",
@@ -212,5 +225,20 @@ describe("GET /api/admin/orders", () => {
     const json = await res.json();
 
     expect(json.data.items.some((i: { id: string }) => i.id === orderBeta.id)).toBe(true);
+  });
+
+  it("lists a guest order under its own name and flags it", async () => {
+    const res = await GET(getRequest({ search: "Gamma Guest" }));
+    const json = await res.json();
+
+    const item = json.data.items.find((i: { id: string }) => i.id === orderGuest.id);
+    expect(item).toMatchObject({ customerName: "Gamma Guest", isGuest: true });
+  });
+
+  it("searches a guest order by its email", async () => {
+    const res = await GET(getRequest({ search: `${PREFIX}-gamma@` }));
+    const json = await res.json();
+
+    expect(json.data.items.some((i: { id: string }) => i.id === orderGuest.id)).toBe(true);
   });
 });
