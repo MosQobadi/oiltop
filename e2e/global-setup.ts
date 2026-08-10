@@ -64,6 +64,22 @@ export default async function globalSetup() {
     "/admin/inventory",
     "/admin/orders/warmup",
     "/admin/inquiries/warmup",
+    // The storefront tree (Phase 11's specs). Same first-hit compile as above,
+    // and the account routes are deliberately absent: `proxy.ts` redirects this
+    // admin context away from them, so requesting them here would warm the
+    // login form rather than the page.
+    "/en",
+    "/fa",
+    "/en/products",
+    "/en/products/warmup",
+    "/en/categories/warmup",
+    "/en/fitment",
+    "/en/cars/warmup",
+    "/en/cars/warmup/warmup",
+    "/en/cart",
+    "/en/checkout",
+    "/en/checkout/confirmation",
+    "/en/login",
   ];
   for (const routePath of dynamicRouteWarmups) {
     await context.get(routePath).catch(() => {});
