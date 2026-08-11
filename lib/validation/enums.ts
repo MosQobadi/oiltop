@@ -7,7 +7,6 @@ import { z } from "zod";
 export const userRoleSchema = z.enum(["ADMIN", "CUSTOMER"]);
 export const userStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 export const partTypeSchema = z.enum(["ENGINE_OIL", "FILTER", "ACCESSORY", "OTHER"]);
-export const filterKindSchema = z.enum(["OIL_FILTER", "AIR_FILTER", "CABIN_FILTER", "FUEL_FILTER"]);
 export const categoryStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 export const brandStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 export const productStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);

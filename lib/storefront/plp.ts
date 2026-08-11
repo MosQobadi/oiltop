@@ -1,7 +1,6 @@
 import { FIT_PARAM } from "./fitment";
 import { formatNumber } from "./pricing";
 import { pickLocale, type Locale } from "@/lib/i18n";
-import { filterKindSchema, partTypeSchema } from "@/lib/validation/enums";
 import {
   STOREFRONT_PRODUCT_SORTS,
   storefrontProductSortSchema,
@@ -15,12 +14,6 @@ import {
 // next one" — the sidebar, the sort control, the pagination links and the page
 // itself all go through these so none of them invents its own param name.
 
-export type PartTypeValue = (typeof partTypeSchema.options)[number];
-export type FilterKindValue = (typeof filterKindSchema.options)[number];
-
-/** Ordered for display: engine oil, then filters, then the rest — never by name. */
-export const PART_TYPE_OPTIONS = partTypeSchema.options;
-export const FILTER_KIND_OPTIONS = filterKindSchema.options;
 export const PRODUCT_SORT_OPTIONS = STOREFRONT_PRODUCT_SORTS;
 
 /** Five rows of the four-up grid. Not a URL param — see the page-query schema. */
@@ -28,12 +21,12 @@ export const PLP_PAGE_SIZE = 20;
 
 const DEFAULT_PRODUCT_SORT: StorefrontProductSort = "newest";
 
-// A whole PLP URL, minus the locale prefix its caller already knows.
+// A whole PLP URL, minus the locale prefix its caller already knows. The grid
+// narrows by category, brand and search — a category is how a customer asks for
+// oil filters, and there is no second spelling of that question.
 export interface ProductListParams {
   category?: string;
   brand?: string;
-  partType?: PartTypeValue;
-  filterKind?: FilterKindValue;
   search?: string;
   sort?: StorefrontProductSort;
   page?: number;
@@ -53,8 +46,6 @@ export function buildProductListHref(basePath: string, params: ProductListParams
 
   if (params.category) query.set("category", params.category);
   if (params.brand) query.set("brand", params.brand);
-  if (params.partType) query.set("partType", params.partType);
-  if (params.filterKind) query.set("filterKind", params.filterKind);
   if (params.search) query.set("search", params.search);
   if (params.sort && params.sort !== DEFAULT_PRODUCT_SORT) query.set("sort", params.sort);
   if (params.page && params.page > 1) query.set("page", String(params.page));
@@ -71,9 +62,7 @@ export function clearProductFilters(params: ProductListParams): ProductListParam
 }
 
 export function activeProductFilterCount(params: ProductListParams): number {
-  return [params.category, params.brand, params.partType, params.filterKind, params.search].filter(
-    (value) => Boolean(value),
-  ).length;
+  return [params.category, params.brand, params.search].filter((value) => Boolean(value)).length;
 }
 
 // `searchParams` hands every key a string, an array (repeated key) or nothing.
@@ -90,59 +79,21 @@ export function collapseSearchParams(
   return collapsed;
 }
 
-// A `<select>` hands back a plain string, and "" is its "any" option. These
-// three turn that back into something the params type accepts rather than
-// casting it and hoping.
-export function parsePartType(value: string): PartTypeValue | undefined {
-  const parsed = partTypeSchema.safeParse(value);
-  return parsed.success ? parsed.data : undefined;
-}
-
-export function parseFilterKind(value: string): FilterKindValue | undefined {
-  const parsed = filterKindSchema.safeParse(value);
-  return parsed.success ? parsed.data : undefined;
-}
-
+// A `<select>` hands back a plain string, and "" is its "any" option — this
+// turns that back into something the params type accepts rather than casting it
+// and hoping.
 export function parseProductSort(value: string): StorefrontProductSort {
   const parsed = storefrontProductSortSchema.safeParse(value);
   return parsed.success ? parsed.data : DEFAULT_PRODUCT_SORT;
 }
 
 // --- Labels ----------------------------------------------------------------
-//
-// partType/filterKind are the fitment engine's identifiers, so they never reach
-// a customer as raw enum values — and their category's own name can't stand in
-// for them either, since several categories share one part type.
-
-const PART_TYPE_LABELS: Record<PartTypeValue, { en: string; fa: string }> = {
-  ENGINE_OIL: { en: "Engine oil", fa: "روغن موتور" },
-  FILTER: { en: "Filters", fa: "فیلترها" },
-  ACCESSORY: { en: "Accessories", fa: "لوازم جانبی" },
-  OTHER: { en: "Other", fa: "سایر" },
-};
-
-const FILTER_KIND_LABELS: Record<FilterKindValue, { en: string; fa: string }> = {
-  OIL_FILTER: { en: "Oil filter", fa: "فیلتر روغن" },
-  AIR_FILTER: { en: "Air filter", fa: "فیلتر هوا" },
-  CABIN_FILTER: { en: "Cabin filter", fa: "فیلتر کابین" },
-  FUEL_FILTER: { en: "Fuel filter", fa: "فیلتر سوخت" },
-};
 
 const PRODUCT_SORT_LABELS: Record<StorefrontProductSort, { en: string; fa: string }> = {
   newest: { en: "Newest", fa: "جدیدترین" },
   "price-asc": { en: "Price: low to high", fa: "قیمت: کم به زیاد" },
   "price-desc": { en: "Price: high to low", fa: "قیمت: زیاد به کم" },
 };
-
-export function partTypeLabel(locale: Locale, partType: PartTypeValue): string {
-  const label = PART_TYPE_LABELS[partType];
-  return pickLocale(locale, label.en, label.fa);
-}
-
-export function filterKindLabel(locale: Locale, filterKind: FilterKindValue): string {
-  const label = FILTER_KIND_LABELS[filterKind];
-  return pickLocale(locale, label.en, label.fa);
-}
 
 export function productSortLabel(locale: Locale, sort: StorefrontProductSort): string {
   const label = PRODUCT_SORT_LABELS[sort];

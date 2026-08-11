@@ -149,10 +149,12 @@ Do not create unnecessary layers. If a task doesn't need a new top-level folder,
   `FitmentProfile.label` is the one deliberate exception: it's an internal
   admin-only identifier, never shown to a customer, so it's a single field, not
   a bilingual pair.
-- `Category.partType` (`ENGINE_OIL` / `FILTER` / `ACCESSORY` / `OTHER`) and
-  `Category.filterKind` (`OIL_FILTER` / `AIR_FILTER` / `CABIN_FILTER` / `FUEL_FILTER`,
-  set only when `partType = FILTER`) are how the fitment engine identifies a
-  category — never match on `nameEn`/`nameFa` strings for logic, only for display.
+- `Category.partType` (`ENGINE_OIL` / `FILTER` / `ACCESSORY` / `OTHER`) describes
+  how a category **behaves**, not what it contains. Exactly two things branch on
+  it: the `ENGINE_OIL` climate rule below, and fitment group ordering
+  (`sortFitmentGroups`). Everything else — filtering a listing, naming a shelf —
+  uses the category itself, keyed on `slug`. Don't add a value per new category,
+  and never match on `nameEn`/`nameFa` for logic, only for display.
 - `FitmentProfileItem.climate` (`STANDARD` / `HOT` / `COLD`) must be `STANDARD`
   unless the related category's `partType` is `ENGINE_OIL` — this is a Zod
   cross-field rule (see `lib/validation/`), not a database constraint, so it can
@@ -248,7 +250,7 @@ source of truth for what the screen contains:
 - Do not add extra filters, columns, or fields beyond what's in the frame —
   except the specific additions called out in the matching task prompt in
   `topoil-admin-claude-code-tasks.md` (bilingual name fields, SEO meta fields,
-  `partType`/`filterKind`, `oemPartNumbers` — these are deliberate, documented
+  `partType`, `oemPartNumbers` — these are deliberate, documented
   departures from the reused Technotopia frame, not scope creep).
 - Do not add dashboards, analytics, or charts unless the frame shows them.
 - Do not add extra buttons or additional CRUD operations.

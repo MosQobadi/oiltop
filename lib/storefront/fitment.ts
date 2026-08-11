@@ -87,8 +87,13 @@ export type FitmentClimateValue = "STANDARD" | "HOT" | "COLD";
 // Category order is a display decision, not a data one: the service returns
 // categories in the order the profile's items happen to be stored, which is
 // whatever the admin entered first. A customer expects oil, then filters, in
-// the order the design brief lists them. Ranked on partType/filterKind — never
-// on the category name, per the fitment rules in CLAUDE.md.
+// the order the design brief lists them.
+//
+// Two keys, in this order. `partType` is how a category behaves, so it puts oil
+// ahead of filters ahead of everything else. Within one part type the order is
+// the design brief's, keyed on the category's *slug* — its stable identity, not
+// the name that gets reworded, and not a second enum that would have to be kept
+// in step with the categories it describes. Never rank on a category name.
 const PART_TYPE_RANK: Record<string, number> = {
   ENGINE_OIL: 0,
   FILTER: 1,
@@ -96,25 +101,27 @@ const PART_TYPE_RANK: Record<string, number> = {
   OTHER: 3,
 };
 
-const FILTER_KIND_RANK: Record<string, number> = {
-  OIL_FILTER: 0,
-  AIR_FILTER: 1,
-  CABIN_FILTER: 2,
-  FUEL_FILTER: 3,
+const CATEGORY_SLUG_RANK: Record<string, number> = {
+  "oil-filter": 0,
+  "air-filter": 1,
+  "cabin-filter": 2,
+  "fuel-filter": 3,
 };
 
+// A category this doesn't recognise sorts after the ones it does, within its
+// part type — a new filter category is listed, just not ahead of the four the
+// brief names.
 const UNRANKED = 9;
 
 export interface FitmentCategoryParts {
+  slug: string;
   partType: string;
-  filterKind: string | null;
 }
 
 export function fitmentCategoryRank(category: FitmentCategoryParts): number {
   const part = PART_TYPE_RANK[category.partType] ?? UNRANKED;
-  const kind =
-    category.filterKind === null ? 0 : (FILTER_KIND_RANK[category.filterKind] ?? UNRANKED);
-  return part * 10 + kind;
+  const within = CATEGORY_SLUG_RANK[category.slug] ?? UNRANKED;
+  return part * 10 + within;
 }
 
 // Sort is stable, so two categories of the same kind keep the order the service

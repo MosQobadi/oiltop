@@ -8,12 +8,6 @@ import {
   activeProductFilterCount,
   buildProductListHref,
   clearProductFilters,
-  FILTER_KIND_OPTIONS,
-  filterKindLabel,
-  PART_TYPE_OPTIONS,
-  parseFilterKind,
-  parsePartType,
-  partTypeLabel,
   type ProductListParams,
 } from "@/lib/storefront/plp";
 
@@ -33,11 +27,10 @@ export interface ProductFilterOption {
 
 /**
  * A control the route itself already pins. The category landing page *is* one
- * category, and with it the one part type that category carries — rendering
- * either select there would offer the customer a filter that does nothing or
- * quietly navigates them off the page they picked.
+ * category, so rendering that select there would offer the customer a filter
+ * that either does nothing or quietly navigates them off the page they picked.
  */
-export type PinnedProductFilter = "category" | "partType";
+export type PinnedProductFilter = "category";
 
 export interface ProductFiltersProps {
   locale: Locale;
@@ -83,19 +76,6 @@ export function ProductFilters({
     const search = typeof value === "string" ? value.trim() : "";
     apply({ search: search === "" ? undefined : search });
   };
-
-  const handlePartTypeChange = (value: string) => {
-    const partType = parsePartType(value);
-    // Filter kind only means anything under FILTER (see CLAUDE.md), so moving
-    // off it drops the kind rather than leaving an invisible filter applied.
-    apply({ partType, filterKind: partType === "FILTER" ? params.filterKind : undefined });
-  };
-
-  // Shown under FILTER, and also whenever a kind is already applied — otherwise
-  // a hand-edited URL would filter the grid with no control to undo it. Pinning
-  // the part type pins the kind with it: a category is one or the other.
-  const showFilterKind =
-    !isPinned("partType") && (params.partType === "FILTER" || params.filterKind !== undefined);
 
   const activeCount = activeProductFilterCount(params);
   const anyLabel = pickLocale(locale, "All", "همه");
@@ -169,34 +149,6 @@ export function ProductFilters({
             options={brands}
             onChange={(value) => apply({ brand: value === "" ? undefined : value })}
           />
-
-          {!isPinned("partType") && (
-            <FilterSelect
-              id={`${baseId}-part-type`}
-              label={pickLocale(locale, "Part type", "نوع قطعه")}
-              anyLabel={anyLabel}
-              value={params.partType ?? ""}
-              options={PART_TYPE_OPTIONS.map((partType) => ({
-                value: partType,
-                label: partTypeLabel(locale, partType),
-              }))}
-              onChange={handlePartTypeChange}
-            />
-          )}
-
-          {showFilterKind && (
-            <FilterSelect
-              id={`${baseId}-filter-kind`}
-              label={pickLocale(locale, "Filter kind", "نوع فیلتر")}
-              anyLabel={anyLabel}
-              value={params.filterKind ?? ""}
-              options={FILTER_KIND_OPTIONS.map((filterKind) => ({
-                value: filterKind,
-                label: filterKindLabel(locale, filterKind),
-              }))}
-              onChange={(value) => apply({ filterKind: parseFilterKind(value) })}
-            />
-          )}
         </div>
 
         {activeCount > 0 && (

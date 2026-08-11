@@ -68,9 +68,9 @@ export default async function CategoryLandingPage({
   const fit = raw[FIT_PARAM];
 
   const [{ products, total }, brands, car] = await Promise.all([
-    // Spelled out rather than spread: `category`, `partType` and `filterKind`
-    // are this page's own, so a hand-edited `?partType=` mustn't narrow a grid
-    // whose rail has no control to undo it.
+    // Spelled out rather than spread: `category` is this page's own, so a
+    // hand-edited `?category=` mustn't narrow a grid whose rail has no control
+    // to undo it.
     listStorefrontProducts({
       category: category.slug,
       brand: query.brand,
@@ -176,8 +176,8 @@ export default async function CategoryLandingPage({
             value: brand.slug,
             label: pickLocale(locale, brand.nameEn, brand.nameFa),
           }))}
-          // Both are the category itself here — see PinnedProductFilter.
-          pinned={["category", "partType"]}
+          // The category is the page itself here — see PinnedProductFilter.
+          pinned={["category"]}
           className="lg:sticky lg:top-6 lg:self-start"
         />
 

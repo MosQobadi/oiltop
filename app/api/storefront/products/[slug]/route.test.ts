@@ -203,7 +203,8 @@ describe("GET /api/storefront/products/:slug", () => {
     expect(product.metaTitleEn).toBe("Meta title");
     expect(product.oemPartNumbers).toEqual([`${PREFIX}-OEM`]);
     expect(product.category.slug).toBe(`${PREFIX}-oil`);
-    expect(product.category.partType).toBe("ENGINE_OIL");
+    // The fitment engine's own field, not the catalog's — see PartType.
+    expect(product.category).not.toHaveProperty("partType");
     expect(product.brand.slug).toBe(`${PREFIX}-brand`);
   });
 

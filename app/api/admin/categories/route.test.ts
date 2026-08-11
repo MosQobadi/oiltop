@@ -173,26 +173,11 @@ describe("POST /api/admin/categories", () => {
     expect(json.error).toMatch(/already exists/i);
   });
 
-  it("forces filterKind to null when partType is not FILTER", async () => {
+  it("persists partType and drops a retired filterKind from the body", async () => {
     const res = await POST(
       postRequest(
         validCategoryPayload({
-          nameEn: `${SLUG_PREFIX} No Filter Kind`,
-          partType: "ACCESSORY",
-        }),
-      ),
-    );
-    const json = await res.json();
-
-    expect(res.status).toBe(201);
-    expect(json.data.category.filterKind).toBeNull();
-  });
-
-  it("persists a valid partType/filterKind combination", async () => {
-    const res = await POST(
-      postRequest(
-        validCategoryPayload({
-          nameEn: `${SLUG_PREFIX} With Filter Kind`,
+          nameEn: `${SLUG_PREFIX} Filter Part Type`,
           partType: "FILTER",
           filterKind: "AIR_FILTER",
         }),
@@ -202,6 +187,6 @@ describe("POST /api/admin/categories", () => {
 
     expect(res.status).toBe(201);
     expect(json.data.category.partType).toBe("FILTER");
-    expect(json.data.category.filterKind).toBe("AIR_FILTER");
+    expect(json.data.category).not.toHaveProperty("filterKind");
   });
 });

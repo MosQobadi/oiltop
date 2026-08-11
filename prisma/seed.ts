@@ -4,7 +4,6 @@ import bcrypt from "bcryptjs";
 import {
   PrismaClient,
   PartType,
-  FilterKind,
   FuelType,
   FitmentClimate,
   FitmentInquiryStatus,
@@ -200,7 +199,6 @@ async function main() {
       longDescriptionFa:
         "فیلترهای روغن طراحی‌شده برای حذف آلودگی‌ها و محافظت از اجزای داخلی موتور در طول دوره‌های سرویس.",
       partType: PartType.FILTER,
-      filterKind: FilterKind.OIL_FILTER,
       status: "ACTIVE",
     },
   });
@@ -218,7 +216,6 @@ async function main() {
       longDescriptionFa:
         "رسانه فیلتراسیون مهندسی‌شده که جریان هوا و کارایی فیلتراسیون را برای تنفس مطمئن موتور متعادل می‌کند.",
       partType: PartType.FILTER,
-      filterKind: FilterKind.AIR_FILTER,
       status: "ACTIVE",
     },
   });
@@ -236,7 +233,6 @@ async function main() {
       longDescriptionFa:
         "گردوغبار، گرده گیاهان و ذرات معلق را از هوای ورودی به سیستم تهویه کابین حذف می‌کند.",
       partType: PartType.FILTER,
-      filterKind: FilterKind.CABIN_FILTER,
       status: "ACTIVE",
     },
   });
@@ -253,7 +249,6 @@ async function main() {
         "Removes particulates and moisture from fuel before it reaches the injection system.",
       longDescriptionFa: "ذرات معلق و رطوبت را پیش از رسیدن سوخت به سیستم انژکتور حذف می‌کند.",
       partType: PartType.FILTER,
-      filterKind: FilterKind.FUEL_FILTER,
       status: "ACTIVE",
     },
   });

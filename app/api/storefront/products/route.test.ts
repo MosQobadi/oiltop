@@ -92,7 +92,6 @@ beforeAll(async () => {
       longDescriptionEn: "Long",
       longDescriptionFa: "بلند",
       partType: "FILTER",
-      filterKind: "AIR_FILTER",
       status: "ACTIVE",
     },
   });
@@ -278,17 +277,14 @@ describe("GET /api/storefront/products", () => {
     expect(await listSlugs({ brand: `${PREFIX}-brand-b` })).toEqual([`${PREFIX}-filter-b`]);
   });
 
-  it("filters by partType and filterKind", async () => {
-    expect(await listSlugs({ partType: "ENGINE_OIL" })).toEqual([`${PREFIX}-oil-a`]);
-    expect((await listSlugs({ partType: "FILTER" })).sort()).toEqual([
-      `${PREFIX}-filter-a`,
-      `${PREFIX}-filter-b`,
-    ]);
-    expect((await listSlugs({ filterKind: "AIR_FILTER" })).sort()).toEqual([
-      `${PREFIX}-filter-a`,
-      `${PREFIX}-filter-b`,
-    ]);
-    expect(await listSlugs({ filterKind: "OIL_FILTER" })).toEqual([]);
+  it("ignores the retired partType/filterKind params instead of narrowing on them", async () => {
+    // A category is how a customer asks for filters, so these no longer filter
+    // anything — and an old link answers with the whole listing rather than a
+    // subset nobody asked for.
+    const all = [`${PREFIX}-filter-a`, `${PREFIX}-filter-b`, `${PREFIX}-oil-a`];
+
+    expect((await listSlugs({ partType: "ENGINE_OIL" })).sort()).toEqual(all);
+    expect((await listSlugs({ filterKind: "OIL_FILTER" })).sort()).toEqual(all);
   });
 
   it("combines category and brand filters", async () => {
@@ -349,11 +345,8 @@ describe("GET /api/storefront/products", () => {
     ]);
   });
 
-  it("rejects an unknown sort or partType with a 400", async () => {
+  it("rejects an unknown sort with a 400", async () => {
     const badSort = await GET(getRequest({ sort: "price-sideways" }));
     expect(badSort.status).toBe(400);
-
-    const badPartType = await GET(getRequest({ partType: "SPACESHIP" }));
-    expect(badPartType.status).toBe(400);
   });
 });

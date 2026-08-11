@@ -97,37 +97,51 @@ describe("formatCarName / formatCarLabel", () => {
 });
 
 describe("sortFitmentGroups", () => {
-  const group = (partType: string, filterKind: string | null) => ({
-    category: { partType, filterKind },
-  });
+  const group = (partType: string, slug: string) => ({ category: { partType, slug } });
 
   it("puts engine oil first and the filters in the design brief's order", () => {
     const sorted = sortFitmentGroups([
-      group("FILTER", "CABIN_FILTER"),
-      group("FILTER", "FUEL_FILTER"),
-      group("ENGINE_OIL", null),
-      group("FILTER", "AIR_FILTER"),
-      group("FILTER", "OIL_FILTER"),
+      group("FILTER", "cabin-filter"),
+      group("FILTER", "fuel-filter"),
+      group("ENGINE_OIL", "engine-oil"),
+      group("FILTER", "air-filter"),
+      group("FILTER", "oil-filter"),
     ]);
 
-    expect(sorted.map((entry) => entry.category.filterKind)).toEqual([
-      null,
-      "OIL_FILTER",
-      "AIR_FILTER",
-      "CABIN_FILTER",
-      "FUEL_FILTER",
+    expect(sorted.map((entry) => entry.category.slug)).toEqual([
+      "engine-oil",
+      "oil-filter",
+      "air-filter",
+      "cabin-filter",
+      "fuel-filter",
     ]);
   });
 
-  it("sorts on partType/filterKind, never on a category name", () => {
+  it("keeps a category it doesn't recognise inside its own part type", () => {
+    const sorted = sortFitmentGroups([
+      group("ACCESSORY", "funnels"),
+      group("FILTER", "particulate-filter"),
+      group("FILTER", "oil-filter"),
+      group("ENGINE_OIL", "gearbox-oil"),
+    ]);
+
+    expect(sorted.map((entry) => entry.category.slug)).toEqual([
+      "gearbox-oil",
+      "oil-filter",
+      "particulate-filter",
+      "funnels",
+    ]);
+  });
+
+  it("sorts on partType/slug, never on a category name", () => {
     // Two categories the fitment engine can't rank keep the order they came in.
-    const first = group("OTHER", null);
-    const second = group("OTHER", null);
+    const first = group("OTHER", "coolant");
+    const second = group("OTHER", "brake-fluid");
     expect(sortFitmentGroups([first, second])).toEqual([first, second]);
   });
 
   it("leaves the caller's array untouched", () => {
-    const groups = [group("FILTER", "OIL_FILTER"), group("ENGINE_OIL", null)];
+    const groups = [group("FILTER", "oil-filter"), group("ENGINE_OIL", "engine-oil")];
     sortFitmentGroups(groups);
     expect(groups[0].category.partType).toBe("FILTER");
   });

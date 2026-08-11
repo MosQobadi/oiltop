@@ -25,41 +25,23 @@ const PART_TYPE_OPTIONS = [
   { label: "Other", value: "OTHER" },
 ];
 
-const FILTER_KIND_OPTIONS = [
-  { label: "Oil Filter", value: "OIL_FILTER" },
-  { label: "Air Filter", value: "AIR_FILTER" },
-  { label: "Cabin Filter", value: "CABIN_FILTER" },
-  { label: "Fuel Filter", value: "FUEL_FILTER" },
-];
-
-const categoryFormSchema = z
-  .object({
-    slug: z.string().min(1, "Slug is required"),
-    nameEn: z.string().min(1, "English name is required").max(200),
-    nameFa: z.string().min(1, "Persian name is required").max(200),
-    partType: z.string().min(1, "Part type is required"),
-    filterKind: z.string(),
-    tags: z.array(z.string()),
-    isActive: z.boolean(),
-    shortDescriptionEn: z.string().min(1, "English short description is required").max(500),
-    shortDescriptionFa: z.string().min(1, "Persian short description is required").max(500),
-    longDescriptionEn: z.string().min(1, "English long description is required").max(5000),
-    longDescriptionFa: z.string().min(1, "Persian long description is required").max(5000),
-    metaTitleEn: z.string().max(70),
-    metaTitleFa: z.string().max(70),
-    metaDescriptionEn: z.string().max(160),
-    metaDescriptionFa: z.string().max(160),
-    image: z.custom<File | string | null>(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.partType === "FILTER" && !data.filterKind) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["filterKind"],
-        message: "Filter kind is required when part type is Filter",
-      });
-    }
-  });
+const categoryFormSchema = z.object({
+  slug: z.string().min(1, "Slug is required"),
+  nameEn: z.string().min(1, "English name is required").max(200),
+  nameFa: z.string().min(1, "Persian name is required").max(200),
+  partType: z.string().min(1, "Part type is required"),
+  tags: z.array(z.string()),
+  isActive: z.boolean(),
+  shortDescriptionEn: z.string().min(1, "English short description is required").max(500),
+  shortDescriptionFa: z.string().min(1, "Persian short description is required").max(500),
+  longDescriptionEn: z.string().min(1, "English long description is required").max(5000),
+  longDescriptionFa: z.string().min(1, "Persian long description is required").max(5000),
+  metaTitleEn: z.string().max(70),
+  metaTitleFa: z.string().max(70),
+  metaDescriptionEn: z.string().max(160),
+  metaDescriptionFa: z.string().max(160),
+  image: z.custom<File | string | null>(),
+});
 
 type CategoryFormValues = z.infer<typeof categoryFormSchema>;
 
@@ -68,7 +50,6 @@ const emptyDefaults: CategoryFormValues = {
   nameEn: "",
   nameFa: "",
   partType: "",
-  filterKind: "",
   tags: [],
   isActive: true,
   shortDescriptionEn: "",
@@ -120,7 +101,6 @@ export default function CategoryFormPage() {
   });
 
   const nameEn = watch("nameEn");
-  const partType = watch("partType");
 
   useEffect(() => {
     if (!isEdit || !categoryId) return;
@@ -146,7 +126,6 @@ export default function CategoryFormPage() {
         nameEn: category.nameEn,
         nameFa: category.nameFa,
         partType: category.partType,
-        filterKind: category.filterKind ?? "",
         tags: category.tags,
         isActive: category.status === "ACTIVE",
         shortDescriptionEn: category.shortDescriptionEn,
@@ -176,12 +155,6 @@ export default function CategoryFormPage() {
     setValue("slug", slugify(nameEn));
   }, [nameEn, isEdit, dirtyFields.slug, setValue]);
 
-  useEffect(() => {
-    if (partType !== "FILTER") {
-      setValue("filterKind", "");
-    }
-  }, [partType, setValue]);
-
   const onSubmit = async (values: CategoryFormValues) => {
     setSubmitError(null);
 
@@ -202,7 +175,6 @@ export default function CategoryFormPage() {
       nameEn: values.nameEn,
       nameFa: values.nameFa,
       partType: values.partType,
-      filterKind: values.partType === "FILTER" ? values.filterKind : undefined,
       tags: values.tags,
       status: values.isActive ? "ACTIVE" : "INACTIVE",
       shortDescriptionEn: values.shortDescriptionEn,
@@ -269,6 +241,8 @@ export default function CategoryFormPage() {
 
         <TextField control={control} name="slug" label="Slug" isRequired />
 
+        {/* How the category behaves, not what it holds: it drives the engine-oil
+            climate rule and the order fitment results are grouped in. */}
         <SelectField
           control={control}
           name="partType"
@@ -276,16 +250,6 @@ export default function CategoryFormPage() {
           options={PART_TYPE_OPTIONS}
           isRequired
         />
-
-        {partType === "FILTER" && (
-          <SelectField
-            control={control}
-            name="filterKind"
-            label="Filter Kind"
-            options={FILTER_KIND_OPTIONS}
-            isRequired
-          />
-        )}
 
         <TagsInput control={control} name="tags" label="Tags" />
 

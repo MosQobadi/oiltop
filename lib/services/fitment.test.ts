@@ -41,18 +41,18 @@ describe("expandYearRanges", () => {
 
 const oilCategory: FitmentCategorySummary = {
   id: "cat_oil",
+  slug: "engine-oil",
   nameEn: "Engine Oil",
   nameFa: "روغن موتور",
   partType: "ENGINE_OIL",
-  filterKind: null,
 };
 
 const filterCategory: FitmentCategorySummary = {
   id: "cat_oil_filter",
+  slug: "oil-filter",
   nameEn: "Oil Filter",
   nameFa: "فیلتر روغن",
   partType: "FILTER",
-  filterKind: "OIL_FILTER",
 };
 
 type FitmentItemProduct = NonNullable<FitmentItemWithRelations["product"]>;

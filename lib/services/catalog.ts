@@ -30,14 +30,16 @@ export function deriveStorefrontStockStatus(stock: number): StorefrontStockStatu
   return null;
 }
 
+// What a customer needs to recognise and reach a category. `partType` is
+// deliberately absent: it says how a category behaves, which is the fitment
+// engine's business (see PartType in prisma/schema.prisma), not something a
+// product card or a filter option has any use for.
 const categorySelect = {
   id: true,
   slug: true,
   nameEn: true,
   nameFa: true,
   image: true,
-  partType: true,
-  filterKind: true,
 } satisfies Prisma.CategorySelect;
 
 const brandSelect = {
@@ -235,8 +237,6 @@ function buildProductWhere(query: StorefrontProductListQuery): Prisma.ProductWhe
       is: {
         status: "ACTIVE",
         ...(query.category ? slugOrIdFilter(query.category) : {}),
-        ...(query.partType ? { partType: query.partType } : {}),
-        ...(query.filterKind ? { filterKind: query.filterKind } : {}),
       },
     },
     brand: {

@@ -26,23 +26,15 @@ describe("GET /api/storefront/categories", () => {
     expect(slugs).toEqual(expect.arrayContaining(["engine-oil", "oil-filter", "air-filter"]));
   });
 
-  it("exposes partType and filterKind but no admin-only fields", async () => {
+  it("exposes enough to name and link a category, and nothing else", async () => {
     const res = await GET();
     const json = await res.json();
 
     const airFilter = json.data.categories.find((c: { slug: string }) => c.slug === "air-filter");
-    expect(airFilter.partType).toBe("FILTER");
-    expect(airFilter.filterKind).toBe("AIR_FILTER");
 
-    expect(Object.keys(airFilter).sort()).toEqual([
-      "filterKind",
-      "id",
-      "image",
-      "nameEn",
-      "nameFa",
-      "partType",
-      "slug",
-    ]);
+    // `partType` is the fitment engine's, not the storefront's: the catalog is
+    // narrowed by category, so nothing out here has any use for it.
+    expect(Object.keys(airFilter).sort()).toEqual(["id", "image", "nameEn", "nameFa", "slug"]);
   });
 
   it("omits INACTIVE categories", async () => {

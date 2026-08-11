@@ -17,7 +17,7 @@ type ResolvedItem = {
   specAttributes: unknown;
 };
 type Group = {
-  category: { nameEn: string; partType: string; filterKind: string | null };
+  category: { slug: string; nameEn: string; partType: string };
   items: ResolvedItem[];
 };
 
@@ -155,15 +155,16 @@ describe("GET /api/storefront/cars/engines/:engineId/fitment", () => {
     }
   });
 
-  it("groups the oil first, then the four filter kinds", async () => {
+  it("groups the oil first, then the four filter categories", async () => {
     const res = await GET(request(), ctx(peugeot206EngineId));
     const json = await res.json();
 
-    const filterKinds = json.data.groups.map((group: Group) => group.category.filterKind);
-    expect(filterKinds[0]).toBeNull();
+    const slugs = json.data.groups.map((group: Group) => group.category.slug);
     expect(json.data.groups[0].category.partType).toBe("ENGINE_OIL");
-    expect(filterKinds).toEqual(
-      expect.arrayContaining(["OIL_FILTER", "AIR_FILTER", "CABIN_FILTER", "FUEL_FILTER"]),
+    // The slug is what the results layout ranks on now — see fitmentCategoryRank.
+    expect(slugs[0]).toBe("engine-oil");
+    expect(slugs).toEqual(
+      expect.arrayContaining(["oil-filter", "air-filter", "cabin-filter", "fuel-filter"]),
     );
   });
 

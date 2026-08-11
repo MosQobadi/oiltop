@@ -82,10 +82,12 @@ const fitmentItemInclude = {
   category: {
     select: {
       id: true,
+      // The results layout orders groups on these two — see
+      // `fitmentCategoryRank` in lib/storefront/fitment.ts.
+      slug: true,
+      partType: true,
       nameEn: true,
       nameFa: true,
-      partType: true,
-      filterKind: true,
     },
   },
   product: { select: fitmentProductSelect },

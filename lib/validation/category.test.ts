@@ -34,29 +34,15 @@ describe("categoryCreateSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("requires filterKind when partType is FILTER", () => {
-    const result = categoryCreateSchema.safeParse({
-      ...validCategory,
-      partType: "FILTER",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("accepts filterKind when partType is FILTER", () => {
-    const result = categoryCreateSchema.safeParse({
-      ...validCategory,
-      partType: "FILTER",
-      filterKind: "OIL_FILTER",
-    });
+  it("takes a FILTER category without asking which kind of filter it is", () => {
+    // Which filter it is *is* the category — there is no second field to keep
+    // in step with it.
+    const result = categoryCreateSchema.safeParse({ ...validCategory, partType: "FILTER" });
     expect(result.success).toBe(true);
   });
 
-  it("rejects filterKind set when partType is not FILTER", () => {
-    const result = categoryCreateSchema.safeParse({
-      ...validCategory,
-      partType: "ENGINE_OIL",
-      filterKind: "OIL_FILTER",
-    });
+  it("rejects a partType outside the enum", () => {
+    const result = categoryCreateSchema.safeParse({ ...validCategory, partType: "OIL_FILTER" });
     expect(result.success).toBe(false);
   });
 });

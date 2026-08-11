@@ -64,13 +64,8 @@ export async function createCategory(input: CategoryCreateInput) {
     throw new DuplicateSlugError(`A category with slug "${slug}" already exists`);
   }
 
-  // Belt-and-suspenders: categoryCreateSchema already enforces this, but the
-  // DB write shouldn't rely solely on the Zod layer for this invariant —
-  // see Category.filterKind in CLAUDE.md.
-  const filterKind = input.partType === "FILTER" ? (input.filterKind ?? null) : null;
-
   return prisma.category.create({
-    data: { ...input, slug, filterKind },
+    data: { ...input, slug },
   });
 }
 
@@ -91,12 +86,9 @@ export async function updateCategory(id: string, input: CategoryUpdateInput) {
     slug = input.slug;
   }
 
-  const partType = input.partType ?? existing.partType;
-  const filterKind = partType === "FILTER" ? (input.filterKind ?? existing.filterKind) : null;
-
   return prisma.category.update({
     where: { id },
-    data: { ...input, slug, filterKind },
+    data: { ...input, slug },
   });
 }
 

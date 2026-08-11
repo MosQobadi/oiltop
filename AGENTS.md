@@ -222,9 +222,9 @@ a Server Component can render them straight from its `params`.
   It holds no filter state — every control writes the next URL and the server
   re-renders — so the only `useState` in it is whether the rail is open on a
   phone. Options arrive already localized so the catalog's types (and Prisma)
-  stay out of the browser bundle. The Filter-kind select appears under
-  `partType = FILTER`, and also whenever a kind is already applied, so a
-  hand-edited URL can't filter the grid with no control to undo it.
+  stay out of the browser bundle. Three controls, no more: search, category and
+  brand. A category _is_ how a customer asks for oil filters, so there is no
+  part-type select beside it offering a second spelling of the same question.
 - **`ProductSortSelect`** — the same contract, split out because sort sits above
   the grid rather than in the rail: it changes the order, not which products
   are shown. Both it and `ProductFilters` reset to page 1 on any change.
@@ -411,9 +411,11 @@ copy.
 the whole tree and only the interactive leaves ship to the browser.
 
 - **Categories are ordered here, not by the query.** `sortFitmentGroups` ranks
-  on `partType`/`filterKind` (engine oil, then oil/air/cabin/fuel filters) —
-  the service returns whatever order the admin entered items in. Never rank on
-  a category name.
+  on `partType` first (oil ahead of filters ahead of the rest), then on the
+  category's `slug` for the design brief's order within a part type — engine
+  oil, then oil/air/cabin/fuel filters. The service returns whatever order the
+  admin entered items in. A slug the rank doesn't know sorts last inside its
+  part type; never rank on a category name.
 - **HOT/COLD is a pair, not a fallback chain.** `splitItemsByClimate` puts them
   in two labelled columns visible at once ("For hot climates" / "For cold
   climates"); a category's STANDARD items render below in their own grid, all
@@ -462,9 +464,9 @@ browser.
   spelled. Params are written in a fixed order and anything at its default is
   omitted, so one set of filters is always exactly one URL — two spellings of
   the same view would split its crawl budget for nothing.
-- **`partTypeLabel`/`filterKindLabel`** render the fitment engine's identifiers
-  for a customer. Never show a raw enum, and never let a category's name stand
-  in for its part type — several categories share one.
+- **The grid narrows by category, brand and search only.** `partType` says how a
+  category behaves and belongs to the fitment engine; it is not a filter, not a
+  query param, and not part of the public categories payload.
 - `PLP_PAGE_SIZE` is the screen's decision, not the URL's: unlike the API's
   query schema, `storefrontProductListPageQuerySchema` has no `pageSize` field.
   That schema is the page's counterpart to the route handler's — same params,

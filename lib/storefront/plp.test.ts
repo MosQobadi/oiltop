@@ -4,12 +4,8 @@ import {
   buildProductListHref,
   clearProductFilters,
   collapseSearchParams,
-  filterKindLabel,
   paginationRange,
-  parseFilterKind,
-  parsePartType,
   parseProductSort,
-  partTypeLabel,
   productCountLabel,
   productPageCount,
   productSortLabel,
@@ -56,8 +52,6 @@ describe("clearProductFilters", () => {
       clearProductFilters({
         category: "engine-oil",
         brand: "mobil",
-        partType: "FILTER",
-        filterKind: "OIL_FILTER",
         search: "x",
         sort: "price-desc",
         page: 4,
@@ -91,14 +85,6 @@ describe("collapseSearchParams", () => {
 });
 
 describe("parsers", () => {
-  it("accepts a real enum value and rejects anything else", () => {
-    expect(parsePartType("ENGINE_OIL")).toBe("ENGINE_OIL");
-    expect(parsePartType("")).toBeUndefined();
-    expect(parsePartType("BOGUS")).toBeUndefined();
-    expect(parseFilterKind("AIR_FILTER")).toBe("AIR_FILTER");
-    expect(parseFilterKind("ENGINE_OIL")).toBeUndefined();
-  });
-
   it("falls back to the default sort rather than undefined", () => {
     expect(parseProductSort("price-desc")).toBe("price-desc");
     expect(parseProductSort("cheapest")).toBe("newest");
@@ -107,10 +93,8 @@ describe("parsers", () => {
 
 describe("labels", () => {
   it("renders enum values in the reader's language", () => {
-    expect(partTypeLabel("en", "ENGINE_OIL")).toBe("Engine oil");
-    expect(partTypeLabel("fa", "ENGINE_OIL")).toBe("روغن موتور");
-    expect(filterKindLabel("fa", "CABIN_FILTER")).toBe("فیلتر کابین");
     expect(productSortLabel("en", "price-asc")).toBe("Price: low to high");
+    expect(productSortLabel("fa", "price-asc")).toBe("قیمت: کم به زیاد");
   });
 
   it("counts products in the reader's digits, and singular only in English", () => {

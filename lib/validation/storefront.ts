@@ -2,7 +2,6 @@ import { z } from "zod";
 import { MAX_CART_QUANTITY } from "@/lib/storefront/cart";
 import { DELIVERY_METHODS } from "@/lib/storefront/delivery";
 import { pageSchema, pageSizeSchema, slugSchema } from "./common";
-import { filterKindSchema, partTypeSchema } from "./enums";
 
 // Public storefront input schemas. Unlike the admin schemas these mostly guard
 // path/query params rather than bodies — the car-finder routes are read-only —
@@ -43,13 +42,15 @@ export const storefrontProductSortSchema = z.enum(STOREFRONT_PRODUCT_SORTS).defa
 
 export type StorefrontProductSort = z.infer<typeof storefrontProductSortSchema>;
 
+// What narrows the grid is a category, a brand or a search — never a part type.
+// `partType` describes how a category behaves (see PartType in
+// prisma/schema.prisma); asking the catalog for "everything that behaves like a
+// filter" is asking for a category, and `category` already answers that.
 export const storefrontProductListQuerySchema = z.object({
   // Both accept a slug (what a storefront URL carries) or a cuid — see
   // categoryOrSlugFilter in lib/services/catalog.ts.
   category: z.string().trim().min(1).optional(),
   brand: z.string().trim().min(1).optional(),
-  partType: partTypeSchema.optional(),
-  filterKind: filterKindSchema.optional(),
   search: z.string().trim().min(1).max(200).optional(),
   sort: storefrontProductSortSchema,
   page: pageSchema,
@@ -69,8 +70,6 @@ export type StorefrontProductListQuery = z.infer<typeof storefrontProductListQue
 export const storefrontProductListPageQuerySchema = z.object({
   category: storefrontProductListQuerySchema.shape.category.catch(undefined),
   brand: storefrontProductListQuerySchema.shape.brand.catch(undefined),
-  partType: storefrontProductListQuerySchema.shape.partType.catch(undefined),
-  filterKind: storefrontProductListQuerySchema.shape.filterKind.catch(undefined),
   search: storefrontProductListQuerySchema.shape.search.catch(undefined),
   sort: storefrontProductSortSchema.catch("newest"),
   page: pageSchema.catch(1),

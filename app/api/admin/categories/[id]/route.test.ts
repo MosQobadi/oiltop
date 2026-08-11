@@ -152,18 +152,15 @@ describe("PATCH /api/admin/categories/:id", () => {
     expect(json.error).toMatch(/already exists/i);
   });
 
-  it("forces filterKind to null when partType changes away from FILTER", async () => {
-    const category = await createTestCategory({
-      partType: "FILTER",
-      filterKind: "OIL_FILTER",
-    });
+  it("changes partType on its own — there is no second field to keep in step", async () => {
+    const category = await createTestCategory({ partType: "FILTER" });
 
     const res = await PATCH(requestWithBody("PATCH", { partType: "ACCESSORY" }), ctx(category.id));
     const json = await res.json();
 
     expect(res.status).toBe(200);
     expect(json.data.category.partType).toBe("ACCESSORY");
-    expect(json.data.category.filterKind).toBeNull();
+    expect(json.data.category).not.toHaveProperty("filterKind");
   });
 });
 

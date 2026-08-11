@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { stripHtml } from "@/lib/sanitize";
 import { pageSchema, pageSizeSchema, slugSchema } from "./common";
-import { categoryStatusSchema, filterKindSchema, partTypeSchema } from "./enums";
+import { categoryStatusSchema, partTypeSchema } from "./enums";
 
 // Kept default-free here because `.partial()` does not unwrap a ZodDefault:
 // left as `.default([])` in the shared shape, a PATCH that omitted tags would
@@ -25,35 +25,13 @@ const categoryShape = {
   metaDescriptionFa: z.string().max(160).transform(stripHtml).optional(),
   image: z.string().min(1).optional(),
   status: categoryStatusSchema,
+  // What the category *behaves* like, not a second name for it — see PartType
+  // in prisma/schema.prisma.
   partType: partTypeSchema,
-  filterKind: filterKindSchema.optional(),
 };
 
-// filterKind is only meaningful (and only allowed) when partType is FILTER —
-// see Category.filterKind in CLAUDE.md.
-function checkFilterKind(data: { partType?: string; filterKind?: string }, ctx: z.RefinementCtx) {
-  if (data.partType === undefined) return;
-  if (data.partType === "FILTER" && !data.filterKind) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["filterKind"],
-      message: "filterKind is required when partType is FILTER",
-    });
-  }
-  if (data.partType !== "FILTER" && data.filterKind) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["filterKind"],
-      message: "filterKind must only be set when partType is FILTER",
-    });
-  }
-}
-
-export const categoryCreateSchema = z.object(categoryShape).superRefine(checkFilterKind);
-export const categoryUpdateSchema = z
-  .object({ ...categoryShape, tags: tagsField })
-  .partial()
-  .superRefine(checkFilterKind);
+export const categoryCreateSchema = z.object(categoryShape);
+export const categoryUpdateSchema = z.object({ ...categoryShape, tags: tagsField }).partial();
 
 export type CategoryCreateInput = z.infer<typeof categoryCreateSchema>;
 export type CategoryUpdateInput = z.infer<typeof categoryUpdateSchema>;
