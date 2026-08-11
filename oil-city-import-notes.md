@@ -72,6 +72,10 @@ model. `labelFa` can come from the model's own descriptive text where it exists
 > year step meaningless but never wrong;
 > (b) make the year step skippable for imported cars;
 > (c) fill years by hand later, per model, for the cars that matter most.
+>
+> **Answered (a).** `IMPORTED_YEAR_START = 2000`, `yearEnd` null. The importer
+> writes the span at create time only and never updates it, so narrowing it by
+> hand per model — option (c) — survives every later run.
 
 ### 3.2 Their part categories are wider than our five
 
@@ -85,6 +89,15 @@ freshener**. We have exactly five categories: `engine-oil`, `oil-filter`,
 > brake fluid / ATF / additives is a data change, not a schema change. But every
 > new category shows up in the storefront's category browse and PLP filters, so
 > this is a product decision, not a technical one.
+>
+> **Answered: neither, for now.** A product whose `categoryGuess` is null is
+> imported into one holding category — slug `imported-uncategorised`, partType
+> OTHER, INACTIVE — and the summary tallies the source's own wording per
+> product. Nothing is dropped and nothing is guessed; creating the real
+> categories stays a human decision, taken with the counts in hand. One holding
+> category rather than one per source wording because `Category` has no
+> `sourceRef` (A.2 gave it to Product/Brand/CarBrand/CarModel only), so
+> auto-created categories would have no idempotency key.
 
 ### 3.3 No OEM part numbers, anywhere
 
@@ -242,12 +255,15 @@ Start with: <<< SCOPE >>>
 
 ## 5. Next steps
 
-1. Answer decisions 1 and 2 above — the importer can't be written without them.
+1. ~~Answer decisions 1 and 2 above~~ — answered inline above (D.2).
 2. Run 2–3 real batches (suggest: one engine-oil listing page, plus one car brand
-   with a handful of models) so the importer is written against real shapes.
-3. Then: importer script — reads `scrape/oil-city/*.json`, idempotent by
-   `sourceSlug`, `--dry-run` reporting what it would change, and refusing to
-   touch any row it did not create.
+   with a handful of models). The importer was written against the D.1 fixture,
+   not a real scrape, so the first real batch is also the first test of the spec
+   key tables and the fuel-type table — expect to extend both, and note that both
+   report what they didn't recognise rather than guessing.
+3. ~~Importer script~~ — `scripts/import.ts` (D.2). Reads `scrape/<source>/*.json`,
+   idempotent by `sourceRef`, `--dry-run` runs the real code path in a
+   transaction it rolls back, and it never writes to a row it did not create.
 4. Profile dedup is what makes this worth doing: hash each car's normalised
    fitment rows and create one `FitmentProfile` per distinct hash, linking every
    engine that shares it — 801 model pages should collapse to far fewer profiles.
