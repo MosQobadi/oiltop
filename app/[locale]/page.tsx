@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { FitmentWizard } from "@/components/storefront/fitment/FitmentWizard";
+import { BrandBrowseSection } from "@/components/storefront/home/BrandBrowseSection";
 import { CategoryBrowseSection } from "@/components/storefront/home/CategoryBrowseSection";
 import { TrustStrip } from "@/components/storefront/home/TrustStrip";
 import { pickLocale, type Locale } from "@/lib/i18n";
-import { listActiveCategories } from "@/lib/services/catalog";
+import { listActiveCategories, listActiveProductBrands } from "@/lib/services/catalog";
 import { localeAlternates } from "@/lib/storefront/seo";
 import { getPublicSettings } from "@/server/setting";
 
@@ -11,9 +12,9 @@ import { getPublicSettings } from "@/server/setting";
 // wizard is the product's headline interaction, so it sits in the hero itself
 // rather than below a marketing block a customer has to scroll past.
 //
-// Three sections, in the order a customer decides things: find my car, browse
-// instead, reach a human. No best-sellers rail and no brand wall yet — those
-// need catalog data this page doesn't fetch, and Task 3.4 doesn't ask for them.
+// Four sections, in the order a customer decides things: find my car, browse by
+// category, browse by brand, reach a human. Still no best-sellers rail — that
+// needs a notion of "best" the catalog doesn't record yet.
 //
 // Data is read through the service layer directly rather than through this app's
 // own /api/storefront routes, the same as app/[locale]/fitment/page.tsx and the
@@ -39,7 +40,11 @@ export async function generateMetadata({
 
 export default async function StorefrontHome({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;
-  const [categories, settings] = await Promise.all([listActiveCategories(), getPublicSettings()]);
+  const [categories, brands, settings] = await Promise.all([
+    listActiveCategories(),
+    listActiveProductBrands(),
+    getPublicSettings(),
+  ]);
 
   return (
     <>
@@ -79,6 +84,8 @@ export default async function StorefrontHome({ params }: { params: Promise<{ loc
       </section>
 
       <CategoryBrowseSection locale={locale} categories={categories} />
+
+      <BrandBrowseSection locale={locale} brands={brands} />
 
       <TrustStrip locale={locale} settings={settings} />
     </>
