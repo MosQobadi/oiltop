@@ -26,7 +26,54 @@ function finalPrice(price: number, discountPercent: number) {
   return Math.round(price * (1 - discountPercent / 100));
 }
 
+// This script's first act is to delete every row it is about to re-create, so
+// running it against a database someone has been entering real data into
+// destroys that work — there is no soft delete and no backup behind it. The
+// guard makes that impossible by accident: seeding is for an empty database,
+// and wiping a populated one has to be asked for out loud.
+//
+//   SEED_RESET=1 pnpm prisma:seed        # bash
+//   $env:SEED_RESET=1; pnpm prisma:seed  # PowerShell
+//
+// Settings are never touched either way — they are not in the reset list below.
+async function isSafeToReset(): Promise<boolean> {
+  if (process.env.SEED_RESET === "1") return true;
+
+  const counts = {
+    users: await prisma.user.count(),
+    categories: await prisma.category.count(),
+    brands: await prisma.brand.count(),
+    products: await prisma.product.count(),
+    carBrands: await prisma.carBrand.count(),
+    carModels: await prisma.carModel.count(),
+    carEngines: await prisma.carEngine.count(),
+    fitmentProfiles: await prisma.fitmentProfile.count(),
+    orders: await prisma.order.count(),
+  };
+
+  const populated = Object.entries(counts).filter(([, count]) => count > 0);
+  if (populated.length === 0) return true;
+
+  const summary = populated.map(([table, count]) => `${count} ${table}`).join(", ");
+  console.error(
+    [
+      "Refusing to seed: the database already holds data.",
+      `  Found: ${summary}.`,
+      "",
+      "  Seeding DELETES all of the above and replaces it with fixtures.",
+      "  If that is really what you want, say so explicitly:",
+      "",
+      "    SEED_RESET=1 pnpm prisma:seed        (bash)",
+      "    $env:SEED_RESET=1; pnpm prisma:seed  (PowerShell)",
+    ].join("\n"),
+  );
+  process.exitCode = 1;
+  return false;
+}
+
 async function main() {
+  if (!(await isSafeToReset())) return;
+
   // Reset in FK-safe (children-first) order so the script can be re-run.
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
