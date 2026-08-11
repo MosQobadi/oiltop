@@ -43,9 +43,11 @@ export interface FitmentResolvedItem {
   climate: FitmentClimate;
   climateLabel: string | null;
   priority: number;
-  // Null product means a spec-only recommendation: we know what the car needs,
-  // the catalog just doesn't carry a matching product yet.
-  product: FitmentProductSummary | null;
+  // Zero, one or several. Empty means a spec-only recommendation: we know what
+  // the car needs, the catalog just doesn't carry a matching product yet. A
+  // `matchSpec` item is the reason this is a list rather than one nullable
+  // product — "5W-30, API SN" legitimately resolves to every 5W-30 in stock.
+  products: FitmentProductSummary[];
   specNote: string | null;
   specAttributes: Prisma.JsonValue | null;
 }
@@ -55,8 +57,27 @@ export interface FitmentCategoryGroup {
   items: FitmentResolvedItem[];
 }
 
-// Scoped narrower than server/fitmentProfile.ts's admin include: no adminNote,
-// and the bilingual name pairs the storefront needs.
+// Shared by the item's explicitly linked product and by the rows a `matchSpec`
+// finds, so both arrive as the same `FitmentProductSummary` through
+// `toProductSummary`. Scoped narrower than server/fitmentProfile.ts's admin
+// include: no adminNote, and the bilingual name pairs the storefront needs.
+const fitmentProductSelect = {
+  id: true,
+  slug: true,
+  nameEn: true,
+  nameFa: true,
+  price: true,
+  discountPercent: true,
+  image: true,
+  inventory: { select: { stock: true } },
+  // Read to decide whether a customer may see this item's product at all
+  // (see `isPubliclyVisible`), never published — `toProductSummary` builds
+  // `FitmentProductSummary` field by field and none of these are in it.
+  status: true,
+  category: { select: { status: true } },
+  brand: { select: { status: true } },
+} satisfies Prisma.ProductSelect;
+
 const fitmentItemInclude = {
   category: {
     select: {
@@ -67,28 +88,15 @@ const fitmentItemInclude = {
       filterKind: true,
     },
   },
-  product: {
-    select: {
-      id: true,
-      slug: true,
-      nameEn: true,
-      nameFa: true,
-      price: true,
-      discountPercent: true,
-      image: true,
-      inventory: { select: { stock: true } },
-      // Read to decide whether a customer may see this item's product at all
-      // (see `isPubliclyVisible`), never published — `toResolvedItem` builds
-      // `FitmentProductSummary` field by field and none of these are in it.
-      status: true,
-      category: { select: { status: true } },
-      brand: { select: { status: true } },
-    },
-  },
+  product: { select: fitmentProductSelect },
 } satisfies Prisma.FitmentProfileItemInclude;
 
 export type FitmentItemWithRelations = Prisma.FitmentProfileItemGetPayload<{
   include: typeof fitmentItemInclude;
+}>;
+
+export type FitmentProductRow = Prisma.ProductGetPayload<{
+  select: typeof fitmentProductSelect;
 }>;
 
 export type FitmentCategorySummary = FitmentItemWithRelations["category"];
@@ -257,53 +265,205 @@ function isPubliclyVisible(product: NonNullable<FitmentItemWithRelations["produc
   );
 }
 
+function toProductSummary(product: FitmentProductRow): FitmentProductSummary {
+  const price = Number(product.price);
+
+  return {
+    id: product.id,
+    slug: product.slug,
+    nameEn: product.nameEn,
+    nameFa: product.nameFa,
+    price,
+    // finalPrice isn't stored — same read-time computation as
+    // server/product.ts, kept in sync with it deliberately.
+    finalPrice: price * (1 - product.discountPercent / 100),
+    image: product.image,
+    // Same three-state derivation the PLP uses; the raw count stays in
+    // the admin panel.
+    stockStatus: deriveStorefrontStockStatus(product.inventory?.stock ?? 0),
+  };
+}
+
+// The item's explicitly linked product, when this audience may be shown it. A
+// product a customer can't buy is not one: publishing it would link to a PDP
+// that 404s (getStorefrontProductBySlug excludes the same rows).
+function usableLinkedProduct(
+  item: FitmentItemWithRelations,
+  audience: FitmentAudience,
+): FitmentProductRow | null {
+  if (!item.product) return null;
+  return audience === "admin" || isPubliclyVisible(item.product) ? item.product : null;
+}
+
 function toResolvedItem(
   item: FitmentItemWithRelations,
   audience: FitmentAudience,
+  specMatches: SpecMatches,
 ): FitmentResolvedItem {
   const climate = item.climate as FitmentClimate;
-  // A product a customer can't buy resolves to the spec-only fallback rather
-  // than being dropped: the car's requirement is still known, and SpecOnlyCard
-  // turns it into a Fitment Inquiry. Dropping the item instead would silently
-  // shorten the recommendation, and publishing it would link to a PDP that
-  // 404s (getStorefrontProductBySlug excludes the same rows).
-  const product =
-    item.product && (audience === "admin" || isPubliclyVisible(item.product)) ? item.product : null;
-  const price = product ? Number(product.price) : 0;
+
+  // The precedence: an explicit product wins over a matchSpec on the same item,
+  // so pinning a recommendation stays the way to override the query. Only when
+  // there is no usable product does the spec get to answer, and only when it
+  // finds nothing too does the item fall through to the spec-only card — the
+  // car's requirement is still known, and SpecOnlyCard turns it into a Fitment
+  // Inquiry. Dropping the item instead would silently shorten the
+  // recommendation.
+  const linked = usableLinkedProduct(item, audience);
+  const products = linked ? [toProductSummary(linked)] : (specMatches.get(item.id) ?? []);
 
   return {
     id: item.id,
     climate,
     climateLabel: CLIMATE_LABELS[climate],
     priority: item.priority,
-    product: product
-      ? {
-          id: product.id,
-          slug: product.slug,
-          nameEn: product.nameEn,
-          nameFa: product.nameFa,
-          price,
-          // finalPrice isn't stored — same read-time computation as
-          // server/product.ts, kept in sync with it deliberately.
-          finalPrice: price * (1 - product.discountPercent / 100),
-          image: product.image,
-          // Same three-state derivation the PLP uses; the raw count stays in
-          // the admin panel.
-          stockStatus: deriveStorefrontStockStatus(product.inventory?.stock ?? 0),
-        }
-      : null,
+    products,
     specNote: item.specNote,
     specAttributes: item.specAttributes,
   };
+}
+
+// --- matchSpec resolution --------------------------------------------------
+//
+// `FitmentProfileItem.matchSpec` is a query against the catalog rather than a
+// pointer into it (see the column's comment in schema.prisma): an item that
+// carries one resolves to whatever currently matches, so a recommendation
+// outlives the individual product it was first written against.
+
+/** The documented shape of the `matchSpec` column. Every key is optional. */
+export interface FitmentMatchSpec {
+  viscosity?: string;
+  apiGrade?: string;
+  volumeMl?: number;
+}
+
+// How many products one spec may resolve to. A spec is an answer, not a
+// listing — past a handful of near-identical oils the customer is being asked
+// to shop rather than being told what fits, and the PLP is where shopping
+// belongs. Raise it here if the co-equal grid ever needs to be longer.
+export const MATCH_SPEC_PRODUCT_LIMIT = 4;
+
+// Codes, not prose: Product.viscosity/apiGrade are stored uppercase (see
+// lib/validation/product.ts), so a spec has to be compared uppercase or it
+// silently matches nothing. Punctuation is left alone on purpose — "5W30" and
+// "5W-30" are different values in the column, so they're different specs here
+// too, and a matchSpec has to be written in the form the catalog uses.
+function normalizeCode(value: string): string | undefined {
+  const trimmed = value.trim().toUpperCase();
+  return trimmed || undefined;
+}
+
+// The column is free-form Json, so this proves the shape rather than trusting
+// it: anything of the wrong type is dropped, and a spec left with no usable key
+// is null — matching on nothing would return the whole category.
+export function parseMatchSpec(
+  value: Prisma.JsonValue | null | undefined,
+): FitmentMatchSpec | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return null;
+
+  const raw = value as Record<string, unknown>;
+  const spec: FitmentMatchSpec = {};
+
+  if (typeof raw.viscosity === "string") spec.viscosity = normalizeCode(raw.viscosity);
+  if (typeof raw.apiGrade === "string") spec.apiGrade = normalizeCode(raw.apiGrade);
+  if (typeof raw.volumeMl === "number" && Number.isInteger(raw.volumeMl) && raw.volumeMl > 0) {
+    spec.volumeMl = raw.volumeMl;
+  }
+
+  // `normalizeCode` can hand back undefined for a whitespace-only string.
+  if (spec.viscosity === undefined) delete spec.viscosity;
+  if (spec.apiGrade === undefined) delete spec.apiGrade;
+
+  return Object.keys(spec).length > 0 ? spec : null;
+}
+
+/** Item id → the products its `matchSpec` resolved to, best price first. */
+export type SpecMatches = Map<string, FitmentProductSummary[]>;
+
+// Two items asking the same question of the same category — the same profile
+// re-used across engines, or a HOT and a COLD item that happen to share a
+// grade — are one query, so the key is the question rather than the item.
+function specQueryKey(categoryId: string, spec: FitmentMatchSpec): string {
+  return JSON.stringify([categoryId, spec.viscosity, spec.apiGrade, spec.volumeMl]);
+}
+
+// Deliberately not audience-aware: a spec resolves to what a customer could
+// actually buy on both surfaces. Nothing points at a deactivated row here, so
+// there is no broken link for the admin preview to surface — the reason the
+// admin audience keeps a deactivated *linked* product doesn't apply.
+async function findProductsForSpec(
+  categoryId: string,
+  spec: FitmentMatchSpec,
+): Promise<FitmentProductSummary[]> {
+  const products = await prisma.product.findMany({
+    where: {
+      categoryId,
+      status: "ACTIVE",
+      category: { status: "ACTIVE" },
+      brand: { status: "ACTIVE" },
+      // Every key present has to match; an absent key is not a constraint.
+      ...(spec.viscosity !== undefined && { viscosity: spec.viscosity }),
+      ...(spec.apiGrade !== undefined && { apiGrade: spec.apiGrade }),
+      ...(spec.volumeMl !== undefined && { volumeMl: spec.volumeMl }),
+    },
+    select: fitmentProductSelect,
+  });
+
+  return (
+    products
+      .map(toProductSummary)
+      // Sorted here rather than in the query because finalPrice isn't a column —
+      // ordering on `price` would put a discounted product behind a cheaper
+      // undiscounted one. Safe to do in memory: the where clause is one category
+      // narrowed by exact spec values, so this is a handful of rows.
+      .sort((a, b) => a.finalPrice - b.finalPrice)
+      .slice(0, MATCH_SPEC_PRODUCT_LIMIT)
+  );
+}
+
+// One round of queries for a whole resolution — the distinct questions its
+// items ask, not one query per item.
+export async function resolveSpecMatches(
+  items: FitmentItemWithRelations[],
+  audience: FitmentAudience = "public",
+): Promise<SpecMatches> {
+  // An item whose linked product this audience can be shown never consults its
+  // spec (see the precedence in `toResolvedItem`), so it isn't worth a query
+  // either. An item whose linked product was *deactivated* does: that is the
+  // case the whole column exists for — the shop stopped stocking the one oil a
+  // recommendation was pinned to, and the spec beside it can still answer.
+  const pending = items.flatMap((item) => {
+    if (usableLinkedProduct(item, audience)) return [];
+    const spec = parseMatchSpec(item.matchSpec);
+    return spec ? [{ item, spec, key: specQueryKey(item.categoryId, spec) }] : [];
+  });
+  if (pending.length === 0) return new Map();
+
+  const queries = new Map(
+    pending.map(({ item, spec, key }) => [key, { categoryId: item.categoryId, spec }]),
+  );
+
+  const byKey: SpecMatches = new Map();
+  await Promise.all(
+    Array.from(queries, async ([key, query]) => {
+      byKey.set(key, await findProductsForSpec(query.categoryId, query.spec));
+    }),
+  );
+
+  return new Map(pending.map(({ item, key }) => [item.id, byKey.get(key) ?? []]));
 }
 
 // Categories keep the order they first appear in; items within a category are
 // re-sorted by priority because an engine can have more than one profile
 // attached, which interleaves two already-priority-ordered item lists. Sort is
 // stable, so equal priorities keep their createdAt ordering from the query.
+// Stays synchronous and pure: `specMatches` is resolved once up front by
+// `resolveFitmentGroups` and handed in, rather than each item reaching for the
+// database mid-grouping.
 export function groupFitmentItemsByCategory(
   items: FitmentItemWithRelations[],
   audience: FitmentAudience = "public",
+  specMatches: SpecMatches = new Map(),
 ): FitmentCategoryGroup[] {
   const groups: {
     category: FitmentCategoryGroup["category"];
@@ -325,8 +485,18 @@ export function groupFitmentItemsByCategory(
     category: group.category,
     items: [...group.items]
       .sort((a, b) => a.priority - b.priority)
-      .map((item) => toResolvedItem(item, audience)),
+      .map((item) => toResolvedItem(item, audience, specMatches)),
   }));
+}
+
+// The whole read: resolve every matchSpec the items carry, then group. Both
+// entry points below go through here so a spec-based item resolves the same way
+// on the wizard's results and on a car model page.
+export async function resolveFitmentGroups(
+  items: FitmentItemWithRelations[],
+  audience: FitmentAudience = "public",
+): Promise<FitmentCategoryGroup[]> {
+  return groupFitmentItemsByCategory(items, audience, await resolveSpecMatches(items, audience));
 }
 
 // Flattens every item across all Fitment Profiles attached to a car engine and
@@ -352,7 +522,7 @@ export async function resolveFitmentForEngine(
     orderBy: { createdAt: "asc" },
   });
 
-  return groupFitmentItemsByCategory(
+  return resolveFitmentGroups(
     links.flatMap((link) => link.profile.items),
     audience,
   );
@@ -544,6 +714,10 @@ export async function getCarModelFitment(carModelId: string): Promise<CarModelFi
     },
   });
   const itemsByProfileId = new Map(profiles.map((profile) => [profile.id, profile.items]));
+  // Resolved across every shared profile at once rather than per profile: two
+  // profiles on one model routinely ask for the same grade, and that's one
+  // query either way.
+  const specMatches = await resolveSpecMatches(profiles.flatMap((profile) => profile.items));
 
   return {
     engines,
@@ -565,7 +739,7 @@ export async function getCarModelFitment(carModelId: string): Promise<CarModelFi
           id: selection.profileId,
           span: profileSpan,
           engines: profileEngines,
-          groups: groupFitmentItemsByCategory(items),
+          groups: groupFitmentItemsByCategory(items, "public", specMatches),
         },
       ];
     }),

@@ -2,6 +2,7 @@ import "dotenv/config";
 import { NextRequest } from "next/server";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@/lib/generated/prisma/client";
 import { GET } from "./route";
 
 // Unauthenticated by construction — nothing here signs a token or sets a cookie.
@@ -9,8 +10,9 @@ import { GET } from "./route";
 const SLUG_PREFIX = "test-storefront-fitment";
 
 type ResolvedItem = {
+  id: string;
   climate: string;
-  product: { id: string; finalPrice: number } | null;
+  products: { id: string; finalPrice: number }[];
   specNote: string | null;
   specAttributes: unknown;
 };
@@ -85,12 +87,72 @@ describe("GET /api/storefront/cars/engines/:engineId/fitment", () => {
     );
     // Matched by content, not position: these tests share the working database
     // with the admin panel, so an engine can pick up extra profiles over time.
-    const specOnly = oilGroup.items.find((item: ResolvedItem) => item.product === null);
+    const specOnly = oilGroup.items.find((item: ResolvedItem) => item.products.length === 0);
     expect(specOnly).toBeDefined();
     expect(specOnly.specNote).toMatch(/No catalog match yet/i);
     expect(specOnly.specAttributes).toMatchObject({
       viscosity: "5W-30 or 10W-40",
     });
+  });
+
+  // The point of matchSpec: an item that states a spec instead of naming a
+  // product answers with whatever the catalog currently carries, so the
+  // recommendation survives the shop dropping any one oil. Written onto the
+  // seeded spec-only item — and a matching viscosity onto a seeded oil — for
+  // the length of the test, then restored, since these tests share the working
+  // database with the admin panel.
+  it("resolves a matchSpec item to the products that currently match it", async () => {
+    const before = await GET(request(), ctx(peugeot206EngineId));
+    const oilGroup = (await before.json()).data.groups.find(
+      (group: Group) => group.category.partType === "ENGINE_OIL",
+    );
+    const specOnly: ResolvedItem = oilGroup.items.find(
+      (item: ResolvedItem) => item.products.length === 0,
+    );
+
+    const { categoryId } = await prisma.fitmentProfileItem.findUniqueOrThrow({
+      where: { id: specOnly.id },
+      select: { categoryId: true },
+    });
+    const oil = await prisma.product.findFirstOrThrow({
+      where: {
+        categoryId,
+        status: "ACTIVE",
+        category: { status: "ACTIVE" },
+        brand: { status: "ACTIVE" },
+      },
+      select: { id: true, viscosity: true },
+    });
+
+    // A grade no real product carries, so the assertion can't pass on some
+    // other seeded oil that happens to share a viscosity.
+    await prisma.$transaction([
+      prisma.product.update({ where: { id: oil.id }, data: { viscosity: "9W-99" } }),
+      prisma.fitmentProfileItem.update({
+        where: { id: specOnly.id },
+        data: { matchSpec: { viscosity: "9W-99" } },
+      }),
+    ]);
+
+    try {
+      const after = await GET(request(), ctx(peugeot206EngineId));
+      const group = (await after.json()).data.groups.find(
+        (candidate: Group) => candidate.category.partType === "ENGINE_OIL",
+      );
+      const item = group.items.find((candidate: ResolvedItem) => candidate.id === specOnly.id);
+
+      expect(item.products.map((product: { id: string }) => product.id)).toEqual([oil.id]);
+      // Still a real card, priced the same way an explicitly linked one is.
+      expect(typeof item.products[0].finalPrice).toBe("number");
+    } finally {
+      await prisma.$transaction([
+        prisma.product.update({ where: { id: oil.id }, data: { viscosity: oil.viscosity } }),
+        prisma.fitmentProfileItem.update({
+          where: { id: specOnly.id },
+          data: { matchSpec: Prisma.DbNull },
+        }),
+      ]);
+    }
   });
 
   it("groups the oil first, then the four filter kinds", async () => {
@@ -117,8 +179,8 @@ describe("GET /api/storefront/cars/engines/:engineId/fitment", () => {
 
     for (const climate of ["HOT", "COLD"]) {
       const item = oilGroup.items.find((candidate: ResolvedItem) => candidate.climate === climate);
-      expect(item.product).not.toBeNull();
-      expect(typeof item.product.finalPrice).toBe("number");
+      expect(item.products).toHaveLength(1);
+      expect(typeof item.products[0].finalPrice).toBe("number");
     }
   });
 
@@ -142,7 +204,7 @@ describe("GET /api/storefront/cars/engines/:engineId/fitment", () => {
       (group: Group) => group.category.partType === "ENGINE_OIL",
     );
     const hot = oilGroup.items.find((item: ResolvedItem) => item.climate === "HOT");
-    const productId: string = hot.product.id;
+    const productId: string = hot.products[0].id;
 
     await prisma.product.update({ where: { id: productId }, data: { status: "INACTIVE" } });
     try {
@@ -156,7 +218,7 @@ describe("GET /api/storefront/cars/engines/:engineId/fitment", () => {
       expect(after.status).toBe(200);
       // Still present, still the HOT recommendation — just without the product.
       expect(item).toBeDefined();
-      expect(item.product).toBeNull();
+      expect(item.products).toEqual([]);
       expect(JSON.stringify(json)).not.toContain(productId);
     } finally {
       await prisma.product.update({ where: { id: productId }, data: { status: "ACTIVE" } });
@@ -170,7 +232,7 @@ describe("GET /api/storefront/cars/engines/:engineId/fitment", () => {
     );
     const cold = oilGroup.items.find((item: ResolvedItem) => item.climate === "COLD");
     const { brandId } = await prisma.product.findFirstOrThrow({
-      where: { id: cold.product.id },
+      where: { id: cold.products[0].id },
       select: { brandId: true },
     });
 
@@ -182,7 +244,7 @@ describe("GET /api/storefront/cars/engines/:engineId/fitment", () => {
       );
       const item = group.items.find((candidate: ResolvedItem) => candidate.climate === "COLD");
 
-      expect(item.product).toBeNull();
+      expect(item.products).toEqual([]);
     } finally {
       await prisma.brand.update({ where: { id: brandId }, data: { status: "ACTIVE" } });
     }

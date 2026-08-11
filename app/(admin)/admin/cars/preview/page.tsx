@@ -36,7 +36,9 @@ interface FitmentItem {
   id: string;
   climate: "STANDARD" | "HOT" | "COLD";
   climateLabel: string | null;
-  product: FitmentProduct | null;
+  // Several when the item is a spec (`matchSpec`) rather than a pinned product;
+  // empty when nothing matched, which is the spec-only case.
+  products: FitmentProduct[];
   specNote: string | null;
 }
 
@@ -58,6 +60,25 @@ const emptyDefaults: PreviewFormValues = {
   year: "",
   carEngineId: "",
 };
+
+function ProductRow({ product }: { product: FitmentProduct }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="rounded-field flex size-10 shrink-0 items-center justify-center overflow-hidden bg-white">
+        {product.image ? (
+          // eslint-disable-next-line @next/next/no-img-element -- product image URL isn't a known static/remote-configured asset
+          <img src={product.image} alt="" className="size-full object-cover" />
+        ) : (
+          <span className="text-xs text-neutral-400">—</span>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col">
+        <span className="text-sm font-medium text-neutral-900">{product.nameEn}</span>
+        <span className="text-xs text-neutral-500">{product.price.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+}
 
 function expandYearOptions(carEngines: CarEngine[]) {
   const currentYear = new Date().getFullYear();
@@ -290,40 +311,26 @@ export default function FitmentPreviewPage() {
               <h2 className="text-sm font-semibold text-neutral-900">{group.category.nameEn}</h2>
               <div className="flex flex-col gap-2">
                 {group.items.map((item) => (
-                  <div key={item.id} className="rounded-field bg-field flex items-center gap-3 p-3">
-                    {item.product ? (
-                      <>
-                        <div className="rounded-field flex size-10 shrink-0 items-center justify-center overflow-hidden bg-white">
-                          {item.product.image ? (
-                            // eslint-disable-next-line @next/next/no-img-element -- product image URL isn't a known static/remote-configured asset
-                            <img
-                              src={item.product.image}
-                              alt=""
-                              className="size-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-xs text-neutral-400">—</span>
+                  <div key={item.id} className="rounded-field bg-field flex items-start gap-3 p-3">
+                    {/* An item resolves to a list: one product when it's pinned
+                        to one, several when it's a spec matched against the
+                        live catalog, none when nothing matched. */}
+                    <div className="flex flex-1 flex-col gap-2">
+                      {item.products.length > 0 ? (
+                        item.products.map((product) => (
+                          <ProductRow key={product.id} product={product} />
+                        ))
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          <Chip color="warning" size="sm" variant="soft" className="self-start">
+                            <Chip.Label>Spec only — not yet in catalog</Chip.Label>
+                          </Chip>
+                          {item.specNote && (
+                            <span className="text-sm text-neutral-700">{item.specNote}</span>
                           )}
                         </div>
-                        <div className="flex flex-1 flex-col">
-                          <span className="text-sm font-medium text-neutral-900">
-                            {item.product.nameEn}
-                          </span>
-                          <span className="text-xs text-neutral-500">
-                            {item.product.price.toLocaleString()}
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex flex-1 flex-col gap-1">
-                        <Chip color="warning" size="sm" variant="soft" className="self-start">
-                          <Chip.Label>Spec only — not yet in catalog</Chip.Label>
-                        </Chip>
-                        {item.specNote && (
-                          <span className="text-sm text-neutral-700">{item.specNote}</span>
-                        )}
-                      </div>
-                    )}
+                      )}
+                    </div>
                     {item.climateLabel && (
                       <Chip size="sm" variant="soft">
                         <Chip.Label>{item.climateLabel}</Chip.Label>

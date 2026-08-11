@@ -125,20 +125,20 @@ function renderableEntries(
   items: FitmentCategoryGroup["items"],
 ): { id: string; node: ReactNode }[] {
   return items.flatMap((item) => {
-    if (item.product) {
-      return [
-        {
-          id: item.id,
-          node: (
-            <Link
-              href={navHref(locale, `${PRODUCTS_PATH}/${item.product.slug}`)}
-              className="focus-visible:ring-accent hover:text-accent rounded font-medium text-neutral-900 underline-offset-2 transition-colors hover:underline focus-visible:ring-2 focus-visible:outline-none"
-            >
-              {pickLocale(locale, item.product.nameEn, item.product.nameFa)}
-            </Link>
-          ),
-        },
-      ];
+    // Several, where the item is a spec rather than a pinned product: each
+    // match is its own entry on the line, separated by the same "·".
+    if (item.products.length > 0) {
+      return item.products.map((product) => ({
+        id: `${item.id}:${product.id}`,
+        node: (
+          <Link
+            href={navHref(locale, `${PRODUCTS_PATH}/${product.slug}`)}
+            className="focus-visible:ring-accent hover:text-accent rounded font-medium text-neutral-900 underline-offset-2 transition-colors hover:underline focus-visible:ring-2 focus-visible:outline-none"
+          >
+            {pickLocale(locale, product.nameEn, product.nameFa)}
+          </Link>
+        ),
+      }));
     }
 
     const spec = formatSpecSummary(item);

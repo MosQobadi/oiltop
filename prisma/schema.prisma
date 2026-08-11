@@ -447,6 +447,18 @@ model FitmentProfileItem {
   specNote       String?
   specAttributes Json?
 
+  // A query against the catalog, not text for a customer: the item resolves to
+  // whatever ACTIVE products in its category currently match, so "this engine
+  // takes 5W-30, API SN" survives a product going out of stock instead of the
+  // recommendation dying with the one row it was pinned to.
+  //
+  //   { viscosity?: string, apiGrade?: string, volumeMl?: number }
+  //
+  // — the three structured spec columns on Product, matched exactly, and every
+  // key present has to match. specAttributes stays what it is: display text for
+  // the spec-only card. An item may carry both; `productId` still wins.
+  matchSpec Json?
+
   priority  Int     @default(0)
   adminNote String?
 

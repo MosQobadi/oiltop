@@ -90,26 +90,32 @@ function CategorySection({
   const hasClimatePair = hot.length > 0 && cold.length > 0;
   const climateItems = [...hot, ...cold];
 
-  const renderItem = (item: FitmentResolvedItem): ReactNode =>
-    item.product ? (
-      <ProductCard
-        key={item.id}
-        locale={locale}
-        product={item.product}
-        imageSizes={FITMENT_IMAGE_SIZES}
-      />
-    ) : (
-      <SpecOnlyCard
-        key={item.id}
-        locale={locale}
-        carLabel={carLabel}
-        carEngineId={carEngineId}
-        categoryId={group.category.id}
-        categoryName={categoryName}
-        specNote={item.specNote}
-        specAttributes={item.specAttributes}
-      />
-    );
+  // One item can be several cards: a spec-based item resolves to every product
+  // that currently matches, and those are co-equal options in the same grid —
+  // exactly what the multi-product case above already looked like. An item with
+  // nothing to show is still one card, the spec-only one.
+  const renderItem = (item: FitmentResolvedItem): ReactNode[] =>
+    item.products.length > 0
+      ? item.products.map((product) => (
+          <ProductCard
+            key={`${item.id}:${product.id}`}
+            locale={locale}
+            product={product}
+            imageSizes={FITMENT_IMAGE_SIZES}
+          />
+        ))
+      : [
+          <SpecOnlyCard
+            key={item.id}
+            locale={locale}
+            carLabel={carLabel}
+            carEngineId={carEngineId}
+            categoryId={group.category.id}
+            categoryName={categoryName}
+            specNote={item.specNote}
+            specAttributes={item.specAttributes}
+          />,
+        ];
 
   return (
     <section data-testid="fitment-category" data-category={group.category.partType}>
@@ -146,7 +152,7 @@ function CategorySection({
         <div
           className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 ${climateItems.length > 0 ? "mt-5" : "mt-4"}`}
         >
-          {standard.map(renderItem)}
+          {standard.flatMap(renderItem)}
         </div>
       )}
     </section>
@@ -169,7 +175,7 @@ function ClimateColumn({
   locale: Locale;
   climate: "HOT" | "COLD";
   items: FitmentResolvedItem[];
-  renderItem: (item: FitmentResolvedItem) => ReactNode;
+  renderItem: (item: FitmentResolvedItem) => ReactNode[];
 }) {
   return (
     <div data-testid="fitment-climate-column" data-climate={climate}>
@@ -178,7 +184,7 @@ function ClimateColumn({
       >
         {climateColumnLabel(locale, climate)}
       </span>
-      <div className="mt-3 flex flex-col gap-4">{items.map(renderItem)}</div>
+      <div className="mt-3 flex flex-col gap-4">{items.flatMap(renderItem)}</div>
     </div>
   );
 }

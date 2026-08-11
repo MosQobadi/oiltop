@@ -4,9 +4,12 @@ import {
   combineYearSpans,
   expandYearRanges,
   groupFitmentItemsByCategory,
+  parseMatchSpec,
   selectSharedProfiles,
   type FitmentCategorySummary,
   type FitmentItemWithRelations,
+  type FitmentProductSummary,
+  type SpecMatches,
 } from "./fitment";
 
 describe("expandYearRanges", () => {
@@ -85,12 +88,29 @@ function makeItem(overrides: Partial<FitmentItemWithRelations> = {}): FitmentIte
     product: null,
     specNote: null,
     specAttributes: null,
+    matchSpec: null,
     priority: 0,
     adminNote: null,
     createdAt: new Date("2026-01-01"),
     updatedAt: new Date("2026-01-01"),
     ...overrides,
   };
+}
+
+// What `resolveSpecMatches` hands the grouper: item id → the products its
+// matchSpec found, already priced and ordered.
+function matches(itemId: string, productIds: string[]): SpecMatches {
+  const products: FitmentProductSummary[] = productIds.map((id) => ({
+    id,
+    slug: id,
+    nameEn: id,
+    nameFa: id,
+    price: 500_000,
+    finalPrice: 500_000,
+    image: null,
+    stockStatus: null,
+  }));
+  return new Map([[itemId, products]]);
 }
 
 describe("groupFitmentItemsByCategory", () => {
@@ -135,19 +155,21 @@ describe("groupFitmentItemsByCategory", () => {
 
     // The card the storefront renders: a PDP link, a charged price, and the
     // three-state stock signal — never the raw count.
-    expect(groups[0].items[0].product).toEqual({
-      id: "product_1",
-      slug: "mobil-1-5w30",
-      nameEn: "Mobil 1 5W-30",
-      nameFa: "موبیل ۱ ۵W-۳۰",
-      price: 1_000_000,
-      finalPrice: 800_000,
-      image: null,
-      stockStatus: null,
-    });
+    expect(groups[0].items[0].products).toEqual([
+      {
+        id: "product_1",
+        slug: "mobil-1-5w30",
+        nameEn: "Mobil 1 5W-30",
+        nameFa: "موبیل ۱ ۵W-۳۰",
+        price: 1_000_000,
+        finalPrice: 800_000,
+        image: null,
+        stockStatus: null,
+      },
+    ]);
   });
 
-  it("keeps a spec-only item's fallback fields and leaves product null", () => {
+  it("keeps a spec-only item's fallback fields and resolves to no products", () => {
     const groups = groupFitmentItemsByCategory([
       makeItem({
         specNote: "5W-30, API SP",
@@ -155,7 +177,7 @@ describe("groupFitmentItemsByCategory", () => {
       }),
     ]);
 
-    expect(groups[0].items[0].product).toBeNull();
+    expect(groups[0].items[0].products).toEqual([]);
     expect(groups[0].items[0].specNote).toBe("5W-30, API SP");
     expect(groups[0].items[0].specAttributes).toEqual({ viscosity: "5W-30" });
   });
@@ -178,7 +200,7 @@ describe("groupFitmentItemsByCategory", () => {
     ]);
 
     expect(groups[0].items).toHaveLength(1);
-    expect(groups[0].items[0].product).toBeNull();
+    expect(groups[0].items[0].products).toEqual([]);
     expect(groups[0].items[0].specNote).toBe("5W-30, API SP");
   });
 
@@ -187,7 +209,7 @@ describe("groupFitmentItemsByCategory", () => {
       makeItem({ productId: "product_1", product: makeProduct({ status: "INACTIVE" }) }),
     ]);
 
-    expect(groups[0].items[0].product).toBeNull();
+    expect(groups[0].items[0].products).toEqual([]);
   });
 
   // The admin Fitment Preview is the QA tool for this data: hiding the product
@@ -198,7 +220,7 @@ describe("groupFitmentItemsByCategory", () => {
       "admin",
     );
 
-    expect(groups[0].items[0].product?.id).toBe("product_1");
+    expect(groups[0].items[0].products.map((product) => product.id)).toEqual(["product_1"]);
   });
 
   // The status trio decides visibility; it is never part of the payload.
@@ -207,13 +229,128 @@ describe("groupFitmentItemsByCategory", () => {
       makeItem({ productId: "product_1", product: makeProduct() }),
     ]);
 
-    expect(groups[0].items[0].product).not.toHaveProperty("status");
-    expect(groups[0].items[0].product).not.toHaveProperty("category");
-    expect(groups[0].items[0].product).not.toHaveProperty("brand");
+    expect(groups[0].items[0].products[0]).not.toHaveProperty("status");
+    expect(groups[0].items[0].products[0]).not.toHaveProperty("category");
+    expect(groups[0].items[0].products[0]).not.toHaveProperty("brand");
   });
 
   it("returns no groups for an engine with no fitment items", () => {
     expect(groupFitmentItemsByCategory([])).toEqual([]);
+  });
+
+  // --- matchSpec ---
+  //
+  // The query itself belongs to `resolveSpecMatches` (it reads the catalog);
+  // what's checked here is the precedence a resolved item applies to it.
+
+  it("resolves a spec-based item to the products its matchSpec found", () => {
+    const groups = groupFitmentItemsByCategory(
+      [makeItem({ matchSpec: { viscosity: "5W-30" } })],
+      "public",
+      matches("item_1", ["cheap", "dearer"]),
+    );
+
+    expect(groups[0].items[0].products.map((product) => product.id)).toEqual(["cheap", "dearer"]);
+  });
+
+  // Pinning a product is how an admin overrides the query, so it has to win —
+  // otherwise adding a spec to an item would quietly unpin it.
+  it("prefers the explicit product over a matchSpec on the same item", () => {
+    const groups = groupFitmentItemsByCategory(
+      [
+        makeItem({
+          productId: "product_1",
+          product: makeProduct(),
+          matchSpec: { viscosity: "5W-30" },
+        }),
+      ],
+      "public",
+      matches("item_1", ["matched"]),
+    );
+
+    expect(groups[0].items[0].products.map((product) => product.id)).toEqual(["product_1"]);
+  });
+
+  // The case the column exists for: the shop stopped stocking the one oil this
+  // recommendation was pinned to, and the spec beside it still answers. The
+  // linked product is unusable here, so there is nothing to prefer it over.
+  it("falls through to the matchSpec when the linked product was deactivated", () => {
+    const groups = groupFitmentItemsByCategory(
+      [
+        makeItem({
+          productId: "product_1",
+          product: makeProduct({ status: "INACTIVE" }),
+          matchSpec: { viscosity: "5W-30" },
+        }),
+      ],
+      "public",
+      matches("item_1", ["still_stocked"]),
+    );
+
+    expect(groups[0].items[0].products.map((product) => product.id)).toEqual(["still_stocked"]);
+  });
+
+  // A spec that matches nothing is the spec-only case: the customer still gets
+  // an answer, and SpecOnlyCard still captures the lead.
+  it("falls back to the spec-only card when a matchSpec resolves to nothing", () => {
+    const groups = groupFitmentItemsByCategory(
+      [makeItem({ matchSpec: { viscosity: "0W-8" }, specNote: "0W-8, API SP" })],
+      "public",
+      matches("item_1", []),
+    );
+
+    expect(groups[0].items[0].products).toEqual([]);
+    expect(groups[0].items[0].specNote).toBe("0W-8, API SP");
+  });
+});
+
+// `matchSpec` is a free-form Json column, so the parser is what stands between
+// whatever the importer wrote and a query.
+describe("parseMatchSpec", () => {
+  it("reads the documented shape", () => {
+    expect(parseMatchSpec({ viscosity: "5W-30", apiGrade: "SN", volumeMl: 4000 })).toEqual({
+      viscosity: "5W-30",
+      apiGrade: "SN",
+      volumeMl: 4000,
+    });
+  });
+
+  // Product.viscosity/apiGrade are stored uppercase, so a lowercase spec would
+  // match nothing at all rather than matching loosely.
+  it("uppercases the codes it will match on", () => {
+    expect(parseMatchSpec({ viscosity: " 5w-30 ", apiGrade: "sn" })).toEqual({
+      viscosity: "5W-30",
+      apiGrade: "SN",
+    });
+  });
+
+  it("keeps a partial spec — an absent key is not a constraint", () => {
+    expect(parseMatchSpec({ viscosity: "10W-40" })).toEqual({ viscosity: "10W-40" });
+  });
+
+  it("drops keys of the wrong type", () => {
+    expect(parseMatchSpec({ viscosity: 530, apiGrade: "SN", volumeMl: "4000" })).toEqual({
+      apiGrade: "SN",
+    });
+  });
+
+  it("rejects a volume that isn't a positive whole number of millilitres", () => {
+    expect(parseMatchSpec({ volumeMl: 0 })).toBeNull();
+    expect(parseMatchSpec({ volumeMl: -1 })).toBeNull();
+    expect(parseMatchSpec({ volumeMl: 4000.5 })).toBeNull();
+  });
+
+  // Matching on nothing would return the whole category, which is not an
+  // answer — so "no usable key" has to read as "no spec".
+  it.each([
+    ["null", null],
+    ["undefined", undefined],
+    ["an empty object", {}],
+    ["an array", ["5W-30"]],
+    ["a bare string", "5W-30"],
+    ["blank codes", { viscosity: "  ", apiGrade: "" }],
+  ])("has no spec for %s", (_case, value) => {
+    expect(parseMatchSpec(value as Prisma.JsonValue)).toBeNull();
   });
 });
 
