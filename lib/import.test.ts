@@ -5,6 +5,12 @@ import {
   deriveSlug,
   discountPercentFrom,
   fallbackSlug,
+  fitmentCandidatesFor,
+  fitmentHash,
+  fitmentProfileLabel,
+  fitmentSpecNote,
+  importHashNote,
+  isImportHashNote,
   mapFuelType,
   normaliseForMatch,
   parseApiGrade,
@@ -12,9 +18,13 @@ import {
   parseViscosity,
   parseVolumeMl,
   sourceRefFor,
+  sourceSlugFromUrl,
   toLatinDigits,
   truncate,
+  type CanonicalFitmentRow,
+  type FitmentCandidate,
 } from "./import";
+import type { ScrapeCar, ScrapeCarSection } from "./validation/import";
 
 describe("toLatinDigits", () => {
   it("converts Persian and Arabic-Indic digits", () => {
@@ -224,5 +234,210 @@ describe("truncate", () => {
   it("keeps imported rows editable in the admin form", () => {
     expect(truncate("a".repeat(600), 500)).toHaveLength(500);
     expect(truncate("short", 500)).toBe("short");
+  });
+});
+
+describe("sourceSlugFromUrl", () => {
+  // The extractor writes sourceSlug as the URL's last path segment decoded, so
+  // this has to land on exactly the same string or a section never finds its
+  // product. Both halves of the real fixture pair are here.
+  it("decodes the last path segment into the product's natural key", () => {
+    expect(sourceSlugFromUrl("https://www.oil-city.ir/product/toyota-motor-oil-5w30-sn-4l/")).toBe(
+      "toyota-motor-oil-5w30-sn-4l",
+    );
+    expect(
+      sourceSlugFromUrl(
+        "https://www.oil-city.ir/product/%D9%81%DB%8C%D9%84%D8%AA%D8%B1-%D8%B1%D9%88%D8%BA%D9%86-%D8%AA%D9%88%DB%8C%D9%88%D8%AA%D8%A7-%D8%B3%DB%8C-%D8%A7%DA%86-%D8%A2%D8%B1/",
+      ),
+    ).toBe("فیلتر-روغن-تویوتا-سی-اچ-آر");
+  });
+
+  it("ignores a missing trailing slash, a query and a fragment", () => {
+    expect(sourceSlugFromUrl("https://www.oil-city.ir/product/toyota-5w30")).toBe("toyota-5w30");
+    expect(sourceSlugFromUrl("https://www.oil-city.ir/product/toyota-5w30/?utm=x#buy")).toBe(
+      "toyota-5w30",
+    );
+  });
+
+  it("is null for anything it can't read a key out of", () => {
+    expect(sourceSlugFromUrl("not a url")).toBeNull();
+    expect(sourceSlugFromUrl("https://www.oil-city.ir/")).toBeNull();
+    // A malformed percent-escape: the raw segment isn't the key either.
+    expect(sourceSlugFromUrl("https://www.oil-city.ir/product/%E0%A4%A/")).toBeNull();
+  });
+});
+
+function makeSection(overrides: Partial<ScrapeCarSection> = {}): ScrapeCarSection {
+  return {
+    headingFa: "روغن موتور خودرو",
+    categoryGuess: "engine-oil",
+    capacityText: null,
+    specNoteFa: null,
+    products: [],
+    ...overrides,
+  };
+}
+
+function makeCar(sections: ScrapeCarSection[]): ScrapeCar {
+  return {
+    brandNameFa: "تویوتا",
+    brandSourceSlug: "toyota",
+    modelNameFa: "تویوتا CHR",
+    modelSourceSlug: "chr",
+    modelDescriptorText: "1800cc هیبرید",
+    sourceUrl: "https://www.oil-city.ir/car/toyota/chr/",
+    sections,
+  };
+}
+
+describe("fitmentCandidatesFor", () => {
+  it("emits one candidate per named product, in page order", () => {
+    const candidates = fitmentCandidatesFor(
+      makeCar([
+        makeSection({
+          specNoteFa: "نکته : گرانروی پیشنهادی 5W30",
+          products: [
+            {
+              nameFa: "روغن موتور تویوتا",
+              productSourceUrl: "https://www.oil-city.ir/product/toyota-5w30/",
+              orderOnPage: 0,
+            },
+            { nameFa: "روغن موتور موبیل 1", productSourceUrl: null, orderOnPage: 1 },
+          ],
+        }),
+        makeSection({
+          headingFa: "فیلتر روغن خودرو",
+          categoryGuess: "oil-filter",
+          products: [{ nameFa: "فیلتر روغن تویوتا", productSourceUrl: null, orderOnPage: 0 }],
+        }),
+      ]),
+    );
+
+    expect(candidates).toHaveLength(3);
+    expect(candidates[0]).toMatchObject({
+      sectionIndex: 0,
+      categoryGuess: "engine-oil",
+      productSourceSlug: "toyota-5w30",
+      priority: 0,
+      specNote: "نکته : گرانروی پیشنهادی 5W30",
+    });
+    // The section named it but linked nothing — a spec-only item, not a skip.
+    expect(candidates[1]).toMatchObject({ productSourceSlug: null, priority: 1 });
+    expect(candidates[2]).toMatchObject({ sectionIndex: 1, categoryGuess: "oil-filter" });
+  });
+
+  it("falls back to list position when the page carries no order", () => {
+    const candidates = fitmentCandidatesFor(
+      makeCar([
+        makeSection({
+          products: [
+            { nameFa: "اول", productSourceUrl: null, orderOnPage: null },
+            { nameFa: "دوم", productSourceUrl: null, orderOnPage: null },
+          ],
+        }),
+      ]),
+    );
+
+    expect(candidates.map((candidate) => candidate.priority)).toEqual([0, 1]);
+  });
+
+  // "نکته : گرانروی پیشنهادی 5W30" with no products under it is still the page
+  // telling a customer what to buy — exactly what a spec-only item is for.
+  it("keeps a product-less section that carries a note, and drops an empty one", () => {
+    expect(
+      fitmentCandidatesFor(makeCar([makeSection({ specNoteFa: "نکته : 5W30" })])),
+    ).toHaveLength(1);
+    expect(fitmentCandidatesFor(makeCar([makeSection()]))).toHaveLength(0);
+  });
+});
+
+describe("fitmentSpecNote", () => {
+  const candidate: FitmentCandidate = {
+    sectionIndex: 0,
+    categoryGuess: "oil-filter",
+    headingFa: "فیلتر روغن خودرو",
+    productSourceSlug: null,
+    productNameFa: "فیلتر روغن تویوتا CHR",
+    specNote: null,
+    priority: 0,
+  };
+
+  it("prefers the section's own نکته, matched product or not", () => {
+    const withNote = { ...candidate, specNote: "نکته : هر ۱۰،۰۰۰ کیلومتر" };
+    expect(fitmentSpecNote(withNote, true)).toBe("نکته : هر ۱۰،۰۰۰ کیلومتر");
+    expect(fitmentSpecNote(withNote, false)).toBe("نکته : هر ۱۰،۰۰۰ کیلومتر");
+  });
+
+  // An item with neither a product nor a note is not a recommendation and the
+  // validation schema rejects one, so an unmatched product falls back to the
+  // source's own words for the thing we don't stock.
+  it("names the product we don't stock, then the heading", () => {
+    expect(fitmentSpecNote(candidate, false)).toBe("فیلتر روغن تویوتا CHR");
+    expect(fitmentSpecNote({ ...candidate, productNameFa: null }, false)).toBe("فیلتر روغن خودرو");
+    expect(
+      fitmentSpecNote({ ...candidate, productNameFa: null, headingFa: null }, false),
+    ).toBeNull();
+  });
+
+  it("leaves a matched product's item bare when the section said nothing", () => {
+    expect(fitmentSpecNote(candidate, true)).toBeNull();
+  });
+});
+
+describe("fitmentHash", () => {
+  const rows: CanonicalFitmentRow[] = [
+    {
+      categorySlug: "engine-oil",
+      productSourceRef: "oil-city:product/toyota-5w30",
+      specNote: null,
+      priority: 0,
+    },
+    { categorySlug: "oil-filter", productSourceRef: null, specNote: "فیلتر روغن", priority: 0 },
+  ];
+
+  // The dedup itself: two model pages saying the same thing are one profile.
+  it("is the same for two cars whose pages say the same thing", () => {
+    expect(fitmentHash(rows)).toBe(fitmentHash(rows.map((row) => ({ ...row }))));
+  });
+
+  it("separates recommendations that differ", () => {
+    const hash = fitmentHash(rows);
+    expect(fitmentHash([rows[1], rows[0]])).not.toBe(hash);
+    expect(fitmentHash([rows[0]])).not.toBe(hash);
+    expect(fitmentHash([{ ...rows[0], priority: 1 }, rows[1]])).not.toBe(hash);
+    expect(fitmentHash([{ ...rows[0], categorySlug: "fuel-filter" }, rows[1]])).not.toBe(hash);
+  });
+
+  // A car whose oil we stock and one whose oil we don't are not the same
+  // recommendation, even where both pages named the same product.
+  it("separates a matched product from the spec-only item it falls back to", () => {
+    expect(fitmentHash([{ ...rows[0], productSourceRef: null, specNote: "روغن" }])).not.toBe(
+      fitmentHash([rows[0]]),
+    );
+  });
+});
+
+describe("importHashNote", () => {
+  it("marks a profile as the importer's own", () => {
+    expect(importHashNote("abc123")).toBe("import-hash:abc123");
+    expect(isImportHashNote(importHashNote("abc123"))).toBe(true);
+  });
+
+  // The rule that keeps a hand-made profile attached where an admin put it.
+  it("doesn't claim a profile nobody imported", () => {
+    expect(isImportHashNote(null)).toBe(false);
+    expect(isImportHashNote("Peugeot 206 — checked against the manual")).toBe(false);
+  });
+});
+
+describe("fitmentProfileLabel", () => {
+  it("names the car that minted it and how much of its page it covers", () => {
+    expect(fitmentProfileLabel(makeCar([]), 4)).toBe("تویوتا تویوتا CHR — 4 sections");
+    expect(fitmentProfileLabel(makeCar([]), 1)).toBe("تویوتا تویوتا CHR — 1 section");
+  });
+
+  it("stays inside the admin form's label limit", () => {
+    const car = { ...makeCar([]), modelNameFa: "م".repeat(300) };
+    expect(fitmentProfileLabel(car, 3)).toHaveLength(200);
   });
 });

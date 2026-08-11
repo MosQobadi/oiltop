@@ -11,6 +11,7 @@
 // Latin name. Both are done once here rather than per record at the call site.
 
 import { createHash } from "node:crypto";
+import type { ScrapeCar, ScrapeCategoryGuess } from "./validation/import";
 import { VISCOSITY_PATTERN } from "./validation/product";
 import { slugify } from "./slug";
 
@@ -349,3 +350,209 @@ export const UNKNOWN_BRAND = {
 // cars — vague, but never wrong, and narrowing it by hand later is the point of
 // leaving it alone on re-import.
 export const IMPORTED_YEAR_START = 2000;
+
+// ---------------------------------------------------------------------------
+// Fitment
+// ---------------------------------------------------------------------------
+//
+// A car page's accordion sections are the whole reason for importing this
+// source: each one is a part type, a نکته note and a list of products, which is
+// exactly a `FitmentProfileItem`. What makes it worth doing rather than merely
+// possible is that oil-city.ir templates the same recommendation across whole
+// families of models — so the sections are normalised into a canonical list
+// here, and the hash of that list becomes the profile's identity. Two cars whose
+// pages say the same thing get one profile between them, and editing it later
+// fixes both.
+
+// `FitmentProfileItem.specNote` and `FitmentProfile.label` as the admin form
+// validates them (lib/validation/fitmentProfile.ts). Same reasoning as the
+// product limits above: an imported row nobody has touched still has to be
+// editable in the form afterwards.
+export const FITMENT_SPEC_NOTE_MAX = 2000;
+export const FITMENT_LABEL_MAX = 200;
+
+// The section's product links are full URLs and `Product.sourceRef` is built
+// from the decoded last path segment (the extractor's `sourceSlug` rule, section
+// 4 of oil-city-import-notes.md). So matching a section to a product is this
+// one conversion, done in one place: URL -> sourceSlug -> sourceRef -> row.
+//
+// Null rather than a throw on anything unusable — a link the importer can't read
+// is a spec-only item and a line in the report, not a failed batch.
+export function sourceSlugFromUrl(url: string): string | null {
+  let pathname: string;
+  try {
+    pathname = new URL(url).pathname;
+  } catch {
+    return null;
+  }
+
+  const segment = pathname
+    .split("/")
+    .filter((part) => part !== "")
+    .pop();
+  if (segment === undefined) return null;
+
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(segment);
+  } catch {
+    // A malformed percent-escape. decodeURIComponent throws on it, and the raw
+    // segment isn't the key either — the extractor wrote the decoded form.
+    return null;
+  }
+
+  const key = decoded.replace(/\s+/g, " ").trim();
+  return key === "" ? null : key;
+}
+
+// One row of a car's recommendation as the source states it, before any of it
+// has been looked up in this catalog. One per named product, or one for a
+// section that names no product but does carry a نکته.
+export type FitmentCandidate = {
+  // Which accordion it came from — reporting and the profile's label, not
+  // identity: a section that produced no items shouldn't be counted in either.
+  sectionIndex: number;
+  categoryGuess: ScrapeCategoryGuess | null;
+  headingFa: string | null;
+  productSourceSlug: string | null;
+  productNameFa: string | null;
+  specNote: string | null;
+  priority: number;
+};
+
+function trimToNull(text: string | null): string | null {
+  if (text === null) return null;
+  const trimmed = text.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+// Sections in page order, products within a section in the order the page
+// listed them — `priority` is that order, and the schema's comment on it says
+// what it means: co-equal valid options, not a fallback chain.
+export function fitmentCandidatesFor(car: ScrapeCar): FitmentCandidate[] {
+  const candidates: FitmentCandidate[] = [];
+
+  car.sections.forEach((section, sectionIndex) => {
+    const specNote = trimToNull(section.specNoteFa);
+    const common = {
+      sectionIndex,
+      categoryGuess: section.categoryGuess,
+      headingFa: trimToNull(section.headingFa),
+      specNote,
+    };
+
+    // A section that names no product is still a recommendation: "نکته : گرانروی
+    // پیشنهادی 5W30" on its own tells a customer what to buy elsewhere, which is
+    // precisely what a spec-only item is for. With no note either there is
+    // nothing to record.
+    if (section.products.length === 0) {
+      if (specNote !== null) {
+        candidates.push({ ...common, productSourceSlug: null, productNameFa: null, priority: 0 });
+      }
+      return;
+    }
+
+    section.products.forEach((product, index) => {
+      candidates.push({
+        ...common,
+        productSourceSlug:
+          product.productSourceUrl === null ? null : sourceSlugFromUrl(product.productSourceUrl),
+        productNameFa: trimToNull(product.nameFa),
+        priority: product.orderOnPage ?? index,
+      });
+    });
+  });
+
+  return candidates;
+}
+
+// The item's spec note. The section's نکته box when it has one — worth keeping
+// even beside a matched product, because it is what the storefront falls back to
+// the day that product is deactivated (see `toResolvedItem` in
+// lib/services/fitment.ts).
+//
+// With no نکته, an item that found no product still has to say something: a row
+// with neither a product nor a note is not a recommendation, and
+// fitmentProfileItemCreateSchema rejects one. So it falls back to the source's
+// own name for the product we don't stock — the only other text on the page
+// that says what to look for — and then to the section heading. All three are
+// source text verbatim; nothing here is composed or translated.
+export function fitmentSpecNote(candidate: FitmentCandidate, hasProduct: boolean): string | null {
+  const note =
+    candidate.specNote ?? (hasProduct ? null : (candidate.productNameFa ?? candidate.headingFa));
+  return note === null ? null : truncate(note, FITMENT_SPEC_NOTE_MAX);
+}
+
+// A candidate once this catalog has answered the two questions it can't answer
+// itself: which category, and do we stock that product.
+export type CanonicalFitmentRow = {
+  categorySlug: string;
+  productSourceRef: string | null;
+  specNote: string | null;
+  priority: number;
+};
+
+// 64 bits. `refHash`'s 10 characters are plenty for a key scoped to one record,
+// but this one has to stay unique across every profile in the catalog, and it is
+// the row's only identity — a collision would silently hand one car another
+// car's recommendation.
+const FITMENT_HASH_LENGTH = 16;
+
+// The profile's identity, and the dedup itself: same rows, same hash, one
+// profile shared between the cars that produced them.
+//
+// What goes into it matters as much as the hashing.
+//   - Category *slugs* and product *sourceRefs*, never database ids: the same
+//     batch then hashes identically on any database, so a dry run against a
+//     clone reaches the same profiles the real run will.
+//   - The *resolved* product ref, null where we don't stock it. A car whose oil
+//     we carry and one whose oil we don't are not the same recommendation, even
+//     though both pages named the same product.
+//   - Order, because the page's ranking of co-equal options is part of what it
+//     says. Two pages listing the same three oils in a different order mint two
+//     profiles — the conservative way round: this never merges two cars that
+//     aren't saying the same thing, it only ever misses a merge.
+export function fitmentHash(rows: CanonicalFitmentRow[]): string {
+  // Tuples, not objects: the field order is fixed here rather than left to
+  // whatever order the row was built in.
+  const canonical = rows.map((row) => [
+    row.categorySlug,
+    row.productSourceRef,
+    row.specNote,
+    row.priority,
+  ]);
+
+  return createHash("sha1")
+    .update(JSON.stringify(canonical))
+    .digest("hex")
+    .slice(0, FITMENT_HASH_LENGTH);
+}
+
+// D.3's call: the hash lives in `internalNote` rather than in a column of its
+// own. The prefix is what makes the note self-describing to an admin reading it,
+// and what lets the importer recognise its own profiles — the rule for both
+// re-linking an engine and leaving hand-made profiles alone.
+//
+// The trade this accepts: an admin who rewrites the note has orphaned the
+// profile from the importer's view, and the next run mints a new one beside it
+// rather than editing theirs. Editing the *items* is safe and expected; the note
+// is the one field to leave alone.
+export const IMPORT_HASH_NOTE_PREFIX = "import-hash:";
+
+export function importHashNote(hash: string): string {
+  return `${IMPORT_HASH_NOTE_PREFIX}${hash}`;
+}
+
+export function isImportHashNote(note: string | null): boolean {
+  return note !== null && note.startsWith(IMPORT_HASH_NOTE_PREFIX);
+}
+
+// Named for the car that minted it. A profile shared by forty models can only
+// carry one name, and the first page to say this particular thing is as good a
+// name as any — the linked-engines panel is the truthful answer to "what does
+// this cover", and it is one click away in the profile editor.
+export function fitmentProfileLabel(car: ScrapeCar, sectionCount: number): string {
+  const name = `${car.brandNameFa} ${car.modelNameFa}`.replace(/\s+/g, " ").trim();
+  const sections = `${sectionCount} ${sectionCount === 1 ? "section" : "sections"}`;
+  return truncate(`${name} — ${sections}`, FITMENT_LABEL_MAX);
+}

@@ -1,7 +1,8 @@
 // Catalog importer. Reads every batch file for a source, validates each with
 // D.1's schema, and upserts in dependency order:
 //
-//   Category (holding) -> Brand -> Product (+Inventory) -> CarBrand -> CarModel -> CarEngine
+//   Category (holding) -> Brand -> Product (+Inventory) -> CarBrand -> CarModel
+//     -> CarEngine -> FitmentProfile (+items) -> CarEngineFitmentProfile
 //
 //   pnpm tsx scripts/import.ts --source oil-city --dry-run
 //   pnpm tsx scripts/import.ts --source oil-city
@@ -26,6 +27,14 @@
 // looked at by anyone, and a product, brand or car reaching the storefront
 // unreviewed is the failure this whole phase exists to avoid. Activating is
 // D.4's job.
+//
+// One ordering caveat, since batch files are read in filename order and each is
+// its own transaction: a car page whose products live in a *later* file imports
+// its items spec-only, because those products don't exist yet when the car is
+// read. The next run — with the products present — resolves them, which mints a
+// corrected profile and re-links the engine to it. Nothing is lost either way,
+// but a source is cheapest to import when its product batches sort before its
+// car batches.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
@@ -39,12 +48,20 @@ import {
 } from "../lib/validation/import";
 import {
   brandLabelDisagrees,
+  type CanonicalFitmentRow,
   deriveSku,
   deriveSlug,
   discountPercentFrom,
   ENGINE_LABEL_MAX,
   fallbackSlug,
+  fitmentCandidatesFor,
+  fitmentHash,
+  fitmentProfileLabel,
+  fitmentSpecNote,
+  IMPORT_HASH_NOTE_PREFIX,
   IMPORTED_YEAR_START,
+  importHashNote,
+  isImportHashNote,
   LONG_DESCRIPTION_MAX,
   mapFuelType,
   NAME_MAX,
@@ -131,6 +148,9 @@ const ENTITIES = [
   "carBrands",
   "carModels",
   "carEngines",
+  "fitmentProfiles",
+  "fitmentItems",
+  "fitmentLinks",
 ] as const;
 type Entity = (typeof ENTITIES)[number];
 
@@ -158,10 +178,26 @@ function increment(counts: Counts, entity: Entity, action: Action) {
   counts[entity][action] += 1;
 }
 
+// What a profile covers, counted over the whole run rather than read back from
+// the database — a dry run rolls its writes away, and the point of the exercise
+// is a number the dry run can already show. Engines are a Set keyed by the car's
+// model ref so the same car appearing in two batch files (or a second run
+// linking nothing new) still counts once, and run 1 and run 2 report the same
+// coverage.
+type ProfileCoverage = { label: string; engines: Set<string> };
+
+// The ten largest is the number that says whether the dedup worked at all.
+const MAX_PRINTED_PROFILES = 10;
+
 class ImportReport {
   readonly files: FileReport[] = [];
   readonly invalidFiles: { file: string; errors: string[] }[] = [];
   readonly unmappedCategories = new Map<string, number>();
+  readonly unmappedSections = new Map<string, number>();
+  readonly missingSectionProducts = new Map<string, number>();
+  readonly profiles = new Map<string, ProfileCoverage>();
+  // Counted after the run rather than during it — see `countOrphanProfiles`.
+  orphanProfiles = 0;
   readonly unmappedFuelWording = new Map<string, number>();
   readonly brandLabelDisagreements: { title: string; label: string; sourceUrl: string }[] = [];
   readonly notes: string[] = [];
@@ -199,6 +235,19 @@ class ImportReport {
     this.invalidFiles.push({ file, errors });
   }
 
+  // The other half of that: a car in file 2 looking for a product from file 1
+  // finds nothing in a dry run, because file 1's transaction was rolled back
+  // before file 2 opened. Every section would resolve to spec-only, and the dry
+  // run would promise a set of profiles the real run then doesn't create — which
+  // is exactly the disagreement `--dry-run` exists to rule out. The run's own
+  // record of what it imported is the missing half of the answer.
+  //
+  // Only ever consulted for a profile's *identity*. The row still gets whatever
+  // id the database could actually give it, which in a dry run is none.
+  dryRunImportedProduct(sourceRef: string): boolean {
+    return this.options.dryRun && this.seenRefs.has(sourceRef);
+  }
+
   record(counts: Counts, entity: Entity, action: Action, sourceRef?: string) {
     let effective = action;
     if (sourceRef !== undefined) {
@@ -210,12 +259,33 @@ class ImportReport {
     increment(counts, entity, effective);
   }
 
+  // Items are created in one statement, so they are counted in one call rather
+  // than by calling `record` per row — and they carry no ref of their own: an
+  // item's identity is the profile's hash, which is already deduplicated above.
+  recordMany(counts: Counts, entity: Entity, action: Action, times: number) {
+    counts[entity][action] += times;
+  }
+
   note(message: string) {
     this.notes.push(message);
   }
 
   countUnmappedCategory(wording: string) {
     this.unmappedCategories.set(wording, (this.unmappedCategories.get(wording) ?? 0) + 1);
+  }
+
+  countUnmappedSection(heading: string) {
+    this.unmappedSections.set(heading, (this.unmappedSections.get(heading) ?? 0) + 1);
+  }
+
+  countMissingSectionProduct(name: string) {
+    this.missingSectionProducts.set(name, (this.missingSectionProducts.get(name) ?? 0) + 1);
+  }
+
+  coverProfile(hash: string, label: string, engineKey: string) {
+    const existing = this.profiles.get(hash);
+    if (existing) existing.engines.add(engineKey);
+    else this.profiles.set(hash, { label, engines: new Set([engineKey]) });
   }
 
   countUnmappedFuelWording(wording: string) {
@@ -264,9 +334,19 @@ class ImportReport {
     console.log("Summary");
     printCounts(this.totals(), "  ");
 
+    this.printFitment();
+
     printTally(
       this.unmappedCategories,
       `Source categories with no match here — imported into "${UNCATEGORISED_CATEGORY.slug}", INACTIVE`,
+    );
+    printTally(
+      this.unmappedSections,
+      `Car page sections with no category match — items filed under "${UNCATEGORISED_CATEGORY.slug}"`,
+    );
+    printTally(
+      this.missingSectionProducts,
+      "Products a car page recommends that this catalog doesn't have — imported as spec-only items",
     );
     printTally(this.unmappedFuelWording, "Fuel wording the table doesn't map — no engine created");
 
@@ -291,6 +371,37 @@ class ImportReport {
     if (this.options.dryRun) console.log("DRY RUN — every transaction above was rolled back.");
     if (this.failed) console.log("Finished with failures — see the FAILED/INVALID files above.");
   }
+
+  // The evidence for D.3. "Profiles created" alone can't tell you whether the
+  // dedup worked — 800 cars and 800 profiles would print the same shape of line.
+  // Engines per profile is the number that can: at 1.0 every car page said
+  // something unique and the exercise bought nothing; the ten largest show where
+  // the collapsing actually happened.
+  private printFitment() {
+    if (this.profiles.size === 0) return;
+
+    const coverage = [...this.profiles.values()].sort((a, b) => b.engines.size - a.engines.size);
+    const engines = coverage.reduce((total, profile) => total + profile.engines.size, 0);
+    const perProfile = (engines / coverage.length).toFixed(1);
+
+    console.log("");
+    console.log(
+      `  Fitment: ${engines} engine(s) across ${coverage.length} profile(s) — ${perProfile} engines per profile`,
+    );
+    console.log(`  Largest profiles by engine count:`);
+    for (const profile of coverage.slice(0, MAX_PRINTED_PROFILES)) {
+      console.log(`    ${String(profile.engines.size).padStart(4)} × ${profile.label}`);
+    }
+    if (coverage.length > MAX_PRINTED_PROFILES) {
+      console.log(`    …and ${coverage.length - MAX_PRINTED_PROFILES} more profiles`);
+    }
+
+    if (this.orphanProfiles > 0) {
+      console.log(
+        `  ${this.orphanProfiles} imported profile(s) are attached to no engine — search "${IMPORT_HASH_NOTE_PREFIX}" in Fitment Profiles to review or delete them`,
+      );
+    }
+  }
 }
 
 function printCounts(counts: Counts, indent: string) {
@@ -300,7 +411,7 @@ function printCounts(counts: Counts, indent: string) {
       (action) => `${counts[entity][action]} ${action}`,
     );
     if (parts.length === 0) continue;
-    console.log(`${indent}${entity.padEnd(11)} ${parts.join(", ")}`);
+    console.log(`${indent}${entity.padEnd(16)} ${parts.join(", ")}`);
     printed = true;
   }
   if (!printed) console.log(`${indent}nothing to do`);
@@ -345,6 +456,11 @@ type Ctx = {
     holdingCategoryId: string | null;
     brandIdByLabel: Map<string, string | null>;
     carBrandIdByName: Map<string, string | null>;
+    // A car page names the same handful of popular oils over and over, and a
+    // batch of car pages is one transaction — so this is the cache that saves
+    // the most queries of any here.
+    productIdBySourceRef: Map<string, string | null>;
+    profileByHash: Map<string, { id: string; label: string }>;
   };
 };
 
@@ -354,6 +470,8 @@ function newCache(): Ctx["cache"] {
     holdingCategoryId: null,
     brandIdByLabel: new Map(),
     carBrandIdByName: new Map(),
+    productIdBySourceRef: new Map(),
+    profileByHash: new Map(),
   };
 }
 
@@ -756,6 +874,19 @@ async function resolveCategoryIdForProduct(
   return holdingCategoryId(ctx);
 }
 
+// How a car page's section finds the product it links to. Only rows the importer
+// created can be found this way, which is the intended reach: a car page cannot
+// attach a hand-entered product to a fitment profile by accident, and a product
+// the source links to but this catalog doesn't stock is a null, not a failure.
+async function findProductIdBySourceRef(ctx: Ctx, sourceRef: string): Promise<string | null> {
+  const cached = ctx.cache.productIdBySourceRef.get(sourceRef);
+  if (cached !== undefined) return cached;
+
+  const product = await ctx.tx.product.findUnique({ where: { sourceRef }, select: { id: true } });
+  ctx.cache.productIdBySourceRef.set(sourceRef, product?.id ?? null);
+  return product?.id ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Cars
 // ---------------------------------------------------------------------------
@@ -772,14 +903,32 @@ async function importCar(ctx: Ctx, car: ScrapeCar) {
 
   // An adopted model is a hand-entered car: it has its own engines, entered by
   // someone who knew the years and the fuel type, and a synthesised 2000-onward
-  // engine next to them would be noise at best.
+  // engine next to them would be noise at best. Its fitment is left alone for
+  // the same reason — attaching an imported profile to an engine somebody
+  // curated is exactly the overwrite this importer refuses to do.
   if (!model.owned) {
     ctx.report.record(ctx.counts, "carEngines", "skipped", `${modelRef}#engine`);
     ctx.report.note(`car "${car.modelNameFa}": existing model adopted, its engines left alone`);
+    skipFitment(ctx, car, modelRef);
     return;
   }
 
-  await upsertCarEngine(ctx, car, model.id, modelRef);
+  const carEngineId = await upsertCarEngine(ctx, car, model.id, modelRef);
+  // No engine means nothing to hang a recommendation on. Why is already in the
+  // report — `upsertCarEngine` said so on its way out.
+  if (carEngineId === null) {
+    skipFitment(ctx, car, modelRef);
+    return;
+  }
+
+  await importCarFitment(ctx, car, carEngineId, modelRef);
+}
+
+// Counted, not just noted, so a file's own numbers add up: 40 cars in, 38
+// profiles and 2 skipped.
+function skipFitment(ctx: Ctx, car: ScrapeCar, modelRef: string) {
+  if (car.sections.length === 0) return;
+  ctx.report.record(ctx.counts, "fitmentProfiles", "skipped", `${modelRef}#fitment`);
 }
 
 async function resolveCarBrandId(ctx: Ctx, car: ScrapeCar): Promise<string | null> {
@@ -908,13 +1057,22 @@ async function upsertCarModel(
 // one — so it is identified as "the only engine of a model we own". A model
 // that has grown a second engine has been worked on by hand, and the importer
 // stops touching its engines rather than guessing which one is its own.
-async function upsertCarEngine(ctx: Ctx, car: ScrapeCar, carModelId: string, modelRef: string) {
+//
+// Returns the engine the car's fitment profile should attach to, or null where
+// there is none to attach to — both of the cases below that decline to write an
+// engine also decline to guess which existing engine the page is about.
+async function upsertCarEngine(
+  ctx: Ctx,
+  car: ScrapeCar,
+  carModelId: string,
+  modelRef: string,
+): Promise<string | null> {
   const fuel = mapFuelType(car.modelDescriptorText, car.modelNameFa);
   if (fuel === null) {
     ctx.report.countUnmappedFuelWording(car.modelDescriptorText ?? car.modelNameFa);
     ctx.report.record(ctx.counts, "carEngines", "skipped", `${modelRef}#engine`);
     ctx.report.note(`car "${car.modelNameFa}": no fuel type in the source wording, no engine`);
-    return;
+    return null;
   }
 
   const labelFa = truncate(car.modelDescriptorText ?? car.modelNameFa, ENGINE_LABEL_MAX);
@@ -926,7 +1084,7 @@ async function upsertCarEngine(ctx: Ctx, car: ScrapeCar, carModelId: string, mod
   if (engines.length > 1) {
     ctx.report.record(ctx.counts, "carEngines", "skipped", `${modelRef}#engine`);
     ctx.report.note(`car "${car.modelNameFa}": ${engines.length} engines already, left alone`);
-    return;
+    return null;
   }
 
   const desired = { labelEn: labelFa, labelFa, fuelType: fuel.fuelType };
@@ -939,10 +1097,10 @@ async function upsertCarEngine(ctx: Ctx, car: ScrapeCar, carModelId: string, mod
       await ctx.tx.carEngine.update({ where: { id: engines[0].id }, data: changes });
       ctx.report.record(ctx.counts, "carEngines", "updated", `${modelRef}#engine`);
     }
-    return;
+    return engines[0].id;
   }
 
-  await ctx.tx.carEngine.create({
+  const created = await ctx.tx.carEngine.create({
     data: {
       ...desired,
       carModelId,
@@ -952,8 +1110,217 @@ async function upsertCarEngine(ctx: Ctx, car: ScrapeCar, carModelId: string, mod
       yearEnd: null,
       status: "INACTIVE",
     },
+    select: { id: true },
   });
   ctx.report.record(ctx.counts, "carEngines", "created", `${modelRef}#engine`);
+  return created.id;
+}
+
+// ---------------------------------------------------------------------------
+// Fitment
+// ---------------------------------------------------------------------------
+//
+// The point of the whole phase. A car page's sections are normalised into a
+// canonical item list (lib/import.ts), and that list's hash *is* the profile's
+// identity: the first car to produce a given hash creates the profile and names
+// it, every later car sharing it just links its engine. oil-city.ir gives whole
+// families of models the same recommendation, so ~800 model pages collapse into
+// far fewer profiles — which is what makes the imported data maintainable, since
+// correcting one profile afterwards corrects every car that shares it.
+
+// A canonical row plus the two things only this catalog can answer: which
+// category row it belongs to, and whether we actually stock the product.
+type ResolvedFitmentRow = {
+  sectionIndex: number;
+  categoryId: string;
+  productId: string | null;
+  specNote: string | null;
+  priority: number;
+  canonical: CanonicalFitmentRow;
+};
+
+async function importCarFitment(ctx: Ctx, car: ScrapeCar, carEngineId: string, modelRef: string) {
+  const rows = await resolveFitmentRows(ctx, car);
+  if (rows.length === 0) {
+    skipFitment(ctx, car, modelRef);
+    return;
+  }
+
+  const hash = fitmentHash(rows.map((row) => row.canonical));
+  const sections = new Set(rows.map((row) => row.sectionIndex)).size;
+  const profile = await ensureFitmentProfile(ctx, hash, fitmentProfileLabel(car, sections), rows);
+
+  // Counted against the profile's *stored* label, not the one this car would
+  // have given it — a profile minted by another car keeps that car's name, and
+  // the summary has to match what an admin will find in the profile list.
+  ctx.report.coverProfile(hash, profile.label, modelRef);
+  await linkEngineToProfile(ctx, car, carEngineId, profile.id, modelRef);
+}
+
+async function resolveFitmentRows(ctx: Ctx, car: ScrapeCar): Promise<ResolvedFitmentRow[]> {
+  const rows: ResolvedFitmentRow[] = [];
+
+  for (const candidate of fitmentCandidatesFor(car)) {
+    const categoryId = await resolveFitmentCategoryId(ctx, candidate.categoryGuess);
+    if (categoryId === null) {
+      ctx.report.note(
+        `car "${car.modelNameFa}": section category "${candidate.categoryGuess}" is not in this catalog, item skipped`,
+      );
+      continue;
+    }
+    if (candidate.categoryGuess === null) {
+      ctx.report.countUnmappedSection(candidate.headingFa ?? "(section with no heading)");
+    }
+
+    // A section links to a product page; `Product.sourceRef` is built from that
+    // URL's decoded last segment. Not stocking it is not a problem — the item
+    // becomes spec-only and the summary names it, so the gaps in the catalog are
+    // a list somebody can work rather than a silent absence.
+    const productSourceRef =
+      candidate.productSourceSlug === null
+        ? null
+        : sourceRefFor(ctx.source, "product", candidate.productSourceSlug);
+    const productId =
+      productSourceRef === null ? null : await findProductIdBySourceRef(ctx, productSourceRef);
+    const matched =
+      productId !== null ||
+      (productSourceRef !== null && ctx.report.dryRunImportedProduct(productSourceRef));
+    if (productSourceRef !== null && !matched) {
+      ctx.report.countMissingSectionProduct(
+        candidate.productNameFa ?? candidate.productSourceSlug ?? "(unnamed)",
+      );
+    }
+
+    const specNote = fitmentSpecNote(candidate, matched);
+    // Neither a product nor a word about what the car needs is not a
+    // recommendation. fitmentProfileItemCreateSchema refuses one from the admin
+    // form; the importer doesn't get to write one either. Keyed on `matched`
+    // rather than on the id, so a dry run drops the same items the real run will
+    // — the row it writes and rolls back is the one thing here allowed to be
+    // emptier than its real counterpart.
+    if (!matched && specNote === null) continue;
+
+    rows.push({
+      sectionIndex: candidate.sectionIndex,
+      categoryId,
+      productId,
+      specNote,
+      priority: candidate.priority,
+      canonical: {
+        categorySlug: candidate.categoryGuess ?? UNCATEGORISED_CATEGORY.slug,
+        // The *resolved* ref: an item we couldn't match is a spec-only item, and
+        // has to hash as one.
+        productSourceRef: matched ? productSourceRef : null,
+        specNote,
+        priority: candidate.priority,
+      },
+    });
+  }
+
+  return rows;
+}
+
+// The same holding-shelf answer DECISION 2 gives a product whose category this
+// catalog doesn't have. A car page's coolant, ATF and brake-fluid sections are
+// real recommendations — dropping them would throw away a third of what these
+// pages say — so they land in the same INACTIVE holding category their products
+// landed in, and the summary tallies the source's own headings so the real
+// categories can be created by hand later with the counts in view.
+async function resolveFitmentCategoryId(
+  ctx: Ctx,
+  categoryGuess: string | null,
+): Promise<string | null> {
+  if (categoryGuess === null) return holdingCategoryId(ctx);
+  return findCategoryIdBySlug(ctx, categoryGuess);
+}
+
+// Created once per distinct hash, then never written to again. A profile found
+// by its hash already says what this car's page says — that is what the hash
+// means — and an admin may since have improved its items; rewriting them every
+// run would undo exactly the review work D.4 exists for.
+async function ensureFitmentProfile(
+  ctx: Ctx,
+  hash: string,
+  label: string,
+  rows: ResolvedFitmentRow[],
+): Promise<{ id: string; label: string }> {
+  const cached = ctx.cache.profileByHash.get(hash);
+  if (cached !== undefined) {
+    ctx.report.record(ctx.counts, "fitmentProfiles", "unchanged", importHashNote(hash));
+    return cached;
+  }
+
+  const internalNote = importHashNote(hash);
+  const existing = await ctx.tx.fitmentProfile.findFirst({
+    where: { internalNote },
+    select: { id: true, label: true },
+  });
+
+  if (existing) {
+    ctx.report.record(ctx.counts, "fitmentProfiles", "unchanged", internalNote);
+    ctx.cache.profileByHash.set(hash, existing);
+    return existing;
+  }
+
+  const created = await ctx.tx.fitmentProfile.create({
+    data: { label, internalNote },
+    select: { id: true, label: true },
+  });
+
+  await ctx.tx.fitmentProfileItem.createMany({
+    data: rows.map((row) => ({
+      profileId: created.id,
+      categoryId: row.categoryId,
+      productId: row.productId,
+      specNote: row.specNote,
+      // Mismatch 3.5: the source's oil notes say the recommendation holds
+      // "در هر چهار فصل". There is no climate split to import, and HOT/COLD
+      // stays a manual enrichment.
+      climate: "STANDARD" as const,
+      priority: row.priority,
+    })),
+  });
+
+  ctx.report.record(ctx.counts, "fitmentProfiles", "created", internalNote);
+  ctx.report.recordMany(ctx.counts, "fitmentItems", "created", rows.length);
+  ctx.cache.profileByHash.set(hash, created);
+  return created;
+}
+
+async function linkEngineToProfile(
+  ctx: Ctx,
+  car: ScrapeCar,
+  carEngineId: string,
+  profileId: string,
+  modelRef: string,
+) {
+  const links = await ctx.tx.carEngineFitmentProfile.findMany({
+    where: { carEngineId },
+    select: { id: true, profileId: true, profile: { select: { label: true, internalNote: true } } },
+  });
+
+  // A car page that changed since the last run hashes differently and so
+  // resolves to a different profile. Adding the new link without dropping the
+  // old one would leave the engine resolving to both at once — two answers where
+  // the page gives one. Only the importer's own links are dropped: a profile an
+  // admin attached by hand carries no import hash and stays where they put it.
+  for (const link of links) {
+    if (link.profileId === profileId) continue;
+    if (!isImportHashNote(link.profile.internalNote)) continue;
+
+    await ctx.tx.carEngineFitmentProfile.delete({ where: { id: link.id } });
+    ctx.report.note(
+      `car "${car.modelNameFa}": detached from "${link.profile.label}" — its page now says something else`,
+    );
+  }
+
+  if (links.some((link) => link.profileId === profileId)) {
+    ctx.report.record(ctx.counts, "fitmentLinks", "unchanged", `${modelRef}#fitment-link`);
+    return;
+  }
+
+  await ctx.tx.carEngineFitmentProfile.create({ data: { carEngineId, profileId } });
+  ctx.report.record(ctx.counts, "fitmentLinks", "created", `${modelRef}#fitment-link`);
 }
 
 // ---------------------------------------------------------------------------
@@ -987,6 +1354,26 @@ async function runBatch(options: Options, report: ImportReport, file: string, ba
   }
 }
 
+// A car page that changes what it says leaves its old profile behind, attached
+// to nothing (`linkEngineToProfile` moves the engine but deletes no profile —
+// an admin may have improved that profile's items, and this importer doesn't
+// destroy work it can't see). Nothing else would ever mention them, so the debris
+// the importer creates is the debris it reports.
+//
+// Read after the run rather than tracked during it: a profile is only orphaned
+// once every file has had its say. Skipped for a dry run, where the answer would
+// describe a database state the run deliberately didn't produce.
+async function countOrphanProfiles(options: Options, report: ImportReport) {
+  if (options.dryRun) return;
+
+  report.orphanProfiles = await prisma.fitmentProfile.count({
+    where: {
+      internalNote: { startsWith: IMPORT_HASH_NOTE_PREFIX },
+      carEngineLinks: { none: {} },
+    },
+  });
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const dir = path.resolve(__dirname, "..", "scrape", options.source);
@@ -1009,6 +1396,7 @@ async function main() {
     await runBatch(options, report, file, parsed.data);
   }
 
+  await countOrphanProfiles(options, report);
   report.print();
   if (report.failed) process.exitCode = 1;
 }
