@@ -227,6 +227,18 @@ async function main() {
   const mannFilter = await prisma.brand.create({
     data: { slug: "mann-filter", nameEn: "Mann-Filter", nameFa: "مان فیلتر", status: "ACTIVE" },
   });
+  const shell = await prisma.brand.create({
+    data: { slug: "shell", nameEn: "Shell", nameFa: "شل", status: "ACTIVE" },
+  });
+  const liquiMoly = await prisma.brand.create({
+    data: { slug: "liqui-moly", nameEn: "Liqui Moly", nameFa: "لیکومولی", status: "ACTIVE" },
+  });
+  const kAndN = await prisma.brand.create({
+    data: { slug: "k-and-n", nameEn: "K&N", nameFa: "کی اند ان", status: "ACTIVE" },
+  });
+  const denso = await prisma.brand.create({
+    data: { slug: "denso", nameEn: "Denso", nameFa: "دنسو", status: "ACTIVE" },
+  });
 
   // ---------------------------------------------------------------------
   // Products + Inventory
@@ -406,6 +418,138 @@ async function main() {
         "رسانه چندلایه گردوغبار ریز و گرده گیاهان را جذب می‌کند تا هوای کابین تمیزتر باشد.",
       stock: 15,
     },
+    // --- The Hyundai Tucson shelf ----------------------------------------
+    //
+    // Everything below exists so one car can be stocked several ways over: the
+    // Tucson 2.0L Nu profile lists five oils, four air filters, two oil filters,
+    // three cabin filters and two fuel filters, which is what a real parts desk
+    // offers and what the storefront's multi-item grids need in order to be
+    // worth looking at. OEM numbers are the Tucson's, so the PLP's OEM search
+    // has something to find.
+    shellOil5w30: {
+      sku: "OIL-SHL-5W30",
+      nameEn: "Shell Helix Ultra 5W-30",
+      nameFa: "شل هلیکس اولترا 5W-30",
+      categoryId: engineOil.id,
+      brandId: shell.id,
+      price: 1_180_000,
+      discountPercent: 8,
+      tags: ["5W-30", "fully synthetic", "API SP"],
+      shortDescriptionEn: "Fully synthetic oil built from natural gas base stock.",
+      shortDescriptionFa: "روغن تمام‌سنتتیک ساخته‌شده از پایه گاز طبیعی.",
+      longDescriptionEn:
+        "PurePlus base oil keeps deposits from forming, holding compression and fuel economy over a long drain interval.",
+      longDescriptionFa:
+        "روغن پایه PurePlus از تشکیل رسوب جلوگیری می‌کند و فشرده‌سازی و مصرف سوخت را در دوره تعویض طولانی حفظ می‌کند.",
+      stock: 32,
+    },
+    liquiMolyOil10w40: {
+      sku: "OIL-LQM-10W40",
+      nameEn: "Liqui Moly MoS2 Leichtlauf 10W-40",
+      nameFa: "لیکومولی MoS2 لایشت‌لاوف 10W-40",
+      categoryId: engineOil.id,
+      brandId: liquiMoly.id,
+      price: 980_000,
+      discountPercent: 0,
+      tags: ["10W-40", "semi-synthetic", "high mileage"],
+      shortDescriptionEn: "Semi-synthetic with MoS2 friction modifier for higher-mileage engines.",
+      shortDescriptionFa: "نیمه‌سنتتیک با افزودنی اصطکاک‌کاه MoS2 برای موتورهای پرکارکرد.",
+      longDescriptionEn:
+        "Molybdenum disulphide leaves a lubricating film on worn surfaces, which quietens an engine that has already covered serious distance.",
+      longDescriptionFa:
+        "دی‌سولفید مولیبدن لایه‌ای روان‌کننده روی سطوح ساییده باقی می‌گذارد و صدای موتور پرکارکرد را کم می‌کند.",
+      stock: 12,
+    },
+    knAirFilter: {
+      sku: "FLT-KN-AIR-33-2400",
+      nameEn: "K&N 33-2400 Washable Air Filter",
+      nameFa: "فیلتر هوا قابل شست‌وشو کی اند ان 33-2400",
+      categoryId: airFilter.id,
+      brandId: kAndN.id,
+      price: 1_450_000,
+      discountPercent: 20,
+      tags: ["air filter", "washable", "performance"],
+      oemPartNumbers: ["28113-D3300"],
+      shortDescriptionEn: "Reusable cotton-gauze filter — wash it instead of replacing it.",
+      shortDescriptionFa: "فیلتر پارچه‌ای قابل استفاده مجدد — به جای تعویض، شسته می‌شود.",
+      longDescriptionEn:
+        "Oiled cotton-gauze media flows more air than paper and is rated for cleaning rather than replacement, so it outlasts the car it is fitted to.",
+      longDescriptionFa:
+        "رسانه پارچه‌ای روغن‌خورده جریان هوای بیشتری نسبت به کاغذ عبور می‌دهد و به جای تعویض شست‌وشو می‌شود؛ عمر آن از خود خودرو بیشتر است.",
+      stock: 6,
+    },
+    densoAirFilter: {
+      sku: "FLT-DNS-AIR-D3300",
+      nameEn: "Denso DDAF-2113 Air Filter",
+      nameFa: "فیلتر هوا دنسو DDAF-2113",
+      categoryId: airFilter.id,
+      brandId: denso.id,
+      price: 330_000,
+      discountPercent: 0,
+      tags: ["air filter", "intake"],
+      oemPartNumbers: ["28113-D3300", "28113-2S000"],
+      shortDescriptionEn: "OE-supplier panel filter at a replacement-part price.",
+      shortDescriptionFa: "فیلتر پنلی از تأمین‌کننده اورجینال با قیمت قطعه جایگزین.",
+      longDescriptionEn:
+        "Built on the same line as the filter the car left the factory with, to the same dimensions and filtration rating.",
+      longDescriptionFa:
+        "در همان خط تولید فیلتر کارخانه‌ای خودرو و با همان ابعاد و رتبه فیلتراسیون ساخته شده است.",
+      stock: 40,
+    },
+    mannCabinFilter: {
+      sku: "FLT-MAN-CAB-CU2545",
+      nameEn: "Mann-Filter CU 2545 Cabin Filter",
+      nameFa: "فیلتر کابین مان فیلتر CU 2545",
+      categoryId: cabinFilter.id,
+      brandId: mannFilter.id,
+      price: 310_000,
+      discountPercent: 0,
+      tags: ["cabin filter", "cabin air"],
+      oemPartNumbers: ["97133-D3000"],
+      shortDescriptionEn: "Particle cabin filter cut to the Tucson's ventilation housing.",
+      shortDescriptionFa: "فیلتر ذرات کابین، متناسب با محفظه تهویه توسان.",
+      longDescriptionEn:
+        "Holds road dust and pollen out of the ventilation system without restricting the blower.",
+      longDescriptionFa:
+        "گردوغبار جاده و گرده گیاهان را از سیستم تهویه دور نگه می‌دارد بدون آنکه جریان فن را محدود کند.",
+      stock: 26,
+    },
+    densoCabinFilter: {
+      sku: "FLT-DNS-CAB-CARBON",
+      nameEn: "Denso Activated Carbon Cabin Filter",
+      nameFa: "فیلتر کابین کربن فعال دنسو",
+      categoryId: cabinFilter.id,
+      brandId: denso.id,
+      price: 420_000,
+      discountPercent: 12,
+      tags: ["cabin filter", "activated carbon", "odour"],
+      oemPartNumbers: ["97133-D3000"],
+      shortDescriptionEn: "Carbon layer that takes out exhaust smell as well as dust.",
+      shortDescriptionFa: "لایه کربن که علاوه بر گردوغبار، بوی دود اگزوز را هم می‌گیرد.",
+      longDescriptionEn:
+        "The activated carbon layer adsorbs exhaust fumes and odours in traffic, on top of the particle filtration a plain cabin filter does.",
+      longDescriptionFa:
+        "لایه کربن فعال علاوه بر فیلتراسیون ذرات، دود و بوی نامطبوع را در ترافیک جذب می‌کند.",
+      stock: 9,
+    },
+    boschFuelFilter: {
+      sku: "FLT-BOS-FUEL-F026",
+      nameEn: "Bosch F026402085 Diesel Fuel Filter",
+      nameFa: "فیلتر سوخت دیزل بوش F026402085",
+      categoryId: fuelFilter.id,
+      brandId: bosch.id,
+      price: 520_000,
+      discountPercent: 0,
+      tags: ["fuel filter", "diesel", "water separator"],
+      oemPartNumbers: ["31112-2P000"],
+      shortDescriptionEn: "Diesel filter with a water separator stage.",
+      shortDescriptionFa: "فیلتر سوخت دیزل با مرحله جداکننده آب.",
+      longDescriptionEn:
+        "Separates water out of the fuel before the high-pressure pump sees it, which is what kills common-rail injectors first.",
+      longDescriptionFa:
+        "آب را پیش از رسیدن به پمپ فشار قوی از سوخت جدا می‌کند — همان چیزی که ابتدا انژکتورهای کامان‌ریل را از کار می‌اندازد.",
+      stock: 14,
+    },
     mannFuelFilter: {
       sku: "FLT-MAN-FUEL-WK820",
       nameEn: "Mann-Filter WK820 Fuel Filter",
@@ -450,7 +594,10 @@ async function main() {
     fuelType: FuelType;
     displacementCc: number;
     engineCode: string;
-    oilPlan: "dual" | "standard" | "specOnly";
+    // Which shape of Fitment Profile this engine gets below. "deepCatalog" is
+    // the Tucson petrol's — several co-equal products in every category, where
+    // the others carry one apiece.
+    fitmentPlan: "dual" | "standard" | "specOnly" | "deepCatalog";
   };
   type ModelSeed = { nameEn: string; nameFa: string; slug: string; engines: EngineSeed[] };
   type CarBrandSeed = { nameEn: string; nameFa: string; slug: string; models: ModelSeed[] };
@@ -474,7 +621,7 @@ async function main() {
               fuelType: FuelType.PETROL,
               displacementCc: 1600,
               engineCode: "1ZR-FE",
-              oilPlan: "dual",
+              fitmentPlan: "dual",
             },
             {
               labelEn: "1.8L VVT-i Petrol",
@@ -484,7 +631,7 @@ async function main() {
               fuelType: FuelType.PETROL,
               displacementCc: 1800,
               engineCode: "2ZR-FE",
-              oilPlan: "standard",
+              fitmentPlan: "standard",
             },
           ],
         },
@@ -501,7 +648,7 @@ async function main() {
               fuelType: FuelType.PETROL,
               displacementCc: 2500,
               engineCode: "2AR-FE",
-              oilPlan: "standard",
+              fitmentPlan: "standard",
             },
           ],
         },
@@ -525,7 +672,7 @@ async function main() {
               fuelType: FuelType.PETROL,
               displacementCc: 1400,
               engineCode: "TU3A",
-              oilPlan: "specOnly",
+              fitmentPlan: "specOnly",
             },
           ],
         },
@@ -542,7 +689,7 @@ async function main() {
               fuelType: FuelType.PETROL,
               displacementCc: 1800,
               engineCode: "XU7P",
-              oilPlan: "standard",
+              fitmentPlan: "standard",
             },
             {
               labelEn: "2.0L EF7 Petrol",
@@ -552,7 +699,7 @@ async function main() {
               fuelType: FuelType.PETROL,
               displacementCc: 2000,
               engineCode: "EF7",
-              oilPlan: "standard",
+              fitmentPlan: "standard",
             },
           ],
         },
@@ -576,7 +723,7 @@ async function main() {
               fuelType: FuelType.PETROL,
               displacementCc: 1800,
               engineCode: "G4NB",
-              oilPlan: "standard",
+              fitmentPlan: "standard",
             },
           ],
         },
@@ -593,7 +740,7 @@ async function main() {
               fuelType: FuelType.PETROL,
               displacementCc: 2000,
               engineCode: "G4NA",
-              oilPlan: "dual",
+              fitmentPlan: "deepCatalog",
             },
             {
               labelEn: "2.0L CRDi Diesel",
@@ -603,7 +750,7 @@ async function main() {
               fuelType: FuelType.DIESEL,
               displacementCc: 2000,
               engineCode: "D4HA",
-              oilPlan: "standard",
+              fitmentPlan: "standard",
             },
           ],
         },
@@ -612,7 +759,7 @@ async function main() {
   ];
 
   type CreatedEngine = Awaited<ReturnType<typeof prisma.carEngine.create>> & {
-    oilPlan: EngineSeed["oilPlan"];
+    fitmentPlan: EngineSeed["fitmentPlan"];
   };
   const engines: CreatedEngine[] = [];
   let peugeot206EngineId = "";
@@ -639,11 +786,11 @@ async function main() {
       });
 
       for (const engineSeed of modelSeed.engines) {
-        const { oilPlan, ...engineData } = engineSeed;
+        const { fitmentPlan, ...engineData } = engineSeed;
         const carEngine = await prisma.carEngine.create({
           data: { ...engineData, carModelId: carModel.id, status: "ACTIVE" },
         });
-        engines.push({ ...carEngine, oilPlan });
+        engines.push({ ...carEngine, fitmentPlan });
         if (carBrandSeed.slug === "peugeot" && modelSeed.slug === "206") {
           peugeot206EngineId = carEngine.id;
         }
@@ -658,12 +805,75 @@ async function main() {
   // that share an oil/filter plan would share a single profile instead (see
   // Design Decision 9), attached to each via the Fitment Profiles UI.
 
+  // The Hyundai Tucson 2.0L Nu's profile, stacked several options deep per
+  // category — five oils (three standard grades plus a HOT and a COLD one),
+  // four air filters, two oil filters, three cabin filters, two fuel filters.
+  // `priority` is the order within a category, lowest first, so the desk's first
+  // recommendation leads and the alternatives follow it.
+  //
+  // Every other engine keeps one product per category. Having one car stocked
+  // properly is what makes the storefront's multi-item grid, the climate
+  // columns and the admin profile editor testable against real shapes.
+  function deepCatalogItems(profileId: string) {
+    const oil = (
+      productId: string,
+      priority: number,
+      climate: FitmentClimate = FitmentClimate.STANDARD,
+    ) => ({
+      profileId,
+      categoryId: engineOil.id,
+      climate,
+      productId,
+      priority,
+    });
+    const part = (categoryId: string, productId: string, priority: number) => ({
+      profileId,
+      categoryId,
+      climate: FitmentClimate.STANDARD,
+      productId,
+      priority,
+    });
+
+    return [
+      oil(products.shellOil5w30.id, 0),
+      oil(products.mobilOil5w30.id, 1),
+      oil(products.liquiMolyOil10w40.id, 2),
+      oil(products.mobilOil0w40.id, 0, FitmentClimate.HOT),
+      oil(products.castrolOil0w20.id, 0, FitmentClimate.COLD),
+
+      part(oilFilter.id, products.boschOilFilter.id, 0),
+      part(oilFilter.id, products.mannOilFilter.id, 1),
+
+      part(airFilter.id, products.mannAirFilter.id, 0),
+      part(airFilter.id, products.densoAirFilter.id, 1),
+      part(airFilter.id, products.boschAirFilter.id, 2),
+      part(airFilter.id, products.knAirFilter.id, 3),
+
+      part(cabinFilter.id, products.mannCabinFilter.id, 0),
+      part(cabinFilter.id, products.densoCabinFilter.id, 1),
+      part(cabinFilter.id, products.boschCabinFilter.id, 2),
+
+      // The Mann filter is seeded out of stock, so this pair also covers "the
+      // first recommendation can't be bought today" on a live category.
+      part(fuelFilter.id, products.boschFuelFilter.id, 0),
+      part(fuelFilter.id, products.mannFuelFilter.id, 1),
+    ];
+  }
+
   for (const [index, engine] of engines.entries()) {
     const profile = await prisma.fitmentProfile.create({
       data: { label: `${engine.labelEn} Fitment` },
     });
 
-    if (engine.oilPlan === "dual") {
+    if (engine.fitmentPlan === "deepCatalog") {
+      await prisma.fitmentProfileItem.createMany({ data: deepCatalogItems(profile.id) });
+      await prisma.carEngineFitmentProfile.create({
+        data: { carEngineId: engine.id, profileId: profile.id },
+      });
+      continue;
+    }
+
+    if (engine.fitmentPlan === "dual") {
       await prisma.fitmentProfileItem.create({
         data: {
           profileId: profile.id,
@@ -682,7 +892,7 @@ async function main() {
           priority: 1,
         },
       });
-    } else if (engine.oilPlan === "standard") {
+    } else if (engine.fitmentPlan === "standard") {
       await prisma.fitmentProfileItem.create({
         data: {
           profileId: profile.id,
