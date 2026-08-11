@@ -217,6 +217,20 @@ model Product {
   tags           String[]
   oemPartNumbers String[]
 
+  // The specs a customer actually shops on, lifted out of the descriptions and
+  // the untyped `tags` array so they can be queried rather than only read.
+  // Normalised uppercase on the way in (see lib/validation/product.ts) — "5w30"
+  // typed into the admin form and "5W-30" written by the importer have to end
+  // up as the same value or the filter they exist for silently misses rows.
+  viscosity String? // "5W-30"
+  apiGrade  String? // "SN"
+  volumeMl  Int? // 4000
+
+  // Everything else worth recording but not worth a column of its own — same
+  // role as FitmentProfileItem.specAttributes. Written by the importer; not
+  // editable in the admin UI.
+  specs Json?
+
   shortDescriptionEn String
   shortDescriptionFa String
   longDescriptionEn  String

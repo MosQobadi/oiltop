@@ -93,6 +93,11 @@ const productCardSelect = {
 const productDetailSelect = {
   ...productCardSelect,
   oemPartNumbers: true,
+  // The PDP's spec list. `specs` stays out until something is written to it —
+  // the free-form column has no display rules yet.
+  viscosity: true,
+  apiGrade: true,
+  volumeMl: true,
   longDescriptionEn: true,
   longDescriptionFa: true,
   metaTitleEn: true,

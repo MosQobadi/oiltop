@@ -151,6 +151,19 @@ describe("PATCH /api/admin/products/:id", () => {
     expect(res.status).toBe(404);
   });
 
+  // An emptied spec box has to be able to undo a spec that was filled in by
+  // mistake, which an omitted field can't say.
+  it("clears a spec column when the update sends null", async () => {
+    const product = await createTestProduct({ viscosity: "5W-30", volumeMl: 4000 });
+    const res = await PATCH(requestWithBody("PATCH", { viscosity: null }), ctx(product.id));
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.data.product.viscosity).toBeNull();
+    // The spec it didn't mention is untouched.
+    expect(json.data.product.volumeMl).toBe(4000);
+  });
+
   it("rejects a duplicate SKU", async () => {
     const productA = await createTestProduct();
     const productB = await createTestProduct();

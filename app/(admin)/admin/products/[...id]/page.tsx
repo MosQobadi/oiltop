@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Disclosure } from "@heroui/react";
 import { slugify } from "@/lib/slug";
+import { VISCOSITY_ERROR, VISCOSITY_PATTERN } from "@/lib/validation";
 import {
   BilingualTextField,
   BilingualTextareaField,
@@ -50,6 +51,20 @@ const productFormSchema = z.object({
       const number = Number(value);
       return Number.isInteger(number) && number >= 0 && number <= 100;
     }, "Discount must be a whole number between 0 and 100"),
+  // Blank means "not recorded" for all three — every spec is optional, and an
+  // empty box is the only way to say so in a text input.
+  viscosity: z
+    .string()
+    .max(20)
+    .refine((value) => value.trim() === "" || VISCOSITY_PATTERN.test(value.trim().toUpperCase()), {
+      message: VISCOSITY_ERROR,
+    }),
+  apiGrade: z.string().max(20),
+  volumeMl: z.string().refine((value) => {
+    if (value.trim() === "") return true;
+    const number = Number(value);
+    return Number.isInteger(number) && number > 0;
+  }, "Volume must be a positive whole number of millilitres"),
   metaTitleEn: z.string().max(70),
   metaTitleFa: z.string().max(70),
   metaDescriptionEn: z.string().max(160),
@@ -75,6 +90,9 @@ const emptyDefaults: ProductFormValues = {
   longDescriptionFa: "",
   price: "0",
   discountPercent: "0",
+  viscosity: "",
+  apiGrade: "",
+  volumeMl: "",
   metaTitleEn: "",
   metaTitleFa: "",
   metaDescriptionEn: "",
@@ -189,6 +207,9 @@ export default function ProductFormPage() {
         longDescriptionFa: product.longDescriptionFa,
         price: String(product.price),
         discountPercent: String(product.discountPercent),
+        viscosity: product.viscosity ?? "",
+        apiGrade: product.apiGrade ?? "",
+        volumeMl: String(product.volumeMl ?? ""),
         metaTitleEn: product.metaTitleEn ?? "",
         metaTitleFa: product.metaTitleFa ?? "",
         metaDescriptionEn: product.metaDescriptionEn ?? "",
@@ -236,6 +257,11 @@ export default function ProductFormPage() {
       longDescriptionFa: values.longDescriptionFa,
       price: Number(values.price),
       discountPercent: Number(values.discountPercent),
+      // null, not undefined: an emptied spec box means "clear this", and an
+      // omitted field would leave the old value in place.
+      viscosity: values.viscosity.trim() || null,
+      apiGrade: values.apiGrade.trim() || null,
+      volumeMl: values.volumeMl.trim() ? Number(values.volumeMl) : null,
       metaTitleEn: values.metaTitleEn || undefined,
       metaTitleFa: values.metaTitleFa || undefined,
       metaDescriptionEn: values.metaDescriptionEn || undefined,
@@ -336,6 +362,39 @@ export default function ProductFormPage() {
           rows={6}
           isRequired
         />
+
+        {/* What a customer filters on — kept as columns rather than tags so the
+            catalog can answer "5W-30, 4 litres" as a query. All optional: a
+            filter or an accessory has none of them. */}
+        <section className="flex flex-col gap-4">
+          <h2 className="text-sm font-medium text-neutral-700">Specifications</h2>
+          <div className="flex flex-col gap-6 sm:flex-row">
+            <TextField
+              control={control}
+              name="viscosity"
+              label="Viscosity"
+              placeholder="5W-30"
+              dir="ltr"
+              className="flex-1"
+            />
+            <TextField
+              control={control}
+              name="apiGrade"
+              label="API Grade"
+              placeholder="SN"
+              dir="ltr"
+              className="flex-1"
+            />
+            <TextField
+              control={control}
+              name="volumeMl"
+              label="Volume (ml)"
+              type="number"
+              placeholder="4000"
+              className="flex-1"
+            />
+          </div>
+        </section>
 
         <div className="flex flex-col gap-6 sm:flex-row">
           <TextField

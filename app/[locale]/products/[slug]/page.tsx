@@ -16,7 +16,7 @@ import { getStorefrontProductBySlug } from "@/lib/services/catalog";
 import { getActiveCarEngineContext } from "@/lib/services/fitment";
 import { FIT_PARAM, withFitContext } from "@/lib/storefront/fitment";
 import { buildProductListHref } from "@/lib/storefront/plp";
-import { groupFittingEnginesByModel } from "@/lib/storefront/pdp";
+import { formatProductSpecs, groupFittingEnginesByModel } from "@/lib/storefront/pdp";
 import { firstFilled, localeAlternates } from "@/lib/storefront/seo";
 import { absoluteUrl } from "@/lib/storefront/sitemap";
 import { productSchema } from "@/lib/storefront/structured-data";
@@ -62,6 +62,7 @@ export default async function ProductDetailPage({
     product.fitsCarEngines.some((engine) => engine.carEngineId === car.carEngine.id);
 
   const vehicleGroups = groupFittingEnginesByModel(product.fitsCarEngines);
+  const specRows = formatProductSpecs(locale, product);
 
   const name = pickLocale(locale, product.nameEn, product.nameFa);
   // The other language's name, same as ProductCard: shoppers here search for
@@ -227,30 +228,61 @@ export default async function ProductDetailPage({
           )}
         </div>
 
-        {product.oemPartNumbers.length > 0 && (
-          <section>
-            <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-neutral-900">
-              {pickLocale(locale, "OEM part numbers", "شماره‌های فنی اصلی")}
-            </h2>
-            <p className="mt-2 text-[13.5px] text-neutral-500">
-              {pickLocale(
-                locale,
-                "Manufacturer codes this part replaces — search any of them to land back here.",
-                "کدهای کارخانه‌ای که این قطعه جایگزین آن‌هاست — جست‌وجوی هرکدام دوباره به همین صفحه می‌رسد.",
-              )}
-            </p>
-            <ul className="mt-3 flex flex-wrap gap-2">
-              {product.oemPartNumbers.map((partNumber) => (
-                <li
-                  key={partNumber}
-                  dir="ltr"
-                  className="rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1 font-mono text-[12.5px] tracking-[0.02em] text-neutral-700"
-                >
-                  {partNumber}
-                </li>
-              ))}
-            </ul>
-          </section>
+        {/* The side column holds the two reference lists. It's rendered only
+            when at least one has something in it, so a bare catalog row doesn't
+            leave an empty track next to the description. */}
+        {(specRows.length > 0 || product.oemPartNumbers.length > 0) && (
+          <div className="flex flex-col gap-10">
+            {specRows.length > 0 && (
+              <section>
+                <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-neutral-900">
+                  {pickLocale(locale, "Specifications", "مشخصات")}
+                </h2>
+                <dl className="mt-3 border-t border-neutral-200">
+                  {specRows.map((row) => (
+                    <div
+                      key={row.label}
+                      className="flex items-baseline justify-between gap-4 border-b border-neutral-200 py-2.5"
+                    >
+                      <dt className="text-[13.5px] text-neutral-500">{row.label}</dt>
+                      {/* `auto` because the value is a Latin code in either
+                          locale ("5W-30") but a translated unit in Persian
+                          ("۴ لیتر"). */}
+                      <dd dir="auto" className="text-[14px] font-medium text-neutral-800">
+                        {row.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            )}
+
+            {product.oemPartNumbers.length > 0 && (
+              <section>
+                <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-neutral-900">
+                  {pickLocale(locale, "OEM part numbers", "شماره‌های فنی اصلی")}
+                </h2>
+                <p className="mt-2 text-[13.5px] text-neutral-500">
+                  {pickLocale(
+                    locale,
+                    "Manufacturer codes this part replaces — search any of them to land back here.",
+                    "کدهای کارخانه‌ای که این قطعه جایگزین آن‌هاست — جست‌وجوی هرکدام دوباره به همین صفحه می‌رسد.",
+                  )}
+                </p>
+                <ul className="mt-3 flex flex-wrap gap-2">
+                  {product.oemPartNumbers.map((partNumber) => (
+                    <li
+                      key={partNumber}
+                      dir="ltr"
+                      className="rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1 font-mono text-[12.5px] tracking-[0.02em] text-neutral-700"
+                    >
+                      {partNumber}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
         )}
       </div>
     </div>

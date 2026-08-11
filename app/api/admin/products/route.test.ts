@@ -347,6 +347,43 @@ describe("POST /api/admin/products", () => {
     expect(json.data.product.slug).toBe(slugify(payload.nameEn as string));
   });
 
+  it("stores the spec columns normalised", async () => {
+    const res = await POST(
+      postRequest(
+        validProductPayload({
+          categoryId: engineOilCategory.id,
+          brandId: mobil1Brand.id,
+          viscosity: " 5w-30 ",
+          apiGrade: "sn",
+          volumeMl: 4000,
+          specs: { baseOil: "Group III" },
+        }),
+      ),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(json.data.product.viscosity).toBe("5W-30");
+    expect(json.data.product.apiGrade).toBe("SN");
+    expect(json.data.product.volumeMl).toBe(4000);
+    expect(json.data.product.specs).toEqual({ baseOil: "Group III" });
+  });
+
+  it("rejects a viscosity that isn't a grade", async () => {
+    const res = await POST(
+      postRequest(
+        validProductPayload({
+          categoryId: engineOilCategory.id,
+          brandId: mobil1Brand.id,
+          viscosity: "fully synthetic",
+        }),
+      ),
+    );
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).success).toBe(false);
+  });
+
   it("rejects a duplicate slug with a clear error", async () => {
     const slug = `${SKU_PREFIX}-dup-slug`.toLowerCase();
     const first = await POST(

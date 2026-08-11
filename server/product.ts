@@ -31,6 +31,15 @@ function toProductResponse(product: ProductWithRelations) {
   };
 }
 
+// `specs` is the one column Zod can only describe as "an object of some shape",
+// and Prisma's Json input type won't accept `unknown` values — so the cast is
+// made once, here, rather than by loosening the schema. Omitted stays omitted:
+// nothing clears `specs` yet, and a plain `null` isn't valid Json input anyway
+// (Prisma wants Prisma.DbNull for that, as server/fitmentProfile.ts does).
+function toProductData<T extends { specs?: Record<string, unknown> }>({ specs, ...rest }: T) {
+  return { ...rest, ...(specs === undefined ? {} : { specs: specs as Prisma.InputJsonValue }) };
+}
+
 export async function listProducts(query: ProductListQuery) {
   const where: Prisma.ProductWhereInput = {
     ...(query.status ? { status: query.status } : {}),
@@ -102,7 +111,7 @@ export async function createProduct(input: ProductCreateInput) {
 
   const product = await prisma.product.create({
     data: {
-      ...input,
+      ...toProductData(input),
       slug,
       inventory: { create: { stock: 0, lastUpdatedAt: new Date() } },
     },
@@ -149,7 +158,7 @@ export async function updateProduct(id: string, input: ProductUpdateInput) {
 
   const updateProductOp = prisma.product.update({
     where: { id },
-    data: input,
+    data: toProductData(input),
     include: productInclude,
   });
 

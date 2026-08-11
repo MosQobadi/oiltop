@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   formatGroupEngineLabels,
+  formatProductSpecs,
+  formatVolume,
   groupContainsEngine,
   groupFittingEnginesByModel,
   type FittingEngineParts,
@@ -107,6 +109,42 @@ describe("groupContainsEngine", () => {
 
   it("is false for an engine this product was never matched to", () => {
     expect(groupContainsEngine(group, "eng_9")).toBe(false);
+  });
+});
+
+describe("formatVolume", () => {
+  it("reads whole litres as litres", () => {
+    expect(formatVolume("en", 4000)).toBe("4 L");
+  });
+
+  it("keeps anything that doesn't divide evenly in millilitres", () => {
+    expect(formatVolume("en", 500)).toBe("500 ml");
+    expect(formatVolume("en", 3785)).toBe("3,785 ml");
+  });
+
+  it("translates the unit and the digits", () => {
+    expect(formatVolume("fa", 4000)).toBe("۴ لیتر");
+  });
+});
+
+describe("formatProductSpecs", () => {
+  const noSpecs = { viscosity: null, apiGrade: null, volumeMl: null };
+
+  it("is empty when the product carries no specs — the PDP renders no section", () => {
+    expect(formatProductSpecs("en", noSpecs)).toEqual([]);
+  });
+
+  it("lists only the specs that are set, viscosity first", () => {
+    expect(formatProductSpecs("en", { ...noSpecs, volumeMl: 1000, viscosity: "5W-30" })).toEqual([
+      { label: "Viscosity", value: "5W-30" },
+      { label: "Volume", value: "1 L" },
+    ]);
+  });
+
+  it("skips a blank string, which an import can still produce", () => {
+    expect(formatProductSpecs("en", { ...noSpecs, viscosity: "   ", apiGrade: "SN" })).toEqual([
+      { label: "API grade", value: "SN" },
+    ]);
   });
 });
 
