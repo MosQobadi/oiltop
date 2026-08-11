@@ -56,6 +56,19 @@ export function ChevronIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+// The stand-in for a product with no photo uploaded yet. An oil bottle rather
+// than a broken-image glyph: most of the catalog is oil, and a shape a customer
+// recognises reads as "photo coming" instead of "something failed".
+export function OilBottleIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M10.2 2.6h3.6v2.5h-3.6z" />
+      <path d="M9.7 5.1h4.6a4.3 4.3 0 0 1 4.3 4.3v8.7a3.3 3.3 0 0 1-3.3 3.3H8.7a3.3 3.3 0 0 1-3.3-3.3V9.4a4.3 4.3 0 0 1 4.3-4.3Z" />
+      <path d="M6.4 12.6h11.2" />
+    </Svg>
+  );
+}
+
 export function MailIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Svg {...props}>

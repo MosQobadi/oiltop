@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { OilBottleIcon } from "./icons";
 import { NotifyMeForm } from "./NotifyMeForm";
 import { navHref } from "./nav-items";
 import { PriceDisplay } from "./PriceDisplay";
@@ -44,6 +45,8 @@ export interface ProductCardProps {
   onAddToCart?: (product: ProductCardProduct) => void;
   /** `sizes` for the product image; the default matches the PLP grid. */
   imageSizes?: string;
+  /** Appended to the card's own classes — layout only (the rail stretches it). */
+  className?: string;
 }
 
 const DEFAULT_IMAGE_SIZES = "(min-width: 1024px) 216px, (min-width: 640px) 33vw, 45vw";
@@ -54,10 +57,13 @@ const CARD_CLASS =
 const IMAGE_BOX_CLASS = "relative h-[140px] overflow-hidden rounded-lg bg-neutral-100";
 
 // A missing image is the norm for a catalog mid-import, so the placeholder is a
-// designed state (the prototype's hatched slot), not a broken-image icon.
+// designed state, not a broken-image icon: the prototype's hatched slot, lit by
+// a soft wash so a grid (or a rail) of imageless products still has depth. The
+// hatch is listed first because layers paint front-to-back — the opaque wash
+// underneath it would otherwise be the only thing visible.
 const PLACEHOLDER_STYLE = {
   backgroundImage:
-    "repeating-linear-gradient(135deg, var(--color-neutral-200) 0 1px, transparent 1px 9px)",
+    "repeating-linear-gradient(135deg, var(--color-neutral-200) 0 1px, transparent 1px 9px), linear-gradient(160deg, #fff 0%, var(--color-neutral-100) 100%)",
 };
 
 export function ProductCard({
@@ -67,6 +73,7 @@ export function ProductCard({
   fitsRibbon,
   onAddToCart,
   imageSizes = DEFAULT_IMAGE_SIZES,
+  className,
 }: ProductCardProps) {
   const [notifyOpen, setNotifyOpen] = useState(false);
   const addItem = useCartStore((state) => state.addItem);
@@ -102,7 +109,10 @@ export function ProductCard({
   };
 
   return (
-    <article data-testid="product-card" className={CARD_CLASS}>
+    <article
+      data-testid="product-card"
+      className={className ? `${CARD_CLASS} ${className}` : CARD_CLASS}
+    >
       <div className={IMAGE_BOX_CLASS}>
         {/* Duplicate of the title link below, hidden from assistive tech and the
             tab order so the card offers one link, not two identical ones. */}
@@ -112,9 +122,12 @@ export function ProductCard({
           ) : (
             <span
               style={PLACEHOLDER_STYLE}
-              className="flex h-full w-full items-center justify-center font-mono text-[9.5px] tracking-[0.04em] text-neutral-500"
+              className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-neutral-400"
             >
-              {pickLocale(locale, "no image", "بدون تصویر")}
+              <OilBottleIcon className="h-7 w-7" />
+              <span className="font-mono text-[9.5px] tracking-[0.04em]">
+                {pickLocale(locale, "no image", "بدون تصویر")}
+              </span>
             </span>
           )}
         </Link>

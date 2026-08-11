@@ -2,9 +2,14 @@ import type { Metadata } from "next";
 import { FitmentWizard } from "@/components/storefront/fitment/FitmentWizard";
 import { BrandBrowseSection } from "@/components/storefront/home/BrandBrowseSection";
 import { CategoryBrowseSection } from "@/components/storefront/home/CategoryBrowseSection";
+import { DealsCarousel } from "@/components/storefront/home/DealsCarousel";
 import { TrustStrip } from "@/components/storefront/home/TrustStrip";
 import { pickLocale, type Locale } from "@/lib/i18n";
-import { listActiveCategories, listActiveProductBrands } from "@/lib/services/catalog";
+import {
+  listActiveCategories,
+  listActiveProductBrands,
+  listStorefrontDeals,
+} from "@/lib/services/catalog";
 import { localeAlternates } from "@/lib/storefront/seo";
 import { getPublicSettings } from "@/server/setting";
 
@@ -12,9 +17,10 @@ import { getPublicSettings } from "@/server/setting";
 // wizard is the product's headline interaction, so it sits in the hero itself
 // rather than below a marketing block a customer has to scroll past.
 //
-// Four sections, in the order a customer decides things: find my car, browse by
-// category, browse by brand, reach a human. Still no best-sellers rail — that
-// needs a notion of "best" the catalog doesn't record yet.
+// Five sections, in the order a customer decides things: find my car, take an
+// offer, browse by category, browse by brand, reach a human. The deals rail sits
+// directly under the hero because it's the only section that can be shopped
+// without knowing anything about your car.
 //
 // Data is read through the service layer directly rather than through this app's
 // own /api/storefront routes, the same as app/[locale]/fitment/page.tsx and the
@@ -40,9 +46,10 @@ export async function generateMetadata({
 
 export default async function StorefrontHome({ params }: { params: Promise<{ locale: Locale }> }) {
   const { locale } = await params;
-  const [categories, brands, settings] = await Promise.all([
+  const [categories, brands, deals, settings] = await Promise.all([
     listActiveCategories(),
     listActiveProductBrands(),
+    listStorefrontDeals(),
     getPublicSettings(),
   ]);
 
@@ -82,6 +89,10 @@ export default async function StorefrontHome({ params }: { params: Promise<{ loc
           <FitmentWizard locale={locale} mode="compact" />
         </div>
       </section>
+
+      {/* An empty rail is worse than no rail — a shop with nothing on offer
+          shouldn't announce it. */}
+      {deals.length > 0 && <DealsCarousel locale={locale} products={deals} />}
 
       <CategoryBrowseSection locale={locale} categories={categories} />
 

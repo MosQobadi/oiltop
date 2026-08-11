@@ -152,6 +152,69 @@ export async function listActiveProductBrands(): Promise<StorefrontBrand[]> {
   });
 }
 
+// The homepage rail. "Deals" here means two things a customer recognises as one
+// shelf — the deepest discounts, and what everyone else is buying — so the two
+// lists are taken separately and merged rather than blended into a single score
+// nobody could explain: a best-seller at full price still earns its place, and a
+// 30%-off product nobody has ordered yet still shows up.
+//
+// Units sold counts every order that wasn't cancelled, at any fulfilment stage:
+// a pending order is a sale a customer made. There is no time window — the
+// catalog is young enough that "ever" and "recently" are the same list, and a
+// window is easy to add here later without any caller noticing.
+const DEALS_LIMIT = 20;
+
+async function findBestSellerProductIds(limit: number): Promise<string[]> {
+  const rows = await prisma.orderItem.groupBy({
+    by: ["productId"],
+    where: { order: { status: { not: "CANCELLED" } } },
+    _sum: { quantity: true },
+    orderBy: { _sum: { quantity: "desc" } },
+    take: limit,
+  });
+  return rows.map((row) => row.productId);
+}
+
+export async function listStorefrontDeals(limit = DEALS_LIMIT): Promise<StorefrontProductCard[]> {
+  // The same ACTIVE-everywhere rule the PLP applies, minus the query filters.
+  const visible: Prisma.ProductWhereInput = {
+    status: "ACTIVE",
+    category: { is: { status: "ACTIVE" } },
+    brand: { is: { status: "ACTIVE" } },
+  };
+
+  const [discounted, bestSellerIds] = await Promise.all([
+    prisma.product.findMany({
+      where: { ...visible, discountPercent: { gt: 0 } },
+      select: productCardSelect,
+      orderBy: [{ discountPercent: "desc" }, { createdAt: "desc" }],
+      take: limit,
+    }),
+    findBestSellerProductIds(limit),
+  ]);
+
+  // Ordered by units sold, so the ranking survives the round-trip that `in`
+  // loses — and re-filtered through `visible`, because an order can reference a
+  // product that has since been deactivated.
+  const bestSellerRows = await prisma.product.findMany({
+    where: { ...visible, id: { in: bestSellerIds } },
+    select: productCardSelect,
+  });
+  const bestSellersById = new Map(bestSellerRows.map((row) => [row.id, row]));
+  const bestSellers = bestSellerIds
+    .map((id) => bestSellersById.get(id))
+    .filter((row): row is ProductCardRow => row !== undefined);
+
+  // Discounts lead — that's the shelf's headline — and the best-sellers fill in
+  // behind them, each product once.
+  const merged = new Map<string, ProductCardRow>();
+  for (const row of [...discounted, ...bestSellers]) {
+    if (!merged.has(row.id)) merged.set(row.id, row);
+  }
+
+  return [...merged.values()].slice(0, limit).map(toPublicProduct);
+}
+
 // Storefront URLs carry slugs (`?category=engine-oil`), but the car-finder
 // hands the PLP ids it already resolved. Accepting either keeps both callers
 // honest without a lookup round-trip; slugs and cuids can't collide because a
