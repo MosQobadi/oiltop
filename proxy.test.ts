@@ -3,6 +3,7 @@ import { SignJWT } from "jose";
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import proxy from "./proxy";
+import { DEFAULT_LOCALE } from "@/lib/i18n";
 
 function adminRequest(cookieValue?: string) {
   const headers = new Headers();
@@ -187,20 +188,20 @@ describe("proxy (locale redirect for /)", () => {
     expect(requestedUrl.pathname).toBe("/api/storefront/settings");
   });
 
-  it("falls back to en when the settings fetch fails", async () => {
+  it("falls back to the default locale when the settings fetch fails", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("connection refused"));
 
     const res = await proxy(rootRequest());
 
     expect(res.status).toBe(307);
-    expect(new URL(res.headers.get("location")!).pathname).toBe("/en");
+    expect(new URL(res.headers.get("location")!).pathname).toBe(`/${DEFAULT_LOCALE}`);
   });
 
-  it("falls back to en when settings return an unusable locale", async () => {
+  it("falls back to the default locale when settings return an unusable locale", async () => {
     mockSettings("DE");
 
     const res = await proxy(rootRequest());
 
-    expect(new URL(res.headers.get("location")!).pathname).toBe("/en");
+    expect(new URL(res.headers.get("location")!).pathname).toBe(`/${DEFAULT_LOCALE}`);
   });
 });

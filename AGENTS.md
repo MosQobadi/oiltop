@@ -526,6 +526,11 @@ storefront tree (`app/[locale]/`) and anything it renders.
   routing primitives. Note the case split: the URL segment is lowercase
   (`"en"`), the stored Settings value is uppercase (`"EN"`), and
   `localeFromSetting` is the only bridge.
+- **`DEFAULT_LOCALE` is `"fa"`** — the shop sells in Iran, so an unprefixed or
+  unresolvable request belongs on the Persian tree. It is only the fallback:
+  `/` redirects to the Settings `defaultLocale` (also `FA` by default), and this
+  constant answers when that can't be read. The admin panel is unaffected —
+  it is English/LTR always, under its own root layout.
 
 ---
 

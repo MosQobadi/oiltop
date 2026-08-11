@@ -10,7 +10,11 @@ export const LOCALES = ["en", "fa"] as const;
 
 export type Locale = (typeof LOCALES)[number];
 
-export const DEFAULT_LOCALE: Locale = "en";
+// Persian: the shop sells in Iran, so the Persian tree is the one a customer
+// who expresses no preference should land on. This is only the fallback — the
+// Settings `defaultLocale` is what "/" actually redirects to (see proxy.ts);
+// this answers when Settings can't be read or holds something unrecognized.
+export const DEFAULT_LOCALE: Locale = "fa";
 
 export function isLocale(value: unknown): value is Locale {
   return typeof value === "string" && (LOCALES as readonly string[]).includes(value);

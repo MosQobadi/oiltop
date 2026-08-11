@@ -44,7 +44,7 @@ const DEFAULTS: SettingsData = {
     sitemapEnabled: false,
   },
   localization: {
-    defaultLocale: "EN",
+    defaultLocale: "FA",
     supportedLocales: ["EN", "FA"],
   },
   shipping: {

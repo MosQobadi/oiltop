@@ -87,7 +87,7 @@ describe("GET /api/storefront/settings", () => {
     expect(res.status).toBe(200);
     expect(json.data.settings.storeName).toBe("");
     expect(json.data.settings.socialLinks).toBeNull();
-    expect(json.data.settings.defaultLocale).toBe("EN");
+    expect(json.data.settings.defaultLocale).toBe("FA");
     expect(json.data.settings.supportedLocales).toEqual(["EN", "FA"]);
   });
 });
