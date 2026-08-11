@@ -226,6 +226,9 @@ model Product {
   fitmentProfileItems FitmentProfileItem[]
   stockNotifications  StockNotification[]
   priceLogs           ProductPriceLog[]
+
+  @@index([categoryId])
+  @@index([brandId])
 }
 
 // Append-only price history. A row means "from changedAt onward this product
@@ -328,6 +331,7 @@ model CarModel {
   engines CarEngine[]
 
   @@unique([carBrandId, slug])
+  @@index([carBrandId])
 }
 
 model CarEngine {
@@ -352,6 +356,8 @@ model CarEngine {
 
   fitmentProfileLinks CarEngineFitmentProfile[]
   fitmentInquiries    FitmentInquiry[]
+
+  @@index([carModelId])
 }
 
 // A reusable set of fitment recommendations, attached to any number of CarEngine
@@ -400,6 +406,10 @@ model FitmentProfileItem {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+  @@index([categoryId])
+  @@index([productId])
 }
 
 model CarEngineFitmentProfile {
@@ -413,7 +423,10 @@ model CarEngineFitmentProfile {
 
   createdAt DateTime @default(now())
 
+  // carEngineId needs no index of its own — the composite unique above is a
+  // btree keyed on it, so a lookup by engine already has index support.
   @@unique([carEngineId, profileId])
+  @@index([profileId])
 }
 
 model FitmentInquiry {
@@ -435,6 +448,9 @@ model FitmentInquiry {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([carEngineId])
+  @@index([categoryId])
 }
 
 // ---------------------------------------------------------------------------
@@ -493,6 +509,9 @@ model OrderItem {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([productId])
 }
 
 // ---------------------------------------------------------------------------
