@@ -9,6 +9,7 @@ export * from "./customer";
 export * from "./enums";
 export * from "./fitmentInquiry";
 export * from "./fitmentProfile";
+export * from "./import";
 export * from "./inventory";
 export * from "./order";
 export * from "./product";

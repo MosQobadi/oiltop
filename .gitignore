@@ -41,6 +41,11 @@ yarn-error.log*
 # user-uploaded content
 /public/uploads
 
+# raw scrape output — batch files per source, not source code. The one committed
+# sample lives at lib/validation/__fixtures__/scrape-batch.json instead, so a
+# real import run can never pick the fixture up as a batch.
+/scrape/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

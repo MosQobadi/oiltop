@@ -1,0 +1,146 @@
+{
+  "_meta": {
+    "batchLabel": "oil-city / toyota chr + related products (fixture)",
+    "sourceUrls": [
+      "https://www.oil-city.ir/car/toyota/chr/",
+      "https://www.oil-city.ir/product-category/products/engine-oil/"
+    ],
+    "extractedAt": "2026-08-11T09:20:00.000Z",
+    "counts": { "products": 3, "carModels": 1, "fitmentRows": 5 }
+  },
+
+  "products": [
+    {
+      "sourceSlug": "toyota-motor-oil-5w30-sn-4l",
+      "nameFa": "روغن موتور تویوتا 5W30 اس ان حجم 4 لیتر",
+      "brandLabelFa": "لکسوس",
+      "sourceCategoryText": "روغن موتور",
+      "categoryGuess": "engine-oil",
+      "priceToman": 1450000,
+      "originalPriceToman": 1780000,
+      "priceRawText": "۱,۷۸۰,۰۰۰ تومان ۱,۴۵۰,۰۰۰ تومان",
+      "specs": { "درجه گرانروی": "5W30", "کیفیت": "SN", "حجم": "4 لیتر" },
+      "oemPartNumbers": [],
+      "shortDescriptionFa": "روغن موتور تمام سنتتیک مناسب خودروهای بنزینی، در هر چهار فصل.",
+      "longDescriptionFa": null,
+      "imageUrls": ["https://www.oil-city.ir/wp-content/uploads/2024/05/toyota-5w30-sn.jpg"],
+      "stockRawText": "موجود در انبار",
+      "sourceUrl": "https://www.oil-city.ir/product/toyota-motor-oil-5w30-sn-4l/"
+    },
+    {
+      "sourceSlug": "فیلتر-روغن-تویوتا-سی-اچ-آر",
+      "nameFa": "فیلتر روغن تویوتا CHR",
+      "brandLabelFa": "تویوتا",
+      "sourceCategoryText": "فیلتر روغن",
+      "categoryGuess": "oil-filter",
+      "priceToman": 320000,
+      "originalPriceToman": null,
+      "priceRawText": "۳۲۰,۰۰۰ تومان",
+      "specs": {},
+      "oemPartNumbers": [],
+      "shortDescriptionFa": null,
+      "longDescriptionFa": null,
+      "imageUrls": [],
+      "stockRawText": null,
+      "sourceUrl": "https://www.oil-city.ir/product/%D9%81%DB%8C%D9%84%D8%AA%D8%B1-%D8%B1%D9%88%D8%BA%D9%86-%D8%AA%D9%88%DB%8C%D9%88%D8%AA%D8%A7-%D8%B3%DB%8C-%D8%A7%DA%86-%D8%A2%D8%B1/"
+    },
+    {
+      "sourceSlug": "ضدیخ-اورجینال-تویوتا",
+      "nameFa": "ضدیخ و مایع خنک‌کننده اورجینال تویوتا",
+      "brandLabelFa": "تویوتا",
+      "sourceCategoryText": "ضدیخ و مایع خنک کننده",
+      "categoryGuess": null,
+      "priceToman": 890000,
+      "originalPriceToman": null,
+      "priceRawText": "۸۹۰,۰۰۰ تومان",
+      "specs": { "حجم": "1 لیتر", "رنگ": "صورتی" },
+      "oemPartNumbers": [],
+      "shortDescriptionFa": null,
+      "longDescriptionFa": null,
+      "imageUrls": [],
+      "stockRawText": "ناموجود",
+      "sourceUrl": "https://www.oil-city.ir/product/%D8%B6%D8%AF%DB%8C%D8%AE-%D8%A7%D9%88%D8%B1%D8%AC%DB%8C%D9%86%D8%A7%D9%84-%D8%AA%D9%88%DB%8C%D9%88%D8%AA%D8%A7/"
+    }
+  ],
+
+  "cars": [
+    {
+      "brandNameFa": "تویوتا",
+      "brandSourceSlug": "toyota",
+      "modelNameFa": "تویوتا CHR",
+      "modelSourceSlug": "chr",
+      "modelDescriptorText": "1800cc هیبرید",
+      "sourceUrl": "https://www.oil-city.ir/car/toyota/chr/",
+      "sections": [
+        {
+          "headingFa": "روغن موتور خودرو (با فیلتر روغن ۴.۲ لیتر بدون فیلتر روغن ۳.۹ لیتر)",
+          "categoryGuess": "engine-oil",
+          "capacityText": "با فیلتر روغن ۴.۲ لیتر بدون فیلتر روغن ۳.۹ لیتر",
+          "specNoteFa": "نکته : تعویض روغن موتور هر ۱۰،۰۰۰ کیلومتر. گرانروی پیشنهادی 5W30 با کیفیت SN، در هر چهار فصل.",
+          "products": [
+            {
+              "nameFa": "روغن موتور تویوتا 5W30 اس ان حجم 4 لیتر",
+              "productSourceUrl": "https://www.oil-city.ir/product/toyota-motor-oil-5w30-sn-4l/",
+              "orderOnPage": 0
+            },
+            {
+              "nameFa": "روغن موتور موبیل 1 مدل 5W30 حجم 4 لیتر",
+              "productSourceUrl": null,
+              "orderOnPage": 1
+            }
+          ]
+        },
+        {
+          "headingFa": "فیلتر روغن خودرو",
+          "categoryGuess": "oil-filter",
+          "capacityText": null,
+          "specNoteFa": "نکته : فیلتر روغن در هر بار تعویض روغن موتور تعویض شود.",
+          "products": [
+            {
+              "nameFa": "فیلتر روغن تویوتا CHR",
+              "productSourceUrl": "https://www.oil-city.ir/product/%D9%81%DB%8C%D9%84%D8%AA%D8%B1-%D8%B1%D9%88%D8%BA%D9%86-%D8%AA%D9%88%DB%8C%D9%88%D8%AA%D8%A7-%D8%B3%DB%8C-%D8%A7%DA%86-%D8%A2%D8%B1/",
+              "orderOnPage": 0
+            }
+          ]
+        },
+        {
+          "headingFa": "فیلتر کابین خودرو",
+          "categoryGuess": "cabin-filter",
+          "capacityText": null,
+          "specNoteFa": null,
+          "products": [
+            {
+              "nameFa": "فیلتر کابین تویوتا CHR",
+              "productSourceUrl": null,
+              "orderOnPage": 0
+            }
+          ]
+        },
+        {
+          "headingFa": "ضدیخ و مایع خنک کننده (۵.۵ لیتر)",
+          "categoryGuess": null,
+          "capacityText": "۵.۵ لیتر",
+          "specNoteFa": null,
+          "products": [
+            {
+              "nameFa": "ضدیخ و مایع خنک‌کننده اورجینال تویوتا",
+              "productSourceUrl": "https://www.oil-city.ir/product/%D8%B6%D8%AF%DB%8C%D8%AE-%D8%A7%D9%88%D8%B1%D8%AC%DB%8C%D9%86%D8%A7%D9%84-%D8%AA%D9%88%DB%8C%D9%88%D8%AA%D8%A7/",
+              "orderOnPage": 0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+
+  "problems": [
+    {
+      "sourceUrl": "https://www.oil-city.ir/product/toyota-motor-oil-5w30-sn-4l/",
+      "issue": "Product title says تویوتا but the page's \"برند :\" value is لکسوس. Recorded as printed, not corrected."
+    },
+    {
+      "sourceUrl": "https://www.oil-city.ir/car/toyota/chr/",
+      "issue": "Coolant section has no category in our five, so categoryGuess is null; headingFa keeps the source wording."
+    }
+  ]
+}
