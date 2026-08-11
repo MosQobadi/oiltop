@@ -19,6 +19,14 @@ function extractString(body: unknown, key: string): string | undefined {
   return undefined;
 }
 
+// Distinguishes "the body didn't mention this key" from "the body sent null to
+// clear it", which `extractString` can't — and for matchSpec the difference is
+// the whole patch semantics.
+function extractValue(body: unknown, key: string): unknown {
+  if (body && typeof body === "object") return (body as Record<string, unknown>)[key];
+  return undefined;
+}
+
 async function ensureAdmin() {
   try {
     await requireAdmin();
@@ -54,14 +62,17 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const categoryId = extractString(body, "categoryId") ?? existing.categoryId;
   const categoryPartType = await getCategoryPartType(categoryId);
 
+  // Same reasoning for climate and matchSpec: neither is defaulted on a patch,
+  // so the item's stored value stands in when the body omits it. Without this a
+  // PATCH moving an item to a FILTER category would slip past the cross-field
+  // rules and leave a HOT filter — or a filter carrying an oil spec — behind.
+  const suppliedMatchSpec = extractValue(body, "matchSpec");
+
   const parsed = fitmentProfileItemUpdateSchema.safeParse({
     ...(body && typeof body === "object" ? body : {}),
     categoryPartType,
-    // Same reasoning for climate: the schema no longer defaults it to STANDARD
-    // on a patch, so the item's stored value stands in when the body omits it.
-    // Without this a PATCH moving a HOT item to a FILTER category would slip
-    // past checkClimate and leave a HOT filter behind.
     climate: extractString(body, "climate") ?? existing.climate,
+    matchSpec: suppliedMatchSpec !== undefined ? suppliedMatchSpec : existing.matchSpec,
   });
   if (!parsed.success) {
     return NextResponse.json(

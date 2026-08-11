@@ -25,16 +25,20 @@ export const VISCOSITY_ERROR = 'Viscosity must look like "5W-30" or "40"';
 // the columns is that "5w30" and "5W-30" answer the same query.
 const upperCase = (value: string) => value.toUpperCase();
 
-const viscosityField = z
+// Exported because a fitment item's `matchSpec` is a *query* against these
+// three columns (see lib/validation/fitmentProfile.ts), and a query written in
+// a different form than the column stores matches nothing. One definition, so
+// the spec being asked for and the spec being written can't drift apart.
+export const viscositySchema = z
   .string()
   .trim()
   .max(20)
   .transform(upperCase)
   .refine((value) => VISCOSITY_PATTERN.test(value), VISCOSITY_ERROR);
 
-const apiGradeField = z.string().trim().min(1).max(20).transform(upperCase);
+export const apiGradeSchema = z.string().trim().min(1).max(20).transform(upperCase);
 
-const volumeMlField = z.number().int().positive("volumeMl must be a positive whole number");
+export const volumeMlSchema = z.number().int().positive("volumeMl must be a positive whole number");
 
 const productShape = {
   sku: z.string().min(1).max(64),
@@ -51,9 +55,9 @@ const productShape = {
   oemPartNumbers: oemPartNumbersField.default([]),
   // Nullable as well as optional: omitting one leaves the stored value alone,
   // sending null is how the admin form clears a spec it filled in by mistake.
-  viscosity: viscosityField.nullable().optional(),
-  apiGrade: apiGradeField.nullable().optional(),
-  volumeMl: volumeMlField.nullable().optional(),
+  viscosity: viscositySchema.nullable().optional(),
+  apiGrade: apiGradeSchema.nullable().optional(),
+  volumeMl: volumeMlSchema.nullable().optional(),
   // Not editable in the admin UI — the importer writes it. Validated only as
   // far as "an object of some shape", which is all the column promises.
   specs: z.record(z.string(), z.unknown()).optional(),

@@ -228,6 +228,59 @@ describe("PATCH /api/admin/fitment-profiles/:id/items/:itemId", () => {
 
     await prisma.fitmentProfileItem.delete({ where: { id: item.id } });
   });
+
+  it("leaves an existing matchSpec alone when the patch doesn't mention it", async () => {
+    const item = await createTestItem({ matchSpec: { viscosity: "5W-30" } });
+
+    const res = await PATCH(
+      requestWithBody("PATCH", { adminNote: `${LABEL_PREFIX} checked` }),
+      ctx(profile.id, item.id),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.data.item.matchSpec).toEqual({ viscosity: "5W-30" });
+
+    await prisma.fitmentProfileItem.delete({ where: { id: item.id } });
+  });
+
+  // Same hole the climate rule has: without the stored spec being fed back into
+  // validation, a patch that only moves the category strands an oil spec on a
+  // filter item, where nothing can ever match it.
+  it("rejects moving a spec-matched item to a non-oil category", async () => {
+    const item = await createTestItem({ matchSpec: { viscosity: "5W-30", apiGrade: "SN" } });
+
+    const res = await PATCH(
+      requestWithBody("PATCH", { categoryId: oilFilterCategory.id }),
+      ctx(profile.id, item.id),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.error).toMatch(/matchSpec is only allowed/i);
+
+    const unchanged = await prisma.fitmentProfileItem.findUniqueOrThrow({
+      where: { id: item.id },
+    });
+    expect(unchanged.categoryId).toBe(engineOilCategory.id);
+
+    await prisma.fitmentProfileItem.delete({ where: { id: item.id } });
+  });
+
+  it("allows moving a spec-matched item to a non-oil category when the same patch clears the spec", async () => {
+    const item = await createTestItem({ matchSpec: { viscosity: "5W-30" } });
+
+    const res = await PATCH(
+      requestWithBody("PATCH", { categoryId: oilFilterCategory.id, matchSpec: null }),
+      ctx(profile.id, item.id),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.data.item.matchSpec).toBeNull();
+
+    await prisma.fitmentProfileItem.delete({ where: { id: item.id } });
+  });
 });
 
 describe("DELETE /api/admin/fitment-profiles/:id/items/:itemId", () => {

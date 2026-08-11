@@ -18,6 +18,21 @@ const CLIMATE_LABELS: Record<string, string> = {
   COLD: "Cold",
 };
 
+// "5W-30 · SN · 4000 ml" — enough to tell two spec-matched items apart in the
+// list. Shown alongside the product rather than instead of it: an item may
+// carry both, and the spec is what answers once the product is deactivated.
+function formatMatchSpec(matchSpec: Record<string, unknown> | null): string | null {
+  if (!matchSpec) return null;
+
+  const parts = [
+    typeof matchSpec.viscosity === "string" ? matchSpec.viscosity : null,
+    typeof matchSpec.apiGrade === "string" ? matchSpec.apiGrade : null,
+    typeof matchSpec.volumeMl === "number" ? `${matchSpec.volumeMl} ml` : null,
+  ].filter((part): part is string => part !== null);
+
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 const profileFormSchema = z.object({
   label: z.string().min(1, "Label is required").max(200),
   internalNote: z.string().max(2000),
@@ -293,8 +308,15 @@ export default function FitmentProfileFormPage() {
                         <Chip.Label>{CLIMATE_LABELS[item.climate]}</Chip.Label>
                       </Chip>
                       <span className="text-sm text-neutral-700">
-                        {item.product ? item.product.nameEn : (item.specNote ?? "Spec only")}
+                        {item.product
+                          ? item.product.nameEn
+                          : (formatMatchSpec(item.matchSpec) ?? item.specNote ?? "Spec only")}
                       </span>
+                      {item.product && formatMatchSpec(item.matchSpec) && (
+                        <span className="text-xs text-neutral-500">
+                          Spec {formatMatchSpec(item.matchSpec)}
+                        </span>
+                      )}
                       <span className="text-xs text-neutral-500">Priority {item.priority}</span>
                     </div>
                     <div className="flex items-center gap-2">

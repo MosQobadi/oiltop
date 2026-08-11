@@ -377,6 +377,29 @@ export function parseMatchSpec(
   return Object.keys(spec).length > 0 ? spec : null;
 }
 
+export interface SpecMatchPreview {
+  /** Everything the spec matches, *not* clipped to MATCH_SPEC_PRODUCT_LIMIT. */
+  total: number;
+  /** The first few, in the order a customer would actually be shown them. */
+  products: FitmentProductSummary[];
+}
+
+// What an admin needs to see while typing a spec: the true size of the answer,
+// plus enough of it to recognise. The count is unclipped on purpose — "matches
+// 12" and "matches 4" are different facts about a recommendation, and the cap
+// is a display rule, not part of the question.
+export async function previewSpecMatches(
+  categoryId: string,
+  spec: FitmentMatchSpec,
+): Promise<SpecMatchPreview> {
+  const [total, products] = await Promise.all([
+    prisma.product.count({ where: specProductWhere(categoryId, spec) }),
+    findProductsForSpec(categoryId, spec),
+  ]);
+
+  return { total, products };
+}
+
 /** Item id → the products its `matchSpec` resolved to, best price first. */
 export type SpecMatches = Map<string, FitmentProductSummary[]>;
 
@@ -385,6 +408,22 @@ export type SpecMatches = Map<string, FitmentProductSummary[]>;
 // grade — are one query, so the key is the question rather than the item.
 function specQueryKey(categoryId: string, spec: FitmentMatchSpec): string {
   return JSON.stringify([categoryId, spec.viscosity, spec.apiGrade, spec.volumeMl]);
+}
+
+// The one definition of what a spec matches. Both the resolution below and the
+// admin's live count read it, so what an admin is shown while authoring a spec
+// is the same question a customer's result will ask.
+function specProductWhere(categoryId: string, spec: FitmentMatchSpec): Prisma.ProductWhereInput {
+  return {
+    categoryId,
+    status: "ACTIVE",
+    category: { status: "ACTIVE" },
+    brand: { status: "ACTIVE" },
+    // Every key present has to match; an absent key is not a constraint.
+    ...(spec.viscosity !== undefined && { viscosity: spec.viscosity }),
+    ...(spec.apiGrade !== undefined && { apiGrade: spec.apiGrade }),
+    ...(spec.volumeMl !== undefined && { volumeMl: spec.volumeMl }),
+  };
 }
 
 // Deliberately not audience-aware: a spec resolves to what a customer could
@@ -396,16 +435,7 @@ async function findProductsForSpec(
   spec: FitmentMatchSpec,
 ): Promise<FitmentProductSummary[]> {
   const products = await prisma.product.findMany({
-    where: {
-      categoryId,
-      status: "ACTIVE",
-      category: { status: "ACTIVE" },
-      brand: { status: "ACTIVE" },
-      // Every key present has to match; an absent key is not a constraint.
-      ...(spec.viscosity !== undefined && { viscosity: spec.viscosity }),
-      ...(spec.apiGrade !== undefined && { apiGrade: spec.apiGrade }),
-      ...(spec.volumeMl !== undefined && { volumeMl: spec.volumeMl }),
-    },
+    where: specProductWhere(categoryId, spec),
     select: fitmentProductSelect,
   });
 

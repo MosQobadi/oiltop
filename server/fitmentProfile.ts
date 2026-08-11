@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { contains, searchTokens } from "@/lib/search";
+import { previewSpecMatches } from "@/lib/services/fitment";
 import type {
   FitmentProfileAttachInput,
   FitmentProfileCreateInput,
@@ -8,6 +9,7 @@ import type {
   FitmentProfileItemUpdateInput,
   FitmentProfileListQuery,
   FitmentProfileUpdateInput,
+  FitmentSpecMatchQuery,
 } from "@/lib/validation";
 
 export class FitmentProfileNotFoundError extends Error {}
@@ -42,6 +44,22 @@ export async function getCategoryPartType(categoryId: string) {
     select: { partType: true },
   });
   return category?.partType;
+}
+
+// Answers "what would this spec recommend right now?" for the item modal.
+// Deliberately delegates to lib/services/fitment.ts rather than querying here:
+// the admin has to be shown the same matches the storefront will resolve to,
+// and the only way to guarantee that is to ask the same code.
+export async function previewFitmentSpecMatches(query: FitmentSpecMatchQuery) {
+  const { categoryId, ...spec } = query;
+  const { total, products } = await previewSpecMatches(categoryId, spec);
+
+  // Named, not priced: this readout exists to prove the spec means something,
+  // and the storefront card is where a price belongs.
+  return {
+    total,
+    products: products.map((product) => ({ id: product.id, nameEn: product.nameEn })),
+  };
 }
 
 function withCounts<T extends { _count: { items: number; carEngineLinks: number } }>(profile: T) {
@@ -177,6 +195,7 @@ export async function createFitmentProfileItem(
       productId: input.productId,
       specNote: input.specNote,
       specAttributes: toJsonInput(input.specAttributes),
+      matchSpec: toJsonInput(input.matchSpec),
       priority: input.priority,
       adminNote: input.adminNote,
     },
@@ -217,6 +236,7 @@ export async function updateFitmentProfileItem(
       productId: input.productId,
       specNote: input.specNote,
       specAttributes: toJsonInput(input.specAttributes),
+      matchSpec: toJsonInput(input.matchSpec),
       priority: input.priority,
       adminNote: input.adminNote,
     },

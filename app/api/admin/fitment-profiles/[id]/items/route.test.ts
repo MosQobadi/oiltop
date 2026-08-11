@@ -103,6 +103,36 @@ describe("POST /api/admin/fitment-profiles/:id/items", () => {
     expect(json.success).toBe(false);
   });
 
+  it("creates a spec-matched item", async () => {
+    const res = await POST(
+      requestWithBody({
+        categoryId: engineOilCategory.id,
+        matchSpec: { viscosity: "5w-30", apiGrade: "sn" },
+      }),
+      ctx(profile.id),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(201);
+    // Stored in the form the catalog stores its spec columns in — a spec saved
+    // as typed would query for a value no product row holds.
+    expect(json.data.item.matchSpec).toEqual({ viscosity: "5W-30", apiGrade: "SN" });
+  });
+
+  it("rejects a matchSpec on a non-ENGINE_OIL category", async () => {
+    const res = await POST(
+      requestWithBody({
+        categoryId: oilFilterCategory.id,
+        matchSpec: { viscosity: "5W-30" },
+      }),
+      ctx(profile.id),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.success).toBe(false);
+  });
+
   it("rejects an item with neither productId nor specNote", async () => {
     const res = await POST(requestWithBody({ categoryId: engineOilCategory.id }), ctx(profile.id));
     const json = await res.json();
