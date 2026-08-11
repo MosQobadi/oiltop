@@ -84,6 +84,53 @@ export function groupContainsEngine(group: FittingVehicleGroup, carEngineId: str
   return group.engines.some((engine) => engine.carEngineId === carEngineId);
 }
 
+// --- Sizes -----------------------------------------------------------------
+
+/** One product in a variant group, as the size selector needs to read it. */
+export interface ProductSizeParts {
+  slug: string;
+  nameEn: string;
+  nameFa: string;
+  volumeMl: number | null;
+}
+
+export interface ProductSizeOption {
+  slug: string;
+  label: string;
+  /** True for the product whose page this is — rendered as the chosen size. */
+  isCurrent: boolean;
+}
+
+// The product being viewed and its siblings as one ordered list, smallest
+// first, because a selector that omitted the current size would leave the
+// customer no marker for where they are. A sibling with no volume recorded
+// falls back to its name and sorts last: the label is worse, but the size still
+// has to be reachable, and this list is the only place it's linked from.
+export function buildSizeOptions(
+  locale: Locale,
+  current: ProductSizeParts,
+  siblings: ProductSizeParts[],
+): ProductSizeOption[] {
+  // No siblings, no choice to offer — the PDP renders nothing at all.
+  if (siblings.length === 0) return [];
+
+  const toOption = (product: ProductSizeParts): ProductSizeOption => ({
+    slug: product.slug,
+    label:
+      product.volumeMl !== null && product.volumeMl > 0
+        ? formatVolume(locale, product.volumeMl)
+        : pickLocale(locale, product.nameEn, product.nameFa),
+    isCurrent: product.slug === current.slug,
+  });
+
+  // Sort is stable, so unlabelled sizes keep the order the service resolved
+  // them in rather than shuffling between requests.
+  return [current, ...siblings]
+    .slice()
+    .sort((a, b) => (a.volumeMl ?? Infinity) - (b.volumeMl ?? Infinity))
+    .map(toOption);
+}
+
 // --- Specifications --------------------------------------------------------
 
 export interface ProductSpecRow {

@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildSizeOptions,
   formatGroupEngineLabels,
   formatProductSpecs,
   formatVolume,
   groupContainsEngine,
   groupFittingEnginesByModel,
   type FittingEngineParts,
+  type ProductSizeParts,
 } from "./pdp";
 import { firstFilled } from "./seo";
 
@@ -145,6 +147,53 @@ describe("formatProductSpecs", () => {
     expect(formatProductSpecs("en", { ...noSpecs, viscosity: "   ", apiGrade: "SN" })).toEqual([
       { label: "API grade", value: "SN" },
     ]);
+  });
+});
+
+describe("buildSizeOptions", () => {
+  function size(overrides: Partial<ProductSizeParts> & { slug: string }): ProductSizeParts {
+    return {
+      nameEn: "Mobil Super 5W-30",
+      nameFa: "موبیل سوپر ۵W-۳۰",
+      volumeMl: 4000,
+      ...overrides,
+    };
+  }
+
+  const current = size({ slug: "mobil-super-5w30-4l" });
+
+  it("is empty for a product with no siblings — the PDP renders no selector", () => {
+    expect(buildSizeOptions("en", current, [])).toEqual([]);
+  });
+
+  it("lists the current size among its siblings, smallest first", () => {
+    const options = buildSizeOptions("en", current, [
+      size({ slug: "mobil-super-5w30-5l", volumeMl: 5000 }),
+      size({ slug: "mobil-super-5w30-1l", volumeMl: 1000 }),
+    ]);
+
+    expect(options).toEqual([
+      { slug: "mobil-super-5w30-1l", label: "1 L", isCurrent: false },
+      { slug: "mobil-super-5w30-4l", label: "4 L", isCurrent: true },
+      { slug: "mobil-super-5w30-5l", label: "5 L", isCurrent: false },
+    ]);
+  });
+
+  it("falls back to the name and sorts last when a sibling has no volume", () => {
+    const options = buildSizeOptions("en", current, [
+      size({ slug: "mobil-super-5w30-drum", volumeMl: null, nameEn: "Mobil Super 5W-30 Drum" }),
+      size({ slug: "mobil-super-5w30-1l", volumeMl: 1000 }),
+    ]);
+
+    expect(options.map((option) => option.label)).toEqual(["1 L", "4 L", "Mobil Super 5W-30 Drum"]);
+  });
+
+  it("labels the sizes in Persian on the Persian tree", () => {
+    const options = buildSizeOptions("fa", current, [
+      size({ slug: "mobil-super-5w30-drum", volumeMl: null, nameFa: "بشکه موبیل سوپر" }),
+    ]);
+
+    expect(options.map((option) => option.label)).toEqual(["۴ لیتر", "بشکه موبیل سوپر"]);
   });
 });
 

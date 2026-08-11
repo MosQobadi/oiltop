@@ -9,6 +9,7 @@ import { categoryHref, navHref, PRODUCTS_PATH } from "@/components/storefront/na
 import { AddToCartControl } from "@/components/storefront/pdp/AddToCartControl";
 import { CompatibleVehicles } from "@/components/storefront/pdp/CompatibleVehicles";
 import { FitsYourCarNotice } from "@/components/storefront/pdp/FitsYourCarNotice";
+import { SizeSelector } from "@/components/storefront/pdp/SizeSelector";
 import { PriceDisplay } from "@/components/storefront/PriceDisplay";
 import { StockBadge } from "@/components/storefront/StockBadge";
 import { pickLocale, type Locale } from "@/lib/i18n";
@@ -16,7 +17,11 @@ import { getStorefrontProductBySlug } from "@/lib/services/catalog";
 import { getActiveCarEngineContext } from "@/lib/services/fitment";
 import { FIT_PARAM, withFitContext } from "@/lib/storefront/fitment";
 import { buildProductListHref } from "@/lib/storefront/plp";
-import { formatProductSpecs, groupFittingEnginesByModel } from "@/lib/storefront/pdp";
+import {
+  buildSizeOptions,
+  formatProductSpecs,
+  groupFittingEnginesByModel,
+} from "@/lib/storefront/pdp";
 import { firstFilled, localeAlternates } from "@/lib/storefront/seo";
 import { absoluteUrl } from "@/lib/storefront/sitemap";
 import { productSchema } from "@/lib/storefront/structured-data";
@@ -82,6 +87,15 @@ export default async function ProductDetailPage({
   // Every link out of this page keeps the customer's car with them, the same
   // way the PLP hands it over on the way in.
   const carryFit = (href: string) => (car ? withFitContext(href, car.carEngine.id) : href);
+
+  // The other bottle sizes of this same oil, this one included so the row reads
+  // as a choice. Empty whenever the product has no siblings, and the selector
+  // renders nothing.
+  const sizeOptions = buildSizeOptions(locale, product, product.sizeSiblings).map((option) => ({
+    label: option.label,
+    isCurrent: option.isCurrent,
+    href: option.isCurrent ? undefined : carryFit(navHref(locale, productPagePath(option.slug))),
+  }));
 
   return (
     <div className="mx-auto w-full max-w-[1180px] px-4 py-10 sm:px-6">
@@ -183,6 +197,8 @@ export default async function ProductDetailPage({
           {car && (
             <FitsYourCarNotice locale={locale} car={car} fits={fitsThisCar} className="mt-5" />
           )}
+
+          <SizeSelector locale={locale} options={sizeOptions} className="mt-6" />
 
           <AddToCartControl
             locale={locale}

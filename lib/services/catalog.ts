@@ -409,28 +409,70 @@ async function getFittingCarEngines(productId: string): Promise<FittingCarEngine
   });
 }
 
+// The same product in another size — one row per sibling sharing this one's
+// `variantGroup`. Narrow on purpose: the size selector needs a link, a label,
+// and the volume to order by, and nothing else on the PDP reads this list.
+export interface ProductSizeSibling {
+  id: string;
+  slug: string;
+  nameEn: string;
+  nameFa: string;
+  volumeMl: number | null;
+}
+
+// Ascending by volume, so 1 L / 4 L / 5 L reads in the order a customer expects
+// rather than in insertion order. A sibling with no volume recorded sorts last
+// and falls back to its name on the page — an unlabelled size is still a real
+// product, and dropping it would hide it from the only place it's linked.
+async function listProductSizeSiblings(
+  variantGroup: string | null,
+  productId: string,
+): Promise<ProductSizeSibling[]> {
+  if (variantGroup === null) return [];
+
+  return prisma.product.findMany({
+    where: {
+      variantGroup,
+      id: { not: productId },
+      // Same ACTIVE-up-the-chain rule the product itself is fetched under: a
+      // size the PDP wouldn't serve is a size it shouldn't link to.
+      status: "ACTIVE",
+      category: { is: { status: "ACTIVE" } },
+      brand: { is: { status: "ACTIVE" } },
+    },
+    select: { id: true, slug: true, nameEn: true, nameFa: true, volumeMl: true },
+    orderBy: [{ volumeMl: { sort: "asc", nulls: "last" } }, { nameEn: "asc" }],
+  });
+}
+
 export type StorefrontProductDetail = ReturnType<typeof toPublicProduct<ProductDetailRow>> & {
   fitsCarEngines: FittingCarEngine[];
+  sizeSiblings: ProductSizeSibling[];
 };
 
 export async function getStorefrontProductBySlug(
   slug: string,
 ): Promise<StorefrontProductDetail | null> {
-  const product = await prisma.product.findFirst({
+  const row = await prisma.product.findFirst({
     where: {
       slug,
       status: "ACTIVE",
       category: { is: { status: "ACTIVE" } },
       brand: { is: { status: "ACTIVE" } },
     },
-    select: productDetailSelect,
+    // variantGroup is the key the siblings are looked up by, not something a
+    // customer is shown — it comes off the row here and no further.
+    select: { ...productDetailSelect, variantGroup: true },
   });
-  if (!product) return null;
+  if (!row) return null;
 
-  return {
-    ...toPublicProduct(product),
-    fitsCarEngines: await getFittingCarEngines(product.id),
-  };
+  const { variantGroup, ...product } = row;
+  const [fitsCarEngines, sizeSiblings] = await Promise.all([
+    getFittingCarEngines(product.id),
+    listProductSizeSiblings(variantGroup, product.id),
+  ]);
+
+  return { ...toPublicProduct(product), fitsCarEngines, sizeSiblings };
 }
 
 // --- Cart line lookup ------------------------------------------------------

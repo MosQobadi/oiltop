@@ -201,6 +201,17 @@ model Product {
   // same convention.
   sourceRef String? @unique
 
+  // The same oil in 1L / 4L / 5L is three rows, and without this they read as
+  // three unrelated products. Every size of one product carries the same
+  // arbitrary string here; null means "this one has no siblings".
+  //
+  // Deliberately a plain string rather than a parent/child relation or a
+  // variants table: the only question it has to answer is "which other products
+  // are this one in a different size", and a shared value answers it with an
+  // index and no extra joins. If sizes ever need to differ in more than volume,
+  // that's the point to reach for a real model — not before.
+  variantGroup String?
+
   nameEn String
   nameFa String
 
@@ -255,6 +266,9 @@ model Product {
 
   @@index([categoryId])
   @@index([brandId])
+  // The PDP's sibling lookup is "same variantGroup, different id" on every
+  // product that has one — an unindexed scan of the whole catalog otherwise.
+  @@index([variantGroup])
 }
 
 // Append-only price history. A row means "from changedAt onward this product
