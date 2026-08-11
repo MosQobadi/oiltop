@@ -134,6 +134,12 @@ model Category {
   id   String @id @default(cuid())
   slug String @unique
 
+  // Importer bookkeeping — see the sourceRef comment on Product. The importer
+  // creates exactly one category (the holding shelf in lib/import.ts), so today
+  // this is set on at most one row; it exists so "which of these did the import
+  // make" is the same question on every list, answered by the same column.
+  sourceRef String? @unique
+
   nameEn String
   nameFa String
 
@@ -194,8 +200,8 @@ model Product {
   // idempotency key: unique so a re-run updates the row it created last time
   // instead of inserting a duplicate, nullable because anything typed into the
   // admin panel has no source. Plumbing only — never surfaced in an admin form
-  // or API response. Brand, CarBrand and CarModel carry the same field with the
-  // same convention.
+  // or API response. Category, Brand, CarBrand and CarModel carry the same
+  // field with the same convention.
   sourceRef String? @unique
 
   // The same oil in 1L / 4L / 5L is three rows, and without this they read as

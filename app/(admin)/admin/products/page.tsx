@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertDialog, Button } from "@heroui/react";
 import { DataTable, StatusPill, type DataTableColumn } from "@/components/admin/DataTable";
+import { useBulkActivate } from "@/components/admin/useBulkActivate";
+import { SOURCE_OPTIONS } from "@/components/admin/sourceFilter";
 
 interface Product {
   id: string;
@@ -38,6 +40,9 @@ export default function ProductsPage() {
   const [status, setStatus] = useState("");
   const [category, setCategory] = useState("");
   const [brand, setBrand] = useState("");
+  const [source, setSource] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const { activate, isActivating, error: activateError, clearError } = useBulkActivate("products");
   const [categoryOptions, setCategoryOptions] = useState<Option[]>([]);
   const [brandOptions, setBrandOptions] = useState<Option[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,6 +82,7 @@ export default function ProductsPage() {
       if (status) params.set("status", status);
       if (category) params.set("category", category);
       if (brand) params.set("brand", brand);
+      if (source) params.set("source", source);
 
       const response = await fetch(`/api/admin/products?${params.toString()}`);
       const result = await response.json();
@@ -97,7 +103,24 @@ export default function ProductsPage() {
     return () => {
       ignore = true;
     };
-  }, [page, search, status, category, brand, reloadKey]);
+  }, [page, search, status, category, brand, source, reloadKey]);
+
+  // A selection is only meaningful against the rows it was made on: kept across
+  // a page or filter change, "Activate 12 selected" would act on rows that are
+  // no longer on screen. Every query change goes through here so that clearing
+  // it is one rule in one place rather than an effect that watches six pieces
+  // of state and fires a render after each one.
+  const changeQuery = (apply: () => void) => {
+    apply();
+    setSelectedIds([]);
+    clearError();
+  };
+
+  const handleActivateSelected = async () => {
+    const { activated } = await activate(selectedIds);
+    setSelectedIds([]);
+    if (activated > 0) setReloadKey((key) => key + 1);
+  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -201,47 +224,76 @@ export default function ProductsPage() {
         </p>
       )}
 
+      {activateError && (
+        <p role="alert" className="text-danger text-sm">
+          {activateError}
+        </p>
+      )}
+
       <DataTable
         columns={columns}
         rows={products}
         searchPlaceholder="Search products..."
-        onSearch={(value) => {
-          setPage(1);
-          setSearch(value);
-        }}
+        onSearch={(value) =>
+          changeQuery(() => {
+            setPage(1);
+            setSearch(value);
+          })
+        }
         filters={[
           {
             label: "Category",
             value: category,
             options: categoryOptions.map((c) => ({ label: c.nameEn, value: c.id })),
-            onChange: (value) => {
-              setPage(1);
-              setCategory(value);
-            },
+            onChange: (value) =>
+              changeQuery(() => {
+                setPage(1);
+                setCategory(value);
+              }),
           },
           {
             label: "Brand",
             value: brand,
             options: brandOptions.map((b) => ({ label: b.nameEn, value: b.id })),
-            onChange: (value) => {
-              setPage(1);
-              setBrand(value);
-            },
+            onChange: (value) =>
+              changeQuery(() => {
+                setPage(1);
+                setBrand(value);
+              }),
           },
           {
             label: "Status",
             value: status,
             options: STATUS_OPTIONS,
-            onChange: (value) => {
-              setPage(1);
-              setStatus(value);
-            },
+            onChange: (value) =>
+              changeQuery(() => {
+                setPage(1);
+                setStatus(value);
+              }),
+          },
+          {
+            label: "Source",
+            value: source,
+            options: SOURCE_OPTIONS,
+            onChange: (value) =>
+              changeQuery(() => {
+                setPage(1);
+                setSource(value);
+              }),
           },
         ]}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        getRowLabel={(row) => row.nameEn}
+        bulkActions={
+          <Button size="sm" onPress={() => void handleActivateSelected()} isDisabled={isActivating}>
+            {isActivating ? "Activating..." : "Activate selected"}
+          </Button>
+        }
         page={page}
         pageSize={PAGE_SIZE}
         total={total}
-        onPageChange={setPage}
+        onPageChange={(next) => changeQuery(() => setPage(next))}
         emptyMessage={isLoading ? "Loading..." : "No products found."}
         aria-label="Products"
       />

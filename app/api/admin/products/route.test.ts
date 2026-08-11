@@ -75,6 +75,7 @@ let boschBrand: { id: string };
 let productActiveEngineOilMobil: { id: string; sku: string };
 let productInactiveOilFilterBosch: { id: string; sku: string };
 let productActiveEngineOilCastrolWithOem: { id: string; sku: string };
+let productImported: { id: string; sku: string };
 
 beforeAll(async () => {
   const admin = await prisma.user.findUniqueOrThrow({
@@ -149,6 +150,28 @@ beforeAll(async () => {
       status: "ACTIVE",
     },
   });
+  // The review queue's subject: a row the importer made, INACTIVE as every
+  // imported row lands. The other three carry no sourceRef and so are "manual".
+  productImported = await prisma.product.create({
+    data: {
+      sku: `${SKU_PREFIX}-D`,
+      slug: `${SKU_PREFIX}-D`.toLowerCase(),
+      sourceRef: `test-source:product/${SKU_PREFIX}-D`.toLowerCase(),
+      nameEn: `${SKU_PREFIX} Imported Engine Oil`,
+      nameFa: "روغن موتور وارداتی آزمایشی",
+      categoryId: engineOilCategory.id,
+      brandId: mobil1Brand.id,
+      price: 3000,
+      discountPercent: 0,
+      tags: [],
+      oemPartNumbers: [],
+      shortDescriptionEn: "Short",
+      shortDescriptionFa: "کوتاه",
+      longDescriptionEn: "Long",
+      longDescriptionFa: "بلند",
+      status: "INACTIVE",
+    },
+  });
 });
 
 afterAll(async () => {
@@ -204,6 +227,39 @@ describe("GET /api/admin/products", () => {
     expect(
       json.data.products.some((p: { id: string }) => p.id === productInactiveOilFilterBosch.id),
     ).toBe(false);
+  });
+
+  it("filters by source", async () => {
+    const importedRes = await GET(getRequest({ source: "imported", pageSize: "100" }));
+    const importedJson = await importedRes.json();
+    const importedIds = importedJson.data.products.map((p: { id: string }) => p.id);
+
+    expect(importedRes.status).toBe(200);
+    expect(importedIds).toContain(productImported.id);
+    expect(importedIds).not.toContain(productActiveEngineOilMobil.id);
+
+    const manualRes = await GET(getRequest({ source: "manual", pageSize: "100" }));
+    const manualJson = await manualRes.json();
+    const manualIds = manualJson.data.products.map((p: { id: string }) => p.id);
+
+    expect(manualIds).toContain(productActiveEngineOilMobil.id);
+    expect(manualIds).not.toContain(productImported.id);
+  });
+
+  it("combines the source filter with status, which is how the review queue is read", async () => {
+    const res = await GET(getRequest({ source: "imported", status: "ACTIVE", pageSize: "100" }));
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.data.products.some((p: { id: string }) => p.id === productImported.id)).toBe(false);
+  });
+
+  it("rejects a source the filter doesn't offer", async () => {
+    const res = await GET(getRequest({ source: "scraped" }));
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.success).toBe(false);
   });
 
   it("filters by brand", async () => {

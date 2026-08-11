@@ -10,3 +10,9 @@ export const slugSchema = z
 // Shared query-string pagination params for admin list endpoints.
 export const pageSchema = z.coerce.number().int().min(1).default(1);
 export const pageSizeSchema = z.coerce.number().int().min(1).max(100).default(20);
+
+// The review queue's filter, on every list whose model carries `sourceRef`:
+// "imported" is a row the importer made, "manual" is one somebody typed in.
+// Omitted means neither — the unfiltered list — so there is no "any" member to
+// keep in step with the empty string the DataTable select uses for "no filter".
+export const sourceFilterSchema = z.enum(["imported", "manual"]);

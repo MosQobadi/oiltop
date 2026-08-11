@@ -17,6 +17,9 @@ export async function listCategories(query: CategoryListQuery) {
   const where: Prisma.CategoryWhereInput = {
     ...(query.status ? { status: query.status } : {}),
     ...(query.partType ? { partType: query.partType } : {}),
+    // The review queue (D.4) — same clause as listProducts, and the comment
+    // there on why "manual" can't be folded into a truthy guard applies here.
+    ...(query.source ? { sourceRef: query.source === "imported" ? { not: null } : null } : {}),
     // Tokenised — see `lib/search.ts`.
     AND: searchTokens(query.search).map((token) => ({
       OR: [{ nameEn: contains(token) }, { nameFa: contains(token) }],

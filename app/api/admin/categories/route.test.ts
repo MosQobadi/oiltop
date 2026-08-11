@@ -58,11 +58,31 @@ function validCategoryPayload(overrides: Record<string, unknown> = {}) {
   };
 }
 
+let importedCategory: { id: string };
+
 beforeAll(async () => {
   const admin = await prisma.user.findUniqueOrThrow({
     where: { email: "admin@topoil.com" },
   });
   cookieJar.set(process.env.COOKIE_NAME!, await signAdminToken(admin.id));
+
+  // The importer's holding shelf, as it lands: a sourceRef and INACTIVE. Every
+  // seeded category is manual, so "engine-oil" is the other half of the test.
+  importedCategory = await prisma.category.create({
+    data: {
+      slug: `${SLUG_PREFIX}-imported`,
+      sourceRef: `test-source:category/${SLUG_PREFIX}`,
+      nameEn: `${SLUG_PREFIX} Imported`,
+      nameFa: "دسته وارداتی آزمایشی",
+      tags: [],
+      shortDescriptionEn: "Short",
+      shortDescriptionFa: "کوتاه",
+      longDescriptionEn: "Long",
+      longDescriptionFa: "بلند",
+      status: "INACTIVE",
+      partType: "OTHER",
+    },
+  });
 });
 
 afterAll(async () => {
@@ -108,6 +128,51 @@ describe("GET /api/admin/categories", () => {
     expect(json.data.categories.every((c: { partType: string }) => c.partType === "FILTER")).toBe(
       true,
     );
+  });
+
+  it("filters by source", async () => {
+    const importedRes = await GET(getRequest({ source: "imported", pageSize: "100" }));
+    const importedJson = await importedRes.json();
+    const importedSlugs = importedJson.data.categories.map((c: { slug: string }) => c.slug);
+
+    expect(importedRes.status).toBe(200);
+    expect(importedSlugs).toContain(`${SLUG_PREFIX}-imported`);
+    expect(importedSlugs).not.toContain("engine-oil");
+
+    const manualRes = await GET(getRequest({ source: "manual", pageSize: "100" }));
+    const manualJson = await manualRes.json();
+    const manualSlugs = manualJson.data.categories.map((c: { slug: string }) => c.slug);
+
+    expect(manualSlugs).toContain("engine-oil");
+    expect(manualSlugs).not.toContain(`${SLUG_PREFIX}-imported`);
+  });
+
+  it("activating an imported category through PATCH takes it out of the review queue", async () => {
+    await prisma.category.update({
+      where: { id: importedCategory.id },
+      data: { status: "ACTIVE" },
+    });
+
+    const res = await GET(getRequest({ source: "imported", status: "INACTIVE", pageSize: "100" }));
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.data.categories.some((c: { id: string }) => c.id === importedCategory.id)).toBe(
+      false,
+    );
+
+    await prisma.category.update({
+      where: { id: importedCategory.id },
+      data: { status: "INACTIVE" },
+    });
+  });
+
+  it("rejects a source the filter doesn't offer", async () => {
+    const res = await GET(getRequest({ source: "scraped" }));
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.success).toBe(false);
   });
 
   it("searches against both nameEn and nameFa", async () => {

@@ -45,6 +45,10 @@ export async function listProducts(query: ProductListQuery) {
     ...(query.status ? { status: query.status } : {}),
     ...(query.category ? { categoryId: query.category } : {}),
     ...(query.brand ? { brandId: query.brand } : {}),
+    // The review queue (D.4). Not a truthy guard like the others: "manual" is a
+    // null check, so an absent filter and "rows nobody imported" are different
+    // clauses, not the same one.
+    ...(query.source ? { sourceRef: query.source === "imported" ? { not: null } : null } : {}),
     // Tokenised so "Mobil 5W-30" still finds "Mobil 1 5W-30" — see
     // `lib/search.ts`. The raw query is tried against `oemPartNumbers` as well,
     // because that match is exact rather than substring: an OEM code with a

@@ -70,6 +70,7 @@ import {
   sourceRefFor,
   truncate,
   UNCATEGORISED_CATEGORY,
+  UNCATEGORISED_CATEGORY_KEY,
   UNKNOWN_BRAND,
 } from "../lib/import";
 
@@ -556,22 +557,34 @@ async function findCategoryIdBySlug(ctx: Ctx, slug: string): Promise<string | nu
   return category?.id ?? null;
 }
 
+// Found by slug, not by `sourceRef`: the slug is the shelf's identity and always
+// was, and a run that changed source name would otherwise create a second shelf
+// beside the first. The ref is stamped on the way in so the Products/Categories
+// review queue can find this row, and backfilled onto a shelf an earlier run
+// created before Category had the column — the one case where a second run
+// reports the shelf as "updated" rather than "unchanged".
 async function holdingCategoryId(ctx: Ctx): Promise<string> {
   if (ctx.cache.holdingCategoryId !== null) return ctx.cache.holdingCategoryId;
 
+  const sourceRef = sourceRefFor(ctx.source, "category", UNCATEGORISED_CATEGORY_KEY);
   const existing = await ctx.tx.category.findUnique({
     where: { slug: UNCATEGORISED_CATEGORY.slug },
-    select: { id: true },
+    select: { id: true, sourceRef: true },
   });
 
   if (existing) {
-    ctx.report.record(ctx.counts, "categories", "unchanged", UNCATEGORISED_CATEGORY.slug);
+    if (existing.sourceRef === null) {
+      await ctx.tx.category.update({ where: { id: existing.id }, data: { sourceRef } });
+      ctx.report.record(ctx.counts, "categories", "updated", UNCATEGORISED_CATEGORY.slug);
+    } else {
+      ctx.report.record(ctx.counts, "categories", "unchanged", UNCATEGORISED_CATEGORY.slug);
+    }
     ctx.cache.holdingCategoryId = existing.id;
     return existing.id;
   }
 
   const created = await ctx.tx.category.create({
-    data: { ...UNCATEGORISED_CATEGORY, tags: [] },
+    data: { ...UNCATEGORISED_CATEGORY, sourceRef, tags: [] },
     select: { id: true },
   });
   ctx.report.record(ctx.counts, "categories", "created", UNCATEGORISED_CATEGORY.slug);

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { stripHtml } from "@/lib/sanitize";
-import { pageSchema, pageSizeSchema, slugSchema } from "./common";
+import { pageSchema, pageSizeSchema, slugSchema, sourceFilterSchema } from "./common";
 import { productStatusSchema } from "./enums";
 
 // The three fields that carry a create-time default, kept default-free here
@@ -91,6 +91,7 @@ export const productListQuerySchema = z.object({
   category: z.string().trim().min(1).optional(),
   brand: z.string().trim().min(1).optional(),
   status: productStatusSchema.optional(),
+  source: sourceFilterSchema.optional(),
   page: pageSchema,
   pageSize: pageSizeSchema,
 });

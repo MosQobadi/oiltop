@@ -62,10 +62,10 @@ export const ENGINE_LABEL_MAX = 100;
 // Identity: sourceRef, slug, sku
 // ---------------------------------------------------------------------------
 
-// The four models that carry `sourceRef`. The kind is part of the ref because
+// The five models that carry `sourceRef`. The kind is part of the ref because
 // the natural keys aren't unique across kinds — a brand and a car brand are
 // both "تویوتا" — and because a ref you can read tells you what it points at.
-export type SourceRefKind = "product" | "brand" | "car-brand" | "car-model";
+export type SourceRefKind = "product" | "brand" | "car-brand" | "car-model" | "category";
 
 // "oil-city:product/toyota-5w30-4l", per the convention documented on
 // Product.sourceRef. Key parts are whitespace-collapsed and trimmed: a stray
@@ -315,11 +315,16 @@ export function brandLabelDisagrees(nameFa: string | null, brandLabelFa: string 
 // source's own wording per product so the real categories can be created by
 // hand and the products re-filed.
 //
-// Deliberately one category, not one per source wording: Category carries no
-// `sourceRef` (A.2 added it to Product/Brand/CarBrand/CarModel only), so
-// auto-created categories would have no idempotency key beyond a slug derived
-// from Persian text, and 27 empty-descriptioned categories is a worse thing to
-// hand an admin than one labelled shelf.
+// Deliberately one category, not one per source wording: a category per wording
+// would be keyed on a slug derived from Persian text, and 27 empty-descriptioned
+// categories is a worse thing to hand an admin than one labelled shelf. (D.4
+// gave Category a `sourceRef` so the review queue can find this row; that is an
+// idempotency key for the shelf, not a licence to mint the other 27.)
+//
+// The ref itself is fixed rather than derived: there is one shelf per source and
+// its natural key is the fact that it *is* the shelf.
+export const UNCATEGORISED_CATEGORY_KEY = "uncategorised";
+
 export const UNCATEGORISED_CATEGORY = {
   slug: "imported-uncategorised",
   nameEn: "Uncategorised (imported)",

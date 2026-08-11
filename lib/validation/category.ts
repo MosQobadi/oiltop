@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { stripHtml } from "@/lib/sanitize";
-import { pageSchema, pageSizeSchema, slugSchema } from "./common";
+import { pageSchema, pageSizeSchema, slugSchema, sourceFilterSchema } from "./common";
 import { categoryStatusSchema, partTypeSchema } from "./enums";
 
 // Kept default-free here because `.partial()` does not unwrap a ZodDefault:
@@ -40,6 +40,7 @@ export const categoryListQuerySchema = z.object({
   search: z.string().trim().min(1).optional(),
   status: categoryStatusSchema.optional(),
   partType: partTypeSchema.optional(),
+  source: sourceFilterSchema.optional(),
   page: pageSchema,
   pageSize: pageSizeSchema,
 });

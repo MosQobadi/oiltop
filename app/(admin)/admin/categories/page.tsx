@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertDialog, Button } from "@heroui/react";
 import { DataTable, StatusPill, type DataTableColumn } from "@/components/admin/DataTable";
+import { useBulkActivate } from "@/components/admin/useBulkActivate";
+import { SOURCE_OPTIONS } from "@/components/admin/sourceFilter";
 
 interface Category {
   id: string;
@@ -42,6 +44,14 @@ export default function CategoriesPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [partType, setPartType] = useState("");
+  const [source, setSource] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const {
+    activate,
+    isActivating,
+    error: activateError,
+    clearError,
+  } = useBulkActivate("categories");
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
@@ -63,6 +73,7 @@ export default function CategoriesPage() {
       if (search) params.set("search", search);
       if (status) params.set("status", status);
       if (partType) params.set("partType", partType);
+      if (source) params.set("source", source);
 
       const response = await fetch(`/api/admin/categories?${params.toString()}`);
       const result = await response.json();
@@ -83,7 +94,21 @@ export default function CategoriesPage() {
     return () => {
       ignore = true;
     };
-  }, [page, search, status, partType, reloadKey]);
+  }, [page, search, status, partType, source, reloadKey]);
+
+  // Every query change goes through here so the selection made against the old
+  // rows goes with them — see the same helper on the Products list.
+  const changeQuery = (apply: () => void) => {
+    apply();
+    setSelectedIds([]);
+    clearError();
+  };
+
+  const handleActivateSelected = async () => {
+    const { activated } = await activate(selectedIds);
+    setSelectedIds([]);
+    if (activated > 0) setReloadKey((key) => key + 1);
+  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -173,38 +198,66 @@ export default function CategoriesPage() {
         </p>
       )}
 
+      {activateError && (
+        <p role="alert" className="text-danger text-sm">
+          {activateError}
+        </p>
+      )}
+
       <DataTable
         columns={columns}
         rows={categories}
         searchPlaceholder="Search categories..."
-        onSearch={(value) => {
-          setPage(1);
-          setSearch(value);
-        }}
+        onSearch={(value) =>
+          changeQuery(() => {
+            setPage(1);
+            setSearch(value);
+          })
+        }
         filters={[
           {
             label: "Status",
             value: status,
             options: STATUS_OPTIONS,
-            onChange: (value) => {
-              setPage(1);
-              setStatus(value);
-            },
+            onChange: (value) =>
+              changeQuery(() => {
+                setPage(1);
+                setStatus(value);
+              }),
           },
           {
             label: "Part Type",
             value: partType,
             options: PART_TYPE_OPTIONS,
-            onChange: (value) => {
-              setPage(1);
-              setPartType(value);
-            },
+            onChange: (value) =>
+              changeQuery(() => {
+                setPage(1);
+                setPartType(value);
+              }),
+          },
+          {
+            label: "Source",
+            value: source,
+            options: SOURCE_OPTIONS,
+            onChange: (value) =>
+              changeQuery(() => {
+                setPage(1);
+                setSource(value);
+              }),
           },
         ]}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+        getRowLabel={(row) => row.nameEn}
+        bulkActions={
+          <Button size="sm" onPress={() => void handleActivateSelected()} isDisabled={isActivating}>
+            {isActivating ? "Activating..." : "Activate selected"}
+          </Button>
+        }
         page={page}
         pageSize={PAGE_SIZE}
         total={total}
-        onPageChange={setPage}
+        onPageChange={(next) => changeQuery(() => setPage(next))}
         emptyMessage={isLoading ? "Loading..." : "No categories found."}
         aria-label="Categories"
       />
