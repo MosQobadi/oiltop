@@ -169,6 +169,9 @@ model Brand {
   id   String @id @default(cuid())
   slug String @unique
 
+  // Importer bookkeeping — see the sourceRef comment on Product.
+  sourceRef String? @unique
+
   nameEn String
   nameFa String
 
@@ -188,6 +191,15 @@ model Product {
   // Single, locale-independent URL segment — the storefront PDP is
   // /en/products/<slug> and /fa/products/<slug>, never slugEn/slugFa.
   slug String @unique
+
+  // Where this row was imported from, formatted "<source>:<natural key in that
+  // source>" — e.g. "oil-city:product/toyota-5w30-4l". It is the importer's
+  // idempotency key: unique so a re-run updates the row it created last time
+  // instead of inserting a duplicate, nullable because anything typed into the
+  // admin panel has no source. Plumbing only — never surfaced in an admin form
+  // or API response. Brand, CarBrand and CarModel carry the same field with the
+  // same convention.
+  sourceRef String? @unique
 
   nameEn String
   nameFa String
@@ -295,6 +307,9 @@ model CarBrand {
   id   String @id @default(cuid())
   slug String @unique
 
+  // Importer bookkeeping — see the sourceRef comment on Product.
+  sourceRef String? @unique
+
   nameEn String
   nameFa String
 
@@ -312,6 +327,9 @@ model CarModel {
 
   carBrandId String
   carBrand   CarBrand @relation(fields: [carBrandId], references: [id])
+
+  // Importer bookkeeping — see the sourceRef comment on Product.
+  sourceRef String? @unique
 
   nameEn String
   nameFa String

@@ -10,7 +10,24 @@ declare global {
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 
-export const prisma = globalThis.prismaClient ?? new PrismaClient({ adapter });
+// sourceRef is importer plumbing (see the comment on Product in schema.prisma).
+// Most list/detail queries use `include` rather than an explicit `select`, so
+// without this the column would ride along into every admin API response.
+// Omitting it globally keeps that from happening by default; the importer opts
+// back in per query with `omit: { sourceRef: false }`.
+const omitSourceRef = { sourceRef: true } as const;
+
+export const prisma =
+  globalThis.prismaClient ??
+  new PrismaClient({
+    adapter,
+    omit: {
+      product: omitSourceRef,
+      brand: omitSourceRef,
+      carBrand: omitSourceRef,
+      carModel: omitSourceRef,
+    },
+  });
 
 if (process.env.NODE_ENV !== "production") {
   globalThis.prismaClient = prisma;
