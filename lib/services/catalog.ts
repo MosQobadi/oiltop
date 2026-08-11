@@ -122,8 +122,10 @@ function toPublicProduct<T extends ProductCardRow>(product: T) {
     ...rest,
     price: priceNumber,
     discountPercent,
-    // finalPrice isn't stored — same read-time computation as
-    // server/product.ts and lib/services/fitment.ts.
+    // Computed here rather than read off Product.finalPrice: that column is a
+    // Decimal the database maintains for sorting (see schema.prisma), and this
+    // is the same read-time arithmetic server/product.ts and
+    // lib/services/fitment.ts do.
     finalPrice: priceNumber * (1 - discountPercent / 100),
     stockStatus: deriveStorefrontStockStatus(inventory?.stock ?? 0),
   };
@@ -269,66 +271,36 @@ function buildProductWhere(query: StorefrontProductListQuery): Prisma.ProductWhe
   };
 }
 
-// finalPrice is computed, not stored, so the database can't order by it: two
-// products can swap places once their discounts differ. For the price sorts we
-// pull the (small) id/price/discount projection for the whole filtered set,
-// order it in memory, and then fetch only the page's rows. Fine for a catalog
-// of this size; if it ever outgrows that, this is the function to replace with
-// a raw ordered query, not the callers.
-async function findProductIdsSortedByFinalPrice(
-  where: Prisma.ProductWhereInput,
-  sort: Extract<StorefrontProductSort, "price-asc" | "price-desc">,
-  skip: number,
-  take: number,
-): Promise<string[]> {
-  const rows = await prisma.product.findMany({
-    where,
-    select: { id: true, price: true, discountPercent: true },
-  });
-
-  const direction = sort === "price-asc" ? 1 : -1;
-  return rows
-    .map((row) => ({
-      id: row.id,
-      finalPrice: Number(row.price) * (1 - row.discountPercent / 100),
-    }))
-    .sort((a, b) => (a.finalPrice - b.finalPrice) * direction)
-    .slice(skip, skip + take)
-    .map((row) => row.id);
+// Every sort is an indexed ORDER BY. The price sorts read `finalPrice`, the
+// stored generated column (see prisma/schema.prisma) — the discounted price is
+// computed by the database on write, so ordering by it needs no second query
+// and no sort in Node.
+//
+// `id` breaks ties in every case: LIMIT/OFFSET paging needs a total order, or a
+// page boundary landing inside a group of equally-priced products can show one
+// of them twice and none of the next.
+function productOrderBy(sort: StorefrontProductSort): Prisma.ProductOrderByWithRelationInput[] {
+  switch (sort) {
+    case "price-asc":
+      return [{ finalPrice: "asc" }, { id: "asc" }];
+    case "price-desc":
+      return [{ finalPrice: "desc" }, { id: "asc" }];
+    case "newest":
+      return [{ createdAt: "desc" }, { id: "asc" }];
+  }
 }
 
 export async function listStorefrontProducts(
   query: StorefrontProductListQuery,
 ): Promise<{ products: StorefrontProductCard[]; total: number }> {
   const where = buildProductWhere(query);
-  const skip = (query.page - 1) * query.pageSize;
-
-  if (query.sort === "price-asc" || query.sort === "price-desc") {
-    const [ids, total] = await Promise.all([
-      findProductIdsSortedByFinalPrice(where, query.sort, skip, query.pageSize),
-      prisma.product.count({ where }),
-    ]);
-
-    const rows = await prisma.product.findMany({
-      where: { id: { in: ids } },
-      select: productCardSelect,
-    });
-    // findMany ignores the order of `in`, so restore the sorted order here.
-    const rowsById = new Map(rows.map((row) => [row.id, row]));
-    const products = ids
-      .map((id) => rowsById.get(id))
-      .filter((row): row is ProductCardRow => row !== undefined)
-      .map(toPublicProduct);
-
-    return { products, total };
-  }
 
   const [rows, total] = await Promise.all([
     prisma.product.findMany({
       where,
       select: productCardSelect,
-      orderBy: { createdAt: "desc" },
-      skip,
+      orderBy: productOrderBy(query.sort),
+      skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
     }),
     prisma.product.count({ where }),

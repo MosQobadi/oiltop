@@ -224,9 +224,20 @@ model Product {
   brandId String
   brand   Brand  @relation(fields: [brandId], references: [id])
 
-  // finalPrice is NOT stored — compute price * (1 - discountPercent / 100) at read time.
   price           Decimal
   discountPercent Int     @default(0)
+
+  // Read-only: a Postgres generated column (see the add_product_final_price
+  // migration), maintained by the database on every write to price or
+  // discountPercent. Prisma can't express `GENERATED ALWAYS AS`, so it's mapped
+  // as a dbgenerated default — never write to it, the database rejects it.
+  //
+  // It exists so the storefront's price sort can be an indexed ORDER BY rather
+  // than a sort in Node. Read paths still compute the same value themselves
+  // (server/product.ts, lib/services/*) — that stays the source of the number
+  // callers see, and this column stays the thing the database orders by, which
+  // is why lib/db.ts omits it from selects globally.
+  finalPrice Decimal @default(dbgenerated())
 
   tags           String[]
   oemPartNumbers String[]
@@ -272,6 +283,8 @@ model Product {
   // The PDP's sibling lookup is "same variantGroup, different id" on every
   // product that has one — an unindexed scan of the whole catalog otherwise.
   @@index([variantGroup])
+  // The PLP's price sort orders by this column directly.
+  @@index([finalPrice])
 }
 
 // Append-only price history. A row means "from changedAt onward this product

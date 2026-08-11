@@ -276,8 +276,9 @@ function toProductSummary(product: FitmentProductRow): FitmentProductSummary {
     nameEn: product.nameEn,
     nameFa: product.nameFa,
     price,
-    // finalPrice isn't stored — same read-time computation as
-    // server/product.ts, kept in sync with it deliberately.
+    // The same read-time computation server/product.ts does, kept in sync with
+    // it deliberately — Product.finalPrice is a sort column, not a read source
+    // (see schema.prisma).
     finalPrice: price * (1 - product.discountPercent / 100),
     image: product.image,
     // Same three-state derivation the PLP uses; the raw count stays in
