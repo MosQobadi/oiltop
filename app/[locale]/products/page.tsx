@@ -131,7 +131,7 @@ export default async function ProductsPage({
             value: brand.slug,
             label: pickLocale(locale, brand.nameEn, brand.nameFa),
           }))}
-          className="lg:sticky lg:top-6 lg:self-start"
+          className="lg:sticky lg:top-24 lg:self-start"
         />
 
         <div>

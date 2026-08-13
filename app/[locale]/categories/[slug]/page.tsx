@@ -178,7 +178,7 @@ export default async function CategoryLandingPage({
           }))}
           // The category is the page itself here — see PinnedProductFilter.
           pinned={["category"]}
-          className="lg:sticky lg:top-6 lg:self-start"
+          className="lg:sticky lg:top-24 lg:self-start"
         />
 
         <div>
