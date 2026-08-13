@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useIsHydrated } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
 import { OilBottleIcon } from "./icons";
@@ -8,8 +9,9 @@ import { NotifyMeForm } from "./NotifyMeForm";
 import { navHref } from "./nav-items";
 import { PriceDisplay } from "./PriceDisplay";
 import { StockBadge, type StockBadgeStatus } from "./StockBadge";
-import { pickLocale, type Locale } from "@/lib/i18n";
+import { formatDigits, pickLocale, type Locale } from "@/lib/i18n";
 import { useCartStore, type NewCartItem } from "@/lib/store/cart";
+import { MAX_CART_QUANTITY } from "@/lib/storefront/cart";
 import { formatDiscountLabel, getDiscountPercent } from "@/lib/storefront/pricing";
 
 // The card renders whatever the caller hands it — this is deliberately a plain
@@ -88,6 +90,13 @@ export function ProductCard({
 }: ProductCardProps) {
   const [notifyOpen, setNotifyOpen] = useState(false);
   const addItem = useCartStore((state) => state.addItem);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const cartQuantity = useCartStore(
+    (state) => state.items.find((line) => line.productId === product.id)?.quantity ?? 0,
+  );
+  // A persisted cart is unreadable on the server, so until hydration the card
+  // renders the button the server sent and swaps to the stepper after.
+  const isHydrated = useIsHydrated();
 
   const { nameEn, nameFa, image, price, finalPrice, stockStatus, brand } = product;
   const outOfStock = stockStatus === "OUT_OF_STOCK";
@@ -100,6 +109,11 @@ export function ProductCard({
   const showSecondaryName = secondaryName.trim() !== "" && secondaryName !== primaryName;
 
   const productHref = href ?? navHref(locale, `/products/${product.slug}`);
+
+  // With `onAddToCart` the caller owns what "added" means, and the store isn't
+  // it — that card keeps the plain button rather than reporting a count it has
+  // no part in.
+  const showStepper = !onAddToCart && isHydrated && cartQuantity > 0;
 
   const handleAddToCart = () => {
     if (onAddToCart) {
@@ -201,6 +215,13 @@ export function ProductCard({
               />
             )}
           </>
+        ) : showStepper ? (
+          <CartQuantityControl
+            locale={locale}
+            productName={primaryName}
+            quantity={cartQuantity}
+            onChange={(next) => updateQuantity(product.id, next)}
+          />
         ) : (
           <button
             type="button"
@@ -214,6 +235,65 @@ export function ProductCard({
     </article>
   );
 }
+
+// What the "Add to cart" button becomes once the product is in the cart: the
+// count, and the two buttons that change it. Deliberately not `QuantityStepper`
+// — that control's typed input doesn't fit a grid tile, and stepping below one
+// here means "take it out of the cart", where on the cart page removal is its
+// own button. The box matches the button it replaces exactly (h-11, same
+// radius), so a card never changes height when it goes in or out of the cart.
+//
+// The stock ceiling is the store's per-line one, same as the PDP: a card knows
+// a product is in stock, not by how much — the cart is where a line meets the
+// live figure.
+function CartQuantityControl({
+  locale,
+  productName,
+  quantity,
+  onChange,
+}: {
+  locale: Locale;
+  productName: string;
+  quantity: number;
+  onChange: (quantity: number) => void;
+}) {
+  const removes = quantity <= 1;
+
+  return (
+    <div className="border-accent/40 bg-accent/[0.07] mt-2.5 flex h-11 w-full items-center justify-between rounded-[9px] border">
+      <button
+        type="button"
+        onClick={() => onChange(quantity - 1)}
+        aria-label={`${
+          removes
+            ? pickLocale(locale, "Remove from cart", "حذف از سبد")
+            : pickLocale(locale, "Decrease quantity", "کاهش تعداد")
+        } — ${productName}`}
+        className={STEP_BUTTON_CLASS}
+      >
+        <span aria-hidden="true">−</span>
+      </button>
+
+      <span role="status" className="text-[13px] font-medium text-neutral-900 tabular-nums">
+        <span className="sr-only">{pickLocale(locale, "In cart:", "در سبد:")} </span>
+        {formatDigits(quantity, locale)}
+      </span>
+
+      <button
+        type="button"
+        onClick={() => onChange(quantity + 1)}
+        disabled={quantity >= MAX_CART_QUANTITY}
+        aria-label={`${pickLocale(locale, "Increase quantity", "افزایش تعداد")} — ${productName}`}
+        className={STEP_BUTTON_CLASS}
+      >
+        <span aria-hidden="true">+</span>
+      </button>
+    </div>
+  );
+}
+
+const STEP_BUTTON_CLASS =
+  "focus-visible:ring-accent text-accent hover:bg-accent/10 flex size-11 shrink-0 items-center justify-center rounded-[9px] text-[18px] leading-none transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:text-neutral-300 disabled:hover:bg-transparent";
 
 // Same card, same box sizes, neutral blocks, and deliberately no pulse — the
 // prototype's handoff notes call for a still skeleton so a grid of them doesn't
