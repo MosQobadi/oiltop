@@ -45,16 +45,27 @@ export interface ProductCardProps {
   onAddToCart?: (product: ProductCardProduct) => void;
   /** `sizes` for the product image; the default matches the PLP grid. */
   imageSizes?: string;
-  /** Appended to the card's own classes — layout only (the rail stretches it). */
+  /** Appended to the card's own classes — layout only. */
   className?: string;
 }
 
 const DEFAULT_IMAGE_SIZES = "(min-width: 1024px) 216px, (min-width: 640px) 33vw, 45vw";
 
+// `h-full` so a card always fills its grid cell (or rail slot): the name block
+// below is fixed, but an opened "Notify me" form can still make one card taller,
+// and the rest of the row should follow it rather than float.
 const CARD_CLASS =
-  "focus-within:border-accent/50 hover:border-accent/50 flex flex-col gap-2.5 rounded-2xl border border-neutral-200 bg-white p-3.5 transition-colors";
+  "focus-within:border-accent/50 hover:border-accent/50 flex h-full flex-col gap-2.5 rounded-2xl border border-neutral-200 bg-white p-3.5 transition-colors";
 
 const IMAGE_BOX_CLASS = "relative h-[140px] overflow-hidden rounded-lg bg-neutral-100";
+
+// The name block is a fixed two lines of title plus one of the secondary name —
+// 2×19px + 2px + 18px at the leadings set on them below. Product names here run
+// from "فیلتر هوا دنسو" to a full spec string, and letting that decide the card's
+// height left every row a different size and the price rows off any shared
+// baseline. Clamping (not scrolling, not stretching) keeps the grid regular; the
+// full name is one click away on the product page.
+const NAME_BLOCK_CLASS = "h-[58px]";
 
 // A missing image is the norm for a catalog mid-import, so the placeholder is a
 // designed state, not a broken-image icon: the prototype's hatched slot, lit by
@@ -150,15 +161,16 @@ export function ProductCard({
         <StockBadge locale={locale} status={stockStatus} className="ms-auto shrink-0" />
       </div>
 
-      <div>
+      <div className={NAME_BLOCK_CLASS}>
         <Link
           href={productHref}
-          className="focus-visible:ring-accent hover:text-accent rounded text-[13.5px] leading-snug font-medium text-neutral-900 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          title={primaryName}
+          className="focus-visible:ring-accent hover:text-accent line-clamp-2 rounded text-[13.5px] leading-[19px] font-medium text-neutral-900 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           {primaryName}
         </Link>
         {showSecondaryName && (
-          <p dir="auto" className="mt-0.5 text-[12.5px] text-neutral-500">
+          <p dir="auto" className="mt-0.5 truncate text-[12.5px] leading-[18px] text-neutral-500">
             {secondaryName}
           </p>
         )}
@@ -214,9 +226,10 @@ export function ProductCardSkeleton() {
         <span className="h-3 w-16 rounded bg-neutral-100" />
         <span className="h-3 w-14 rounded bg-neutral-100" />
       </div>
-      <div className="flex flex-col gap-1.5">
-        <span className="h-3.5 w-full rounded bg-neutral-100" />
-        <span className="h-3 w-2/3 rounded bg-neutral-100" />
+      <div className={NAME_BLOCK_CLASS}>
+        <span className="block h-3.5 w-full rounded bg-neutral-100" />
+        <span className="mt-1.5 block h-3.5 w-4/5 rounded bg-neutral-100" />
+        <span className="mt-2 block h-3 w-2/3 rounded bg-neutral-100" />
       </div>
       <div className="mt-auto pt-1">
         <span className="block h-4 w-24 rounded bg-neutral-100" />

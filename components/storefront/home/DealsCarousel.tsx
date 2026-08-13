@@ -129,15 +129,7 @@ export function DealsCarousel({
             key={product.id}
             className="w-[66vw] max-w-[248px] min-w-[176px] flex-none snap-start sm:w-[40vw] lg:w-[23%]"
           >
-            <ProductCard
-              locale={locale}
-              product={product}
-              imageSizes={CARD_IMAGE_SIZES}
-              // h-full so a short card (no secondary name) still lines its
-              // button up with its neighbours' — the rail has no grid rows to
-              // do it for us.
-              className="h-full"
-            />
+            <ProductCard locale={locale} product={product} imageSizes={CARD_IMAGE_SIZES} />
           </li>
         ))}
       </ul>
