@@ -85,3 +85,84 @@ export function PhoneIcon(props: SVGProps<SVGSVGElement>) {
     </Svg>
   );
 }
+
+// Like ChevronIcon, this points forward in reading order rather than east —
+// callers flip it with `rtl:-scale-x-100`.
+export function ArrowIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M4 12h15m-6-6 6 6-6 6" />
+    </Svg>
+  );
+}
+
+// The spin-on canister every oil/fuel filter in the catalog looks like.
+export function FilterCanisterIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <rect x="6" y="3.5" width="12" height="17" rx="2.5" />
+      <path d="M6.3 7.5h11.4M6.3 16.5h11.4M10 3.7v3.6M14 3.7v3.6" />
+    </Svg>
+  );
+}
+
+// A pleated panel — the flat air/cabin filter, as distinct from the canister.
+export function FilterPanelIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <path d="M7.5 6v12M12 6v12M16.5 6v12" />
+    </Svg>
+  );
+}
+
+// The catch-all for a category with no glyph of its own, and for "everything
+// else" links.
+export function GridIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+    </Svg>
+  );
+}
+
+export function ShieldIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M12 2.8l7 2.6v6c0 4.4-2.9 8.3-7 9.8-4.1-1.5-7-5.4-7-9.8v-6Z" />
+      <path d="m9 11.8 2.2 2.2L15.2 10" />
+    </Svg>
+  );
+}
+
+export function GearIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="3.2" />
+      <path d="M12 2.5v2.6M12 18.9v2.6M21.5 12h-2.6M5.1 12H2.5M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8M18.7 18.7l-1.8-1.8M7.1 7.1 5.3 5.3" />
+    </Svg>
+  );
+}
+
+// The award rosette — "trusted brands", not a generic checkmark.
+export function MedalIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="9" r="6" />
+      <path d="m9.3 12.2-1.1 8.3 3.8-2.3 3.8 2.3-1.1-8.3" />
+    </Svg>
+  );
+}
+
+export function TruckIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M3 6.5h10.5v9H3zM13.5 9.5H17l3 3v3h-6.5z" />
+      <circle cx="7" cy="17.5" r="1.6" />
+      <circle cx="16.5" cy="17.5" r="1.6" />
+    </Svg>
+  );
+}

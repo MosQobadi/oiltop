@@ -4,12 +4,24 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-farsi: var(--font-vazirmatn);
+
+  /* Exposes --accent-on-dark below as `text-accent-on-dark` and friends. */
+  --color-accent-on-dark: var(--accent-on-dark);
 }
 
 :root {
   /* Top Oil brand accent (rust/amber) — overrides HeroUI's default blue */
   --accent: #c2410c;
   --accent-foreground: var(--snow);
+
+  /* The same rust, raised in lightness for use *on* a dark ground. #c2410c is
+     a dark colour: on the near-black homepage banner it measures 3.36:1, which
+     large text only barely clears and an icon doesn't clear at all once the
+     banner's glow lifts the ground behind it. This is the accent hue at
+     L=0.68 — 5.67:1 on that ground, 4.12:1 against the brightest part of the
+     glow. Use it for accent-coloured text and icons on dark surfaces; solid
+     accent fills (buttons) keep --accent, which carries white at 5.18:1. */
+  --accent-on-dark: oklch(0.68 0.17 50);
 }
 
 body {
