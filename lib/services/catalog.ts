@@ -161,7 +161,11 @@ export async function listActiveProductBrands(): Promise<StorefrontBrand[]> {
   return prisma.brand.findMany({
     where: { status: "ACTIVE" },
     select: brandSelect,
-    orderBy: { nameEn: "asc" },
+    // Pinned brands first in the admin's order, everything unordered after them
+    // alphabetically — name also breaks a tie between equal numbers.
+    // `sortOrder` itself stays out of the payload: it orders the list, it isn't
+    // something a brand card or a filter option renders.
+    orderBy: [{ sortOrder: { sort: "asc", nulls: "last" } }, { nameEn: "asc" }],
   });
 }
 

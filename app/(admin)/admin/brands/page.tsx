@@ -11,6 +11,7 @@ interface Brand {
   slug: string;
   logo: string | null;
   status: "ACTIVE" | "INACTIVE";
+  sortOrder: number | null;
   productCount: number;
 }
 
@@ -108,6 +109,13 @@ export default function BrandsPage() {
     { key: "nameEn", label: "Brand" },
     { key: "slug", label: "Slug" },
     { key: "productCount", label: "Products" },
+    // Where the storefront puts it, not where this list does — this table stays
+    // newest-first so the review queue keeps working.
+    {
+      key: "sortOrder",
+      label: "Order",
+      render: (row) => row.sortOrder ?? <span className="text-neutral-400">—</span>,
+    },
     {
       key: "status",
       label: "Status",

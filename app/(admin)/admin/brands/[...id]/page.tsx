@@ -18,6 +18,13 @@ const brandFormSchema = z.object({
   slug: z.string().min(1, "Slug is required"),
   nameEn: z.string().min(1, "English name is required").max(200),
   nameFa: z.string().min(1, "Persian name is required").max(200),
+  // Blank is a real answer here — "not pinned anywhere" — so the box validates
+  // empty, the same way the category form's display order does.
+  sortOrder: z.string().refine((value) => {
+    if (value.trim() === "") return true;
+    const number = Number(value);
+    return Number.isInteger(number) && number >= 0 && number <= 9999;
+  }, "Display order must be a whole number between 0 and 9999"),
   isActive: z.boolean(),
   logo: z.custom<File | string | null>(),
 });
@@ -28,6 +35,7 @@ const emptyDefaults: BrandFormValues = {
   slug: "",
   nameEn: "",
   nameFa: "",
+  sortOrder: "",
   isActive: true,
   logo: null,
 };
@@ -94,6 +102,7 @@ export default function BrandFormPage() {
         slug: brand.slug,
         nameEn: brand.nameEn,
         nameFa: brand.nameFa,
+        sortOrder: String(brand.sortOrder ?? ""),
         isActive: brand.status === "ACTIVE",
         logo: brand.logo,
       });
@@ -133,6 +142,7 @@ export default function BrandFormPage() {
       slug: values.slug,
       nameEn: values.nameEn,
       nameFa: values.nameFa,
+      sortOrder: values.sortOrder.trim() ? Number(values.sortOrder) : null,
       status: values.isActive ? "ACTIVE" : "INACTIVE",
       logo: logoUrl,
     };
@@ -188,6 +198,16 @@ export default function BrandFormPage() {
         <TextField control={control} name="slug" label="Slug" isRequired />
 
         <ImageUploadField control={control} name="logo" label="Logo" />
+
+        {/* Storefront only. Lowest number shows first; leaving it blank puts the
+            brand after the numbered ones, in alphabetical order. */}
+        <TextField
+          control={control}
+          name="sortOrder"
+          label="Display Order"
+          type="number"
+          placeholder="Unordered"
+        />
 
         <ToggleField control={control} name="isActive" label="Active" />
 

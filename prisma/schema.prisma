@@ -189,6 +189,13 @@ model Brand {
   logo   String?
   status BrandStatus
 
+  // Where the brand sits in the storefront's brand lists (home browse section,
+  // PLP and category-page filter rails) — lowest first. Nullable for the same
+  // reason as Category.sortOrder: "unordered" has to sort *after* the pinned
+  // brands, which `@default(0)` could not express.
+  // Admin-facing lists ignore it — they stay newest-first for the review queue.
+  sortOrder Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

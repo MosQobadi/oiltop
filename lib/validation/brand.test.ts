@@ -34,6 +34,15 @@ describe("brandCreateSchema", () => {
     const result = brandCreateSchema.safeParse(invalid);
     expect(result.success).toBe(false);
   });
+
+  it("leaves sortOrder null when it is omitted — unordered, not first", () => {
+    expect(brandCreateSchema.parse(validBrand).sortOrder).toBeNull();
+  });
+
+  it("rejects a fractional or negative sortOrder", () => {
+    expect(brandCreateSchema.safeParse({ ...validBrand, sortOrder: 1.5 }).success).toBe(false);
+    expect(brandCreateSchema.safeParse({ ...validBrand, sortOrder: -1 }).success).toBe(false);
+  });
 });
 
 describe("brandUpdateSchema", () => {
@@ -44,5 +53,16 @@ describe("brandUpdateSchema", () => {
   it("rejects an invalid slug", () => {
     const result = brandUpdateSchema.safeParse({ slug: "Not A Slug!" });
     expect(result.success).toBe(false);
+  });
+
+  // A surviving default would send every renamed brand back to the front of the
+  // storefront list.
+  it("leaves sortOrder alone when it is not part of the update", () => {
+    expect(brandUpdateSchema.parse({ nameEn: "Updated name" })).not.toHaveProperty("sortOrder");
+    expect(brandUpdateSchema.parse({ sortOrder: 3 })).toEqual({ sortOrder: 3 });
+  });
+
+  it("unpins a brand when sortOrder is explicitly cleared", () => {
+    expect(brandUpdateSchema.parse({ sortOrder: null })).toEqual({ sortOrder: null });
   });
 });

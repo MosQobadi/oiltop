@@ -39,6 +39,48 @@ describe("GET /api/storefront/brands", () => {
     ]);
   });
 
+  it("puts pinned brands first, in order, and unordered ones after them", async () => {
+    // Named so alphabetical order alone would produce the exact opposite:
+    // "zzz" pinned to 1 has to beat "aaa" with no position at all.
+    const [pinnedLast, pinnedFirst, unordered] = await Promise.all([
+      prisma.brand.create({
+        data: {
+          slug: `${SLUG_PREFIX}-mmm`,
+          nameEn: "Mmm",
+          nameFa: "برند آزمایشی",
+          status: "ACTIVE",
+          sortOrder: 2,
+        },
+      }),
+      prisma.brand.create({
+        data: {
+          slug: `${SLUG_PREFIX}-zzz`,
+          nameEn: "Zzz",
+          nameFa: "برند آزمایشی",
+          status: "ACTIVE",
+          sortOrder: 1,
+        },
+      }),
+      prisma.brand.create({
+        data: {
+          slug: `${SLUG_PREFIX}-aaa`,
+          nameEn: "Aaa",
+          nameFa: "برند آزمایشی",
+          status: "ACTIVE",
+          sortOrder: null,
+        },
+      }),
+    ]);
+
+    const res = await GET();
+    const json = await res.json();
+    const ids = json.data.brands.map((b: { id: string }) => b.id);
+
+    expect(ids.indexOf(pinnedFirst.id)).toBeLessThan(ids.indexOf(pinnedLast.id));
+    // The unpinned one is alphabetically first and still comes last of the three.
+    expect(ids.indexOf(pinnedLast.id)).toBeLessThan(ids.indexOf(unordered.id));
+  });
+
   it("omits INACTIVE brands", async () => {
     const inactive = await prisma.brand.create({
       data: {
