@@ -90,30 +90,42 @@ function BrandCard({
   return (
     <Link
       href={href}
-      className="focus-visible:ring-accent hover:border-accent/50 flex h-full flex-col items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-5 text-center transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      className="group focus-visible:ring-accent hover:border-accent/50 relative block aspect-[4/3] overflow-hidden rounded-2xl border border-neutral-200 bg-white text-center transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
     >
-      <span className="relative flex h-14 w-full items-center justify-center">
+      <span className="absolute inset-0 flex items-center justify-center">
         {brand.logo ? (
           <Image
             src={brand.logo}
             alt=""
             fill
             sizes={LOGO_SIZES}
-            // Contained, not cropped: a logo is the one image on this page whose
-            // whole shape is the point.
-            className="object-contain"
+            // Contained, not cropped — the one rule the category cards next door
+            // don't share. A photo of an air filter survives losing its edges;
+            // a logo *is* its edges, so it gets the whole card to sit in rather
+            // than being blown up to fill it.
+            className="object-contain p-5 transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           />
         ) : (
           <span
             aria-hidden="true"
-            className="text-accent bg-accent/10 flex size-14 items-center justify-center rounded-full text-[17px] font-semibold tracking-[-0.02em]"
+            // Grown with the card — a 56px disc that read as a tile when the
+            // tile was 130px tall just looks lost in one nearly twice that.
+            className="text-accent bg-accent/10 flex size-16 items-center justify-center rounded-full text-[19px] font-semibold tracking-[-0.02em]"
           >
             {brandMonogram(brand.nameEn || brand.nameFa)}
           </span>
         )}
       </span>
 
-      <span className="w-full min-w-0">
+      {/* The category cards' scrim, inverted: the ground here is white, so what
+          the name needs protecting from is a tall logo reaching down behind it,
+          not a bright photo. Same job, opposite colour. */}
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 bottom-0 block h-2/5 bg-gradient-to-t from-white via-white/85 to-transparent"
+      />
+
+      <span className="absolute inset-x-0 bottom-0 block min-w-0 px-3 pb-3.5">
         <span className="block truncate text-[14.5px] font-semibold tracking-[-0.015em] text-neutral-900">
           {primaryName}
         </span>
