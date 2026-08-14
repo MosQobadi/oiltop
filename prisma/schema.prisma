@@ -160,6 +160,14 @@ model Category {
 
   partType PartType
 
+  // Where the category sits in the storefront's category lists (nav, home
+  // browse section, PLP filter rail) — lowest first. Nullable rather than
+  // `@default(0)` so "unordered" is a distinct state that sorts *after* the
+  // pinned ones and stays alphabetical among itself; at 0 an untouched category
+  // would outrank every category the admin had deliberately numbered.
+  // Admin-facing lists ignore it — they stay newest-first for the review queue.
+  sortOrder Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

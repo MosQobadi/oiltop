@@ -137,7 +137,11 @@ export async function listActiveCategories(): Promise<StorefrontCategory[]> {
   return prisma.category.findMany({
     where: { status: "ACTIVE" },
     select: categorySelect,
-    orderBy: { nameEn: "asc" },
+    // Pinned categories first in the admin's order, everything unordered after
+    // them alphabetically — name also breaks a tie between equal numbers.
+    // `sortOrder` itself stays out of the payload: it orders the list, it isn't
+    // something a nav link or a filter option renders.
+    orderBy: [{ sortOrder: { sort: "asc", nulls: "last" } }, { nameEn: "asc" }],
   });
 }
 

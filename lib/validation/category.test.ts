@@ -54,6 +54,17 @@ describe("categoryCreateSchema defaults", () => {
 
     expect(categoryCreateSchema.parse(withoutTags).tags).toEqual([]);
   });
+
+  it("leaves sortOrder null when it is omitted — unordered, not first", () => {
+    expect(categoryCreateSchema.parse(validCategory).sortOrder).toBeNull();
+  });
+
+  it("rejects a fractional or negative sortOrder", () => {
+    expect(categoryCreateSchema.safeParse({ ...validCategory, sortOrder: 1.5 }).success).toBe(
+      false,
+    );
+    expect(categoryCreateSchema.safeParse({ ...validCategory, sortOrder: -1 }).success).toBe(false);
+  });
 });
 
 describe("categoryUpdateSchema", () => {
@@ -82,5 +93,16 @@ describe("categoryUpdateSchema", () => {
 
   it("keeps an explicitly emptied tags array", () => {
     expect(categoryUpdateSchema.parse({ tags: [] })).toEqual({ tags: [] });
+  });
+
+  // Same trap as tags: a surviving default would send every renamed category
+  // back to the front of the storefront list.
+  it("leaves sortOrder alone when it is not part of the update", () => {
+    expect(categoryUpdateSchema.parse({ nameEn: "Updated name" })).not.toHaveProperty("sortOrder");
+    expect(categoryUpdateSchema.parse({ sortOrder: 3 })).toEqual({ sortOrder: 3 });
+  });
+
+  it("unpins a category when sortOrder is explicitly cleared", () => {
+    expect(categoryUpdateSchema.parse({ sortOrder: null })).toEqual({ sortOrder: null });
   });
 });

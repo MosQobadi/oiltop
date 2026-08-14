@@ -31,6 +31,13 @@ const categoryFormSchema = z.object({
   nameFa: z.string().min(1, "Persian name is required").max(200),
   partType: z.string().min(1, "Part type is required"),
   tags: z.array(z.string()),
+  // Blank is a real answer here — "not pinned anywhere" — so the box validates
+  // empty, the same way the product form's optional specs do.
+  sortOrder: z.string().refine((value) => {
+    if (value.trim() === "") return true;
+    const number = Number(value);
+    return Number.isInteger(number) && number >= 0 && number <= 9999;
+  }, "Display order must be a whole number between 0 and 9999"),
   isActive: z.boolean(),
   shortDescriptionEn: z.string().min(1, "English short description is required").max(500),
   shortDescriptionFa: z.string().min(1, "Persian short description is required").max(500),
@@ -51,6 +58,7 @@ const emptyDefaults: CategoryFormValues = {
   nameFa: "",
   partType: "",
   tags: [],
+  sortOrder: "",
   isActive: true,
   shortDescriptionEn: "",
   shortDescriptionFa: "",
@@ -127,6 +135,7 @@ export default function CategoryFormPage() {
         nameFa: category.nameFa,
         partType: category.partType,
         tags: category.tags,
+        sortOrder: String(category.sortOrder ?? ""),
         isActive: category.status === "ACTIVE",
         shortDescriptionEn: category.shortDescriptionEn,
         shortDescriptionFa: category.shortDescriptionFa,
@@ -176,6 +185,7 @@ export default function CategoryFormPage() {
       nameFa: values.nameFa,
       partType: values.partType,
       tags: values.tags,
+      sortOrder: values.sortOrder.trim() ? Number(values.sortOrder) : null,
       status: values.isActive ? "ACTIVE" : "INACTIVE",
       shortDescriptionEn: values.shortDescriptionEn,
       shortDescriptionFa: values.shortDescriptionFa,
@@ -252,6 +262,16 @@ export default function CategoryFormPage() {
         />
 
         <TagsInput control={control} name="tags" label="Tags" />
+
+        {/* Storefront only. Lowest number shows first; leaving it blank puts the
+            category after the numbered ones, in alphabetical order. */}
+        <TextField
+          control={control}
+          name="sortOrder"
+          label="Display Order"
+          type="number"
+          placeholder="Unordered"
+        />
 
         <ToggleField control={control} name="isActive" label="Active" />
 

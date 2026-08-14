@@ -9,6 +9,9 @@ import { categoryStatusSchema, partTypeSchema } from "./enums";
 // wipe its tags. Create opts into the default, update doesn't.
 const tagsField = z.array(z.string().min(1).max(50));
 
+// Null is "unordered" — the storefront sorts those last, alphabetically.
+const sortOrderField = z.number().int().min(0).max(9999).nullable();
+
 const categoryShape = {
   // Optional on create — auto-generated from nameEn via slugify() when omitted.
   slug: slugSchema.optional(),
@@ -28,10 +31,17 @@ const categoryShape = {
   // What the category *behaves* like, not a second name for it — see PartType
   // in prisma/schema.prisma.
   partType: partTypeSchema,
+  // Storefront display order, lowest first — see Category.sortOrder. Defaulted
+  // like tags, and for the same reason kept default-free in the update schema:
+  // a default that survives `.partial()` would drop the category's position
+  // every time something else about it was edited.
+  sortOrder: sortOrderField.default(null),
 };
 
 export const categoryCreateSchema = z.object(categoryShape);
-export const categoryUpdateSchema = z.object({ ...categoryShape, tags: tagsField }).partial();
+export const categoryUpdateSchema = z
+  .object({ ...categoryShape, tags: tagsField, sortOrder: sortOrderField })
+  .partial();
 
 export type CategoryCreateInput = z.infer<typeof categoryCreateSchema>;
 export type CategoryUpdateInput = z.infer<typeof categoryUpdateSchema>;

@@ -14,6 +14,7 @@ interface Category {
   image: string | null;
   status: "ACTIVE" | "INACTIVE";
   partType: "ENGINE_OIL" | "FILTER" | "ACCESSORY" | "OTHER";
+  sortOrder: number | null;
   productCount: number;
 }
 
@@ -153,6 +154,13 @@ export default function CategoriesPage() {
       render: (row) => PART_TYPE_LABELS[row.partType],
     },
     { key: "productCount", label: "Products" },
+    // Where the storefront puts it, not where this list does — this table stays
+    // newest-first so the review queue keeps working.
+    {
+      key: "sortOrder",
+      label: "Order",
+      render: (row) => row.sortOrder ?? <span className="text-neutral-400">—</span>,
+    },
     {
       key: "status",
       label: "Status",
