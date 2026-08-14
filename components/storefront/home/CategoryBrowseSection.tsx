@@ -13,11 +13,12 @@ import type { StorefrontCategory } from "@/lib/services/catalog";
 
 const CARD_IMAGE_SIZES = "(min-width: 1024px) 360px, (min-width: 640px) 46vw, 92vw";
 
-// Same hatched slot as ProductCard's missing image: a category with no artwork
-// yet is a designed state, not a hole in the grid.
+// ProductCard's hatched "no artwork yet" slot, redrawn dark: the card's ground
+// is now the image itself, and the name sits on top of it in white — so the
+// placeholder has to be dark enough to keep that name readable too.
 const PLACEHOLDER_STYLE = {
   backgroundImage:
-    "repeating-linear-gradient(135deg, var(--color-neutral-200) 0 1px, transparent 1px 10px)",
+    "repeating-linear-gradient(135deg, var(--color-neutral-700) 0 1px, transparent 1px 10px)",
 };
 
 export function CategoryBrowseSection({
@@ -63,7 +64,7 @@ export function CategoryBrowseSection({
           )}
         </p>
       ) : (
-        <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((category) => (
             <li key={category.id}>
               <CategoryCard locale={locale} category={category} />
@@ -85,34 +86,42 @@ function CategoryCard({ locale, category }: { locale: Locale; category: Storefro
   return (
     <Link
       href={categoryHref(locale, category.slug)}
-      className="focus-visible:ring-accent hover:border-accent/50 block h-full rounded-2xl border border-neutral-200 bg-white p-3.5 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      className="group focus-visible:ring-accent hover:ring-accent relative block aspect-[16/10] overflow-hidden rounded-2xl bg-neutral-900 ring-1 ring-black/5 transition-shadow ring-inset hover:ring-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
     >
-      <div className="relative h-[132px] overflow-hidden rounded-xl bg-neutral-100">
-        {category.image ? (
-          <Image
-            src={category.image}
-            alt=""
-            fill
-            sizes={CARD_IMAGE_SIZES}
-            className="object-cover"
-          />
-        ) : (
-          <span style={PLACEHOLDER_STYLE} className="block h-full w-full" />
-        )}
-      </div>
+      {category.image ? (
+        <Image
+          src={category.image}
+          alt=""
+          fill
+          sizes={CARD_IMAGE_SIZES}
+          className="object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+        />
+      ) : (
+        <span style={PLACEHOLDER_STYLE} className="block h-full w-full bg-neutral-800" />
+      )}
 
-      <div className="mt-3.5 flex items-center justify-between gap-3">
+      {/* The name sits on artwork nobody has vetted for contrast — and a fair
+          few of these are product shots on a white ground — so it gets its own:
+          90% at the very bottom, which still clears AA for white text over a
+          pure-white image, faded out by mid-card so it never reads as a grey
+          box over a dark one. */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/90 via-black/50 to-transparent"
+      />
+
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
         <div className="min-w-0">
-          <div className="truncate text-[15.5px] font-semibold tracking-[-0.015em] text-neutral-900">
+          <div className="truncate text-[16px] font-semibold tracking-[-0.015em] text-white">
             {primaryName}
           </div>
           {showSecondaryName && (
-            <p dir="auto" className="mt-0.5 truncate text-[12.5px] text-neutral-500">
+            <p dir="auto" className="mt-0.5 truncate text-[12.5px] text-white/80">
               {secondaryName}
             </p>
           )}
         </div>
-        <ChevronIcon className="h-4 w-4 shrink-0 text-neutral-400 rtl:-scale-x-100" />
+        <ChevronIcon className="h-4 w-4 shrink-0 text-white/80 rtl:-scale-x-100" />
       </div>
     </Link>
   );
