@@ -101,11 +101,16 @@ describe("GET /api/storefront/cars/models/:modelId/engines", () => {
     const labels = json.data.carEngines.map((engine: { labelEn: string }) => engine.labelEn);
     expect(labels).toContain("1.8L VVT-i Petrol");
     expect(labels).not.toContain("1.6L Dual VVT-i Petrol");
+    // The public projection, asserted key by key so a new column on CarEngine
+    // can't ride along into an unauthenticated response by accident. `image` is
+    // here deliberately: the type step renders a photo per type, falling back
+    // to the model's when it's null.
     expect(Object.keys(json.data.carEngines[0]).sort()).toEqual([
       "displacementCc",
       "engineCode",
       "fuelType",
       "id",
+      "image",
       "labelEn",
       "labelFa",
       "yearEnd",

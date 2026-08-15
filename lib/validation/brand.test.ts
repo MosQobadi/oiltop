@@ -65,4 +65,14 @@ describe("brandUpdateSchema", () => {
   it("unpins a brand when sortOrder is explicitly cleared", () => {
     expect(brandUpdateSchema.parse({ sortOrder: null })).toEqual({ sortOrder: null });
   });
+
+  // Same shape as sortOrder above: null clears, an absent key leaves it alone.
+  it("clears the logo when it is explicitly nulled", () => {
+    expect(brandUpdateSchema.parse({ logo: null })).toEqual({ logo: null });
+    expect(brandUpdateSchema.parse({ nameEn: "Updated name" })).not.toHaveProperty("logo");
+  });
+
+  it("still rejects an empty-string logo", () => {
+    expect(brandUpdateSchema.safeParse({ logo: "" }).success).toBe(false);
+  });
 });

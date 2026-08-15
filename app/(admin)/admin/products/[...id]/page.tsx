@@ -230,7 +230,10 @@ export default function ProductFormPage() {
   const onSubmit = async (values: ProductFormValues) => {
     setSubmitError(null);
 
-    let imageUrl: string | undefined;
+    // null, not undefined, when the admin removed the image: undefined is
+    // dropped from the JSON body, so a PATCH would leave the old image in place
+    // and "Remove" would clear the preview but not the record.
+    let imageUrl: string | null;
     if (values.image instanceof File) {
       try {
         imageUrl = await uploadImage(values.image);
@@ -239,7 +242,7 @@ export default function ProductFormPage() {
         return;
       }
     } else {
-      imageUrl = values.image ?? undefined;
+      imageUrl = values.image ?? null;
     }
 
     const payload = {

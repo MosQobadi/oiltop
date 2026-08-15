@@ -13,7 +13,9 @@ const carModelShape = {
   metaTitleFa: z.string().max(70).transform(stripHtml).optional(),
   metaDescriptionEn: z.string().max(160).transform(stripHtml).optional(),
   metaDescriptionFa: z.string().max(160).transform(stripHtml).optional(),
-  image: z.string().min(1).optional(),
+  // Nullable, not merely optional: on a PATCH an omitted key means "leave it",
+  // so clearing the photo needs an explicit null to say so.
+  image: z.string().min(1).nullable().optional(),
   status: carModelStatusSchema,
 };
 

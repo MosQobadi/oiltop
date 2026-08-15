@@ -133,7 +133,10 @@ export default function CarModelFormPage() {
   const onSubmit = async (values: CarModelFormValues) => {
     setSubmitError(null);
 
-    let imageUrl: string | undefined;
+    // null, not undefined, when the admin removed the photo: undefined is
+    // dropped from the JSON body, so a PATCH would leave the old image in place
+    // and "Remove" would clear the preview but not the record.
+    let imageUrl: string | null;
     if (values.image instanceof File) {
       try {
         imageUrl = await uploadImage(values.image);
@@ -142,7 +145,7 @@ export default function CarModelFormPage() {
         return;
       }
     } else {
-      imageUrl = values.image ?? undefined;
+      imageUrl = values.image ?? null;
     }
 
     const payload = {

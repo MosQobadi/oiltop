@@ -105,4 +105,14 @@ describe("categoryUpdateSchema", () => {
   it("unpins a category when sortOrder is explicitly cleared", () => {
     expect(categoryUpdateSchema.parse({ sortOrder: null })).toEqual({ sortOrder: null });
   });
+
+  // Same shape as sortOrder above: null clears, an absent key leaves it alone.
+  it("clears the image when it is explicitly nulled", () => {
+    expect(categoryUpdateSchema.parse({ image: null })).toEqual({ image: null });
+    expect(categoryUpdateSchema.parse({ nameEn: "Updated name" })).not.toHaveProperty("image");
+  });
+
+  it("still rejects an empty-string image", () => {
+    expect(categoryUpdateSchema.safeParse({ image: "" }).success).toBe(false);
+  });
 });

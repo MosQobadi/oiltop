@@ -117,7 +117,10 @@ export default function CarBrandFormPage() {
   const onSubmit = async (values: CarBrandFormValues) => {
     setSubmitError(null);
 
-    let logoUrl: string | undefined;
+    // null, not undefined, when the admin removed the logo: undefined is
+    // dropped from the JSON body, so a PATCH would leave the old logo in place
+    // and "Remove" would clear the preview but not the record.
+    let logoUrl: string | null;
     if (values.logo instanceof File) {
       try {
         logoUrl = await uploadImage(values.logo);
@@ -126,7 +129,7 @@ export default function CarBrandFormPage() {
         return;
       }
     } else {
-      logoUrl = values.logo ?? undefined;
+      logoUrl = values.logo ?? null;
     }
 
     const payload = {

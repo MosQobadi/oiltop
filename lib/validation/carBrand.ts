@@ -7,7 +7,9 @@ const carBrandShape = {
   slug: slugSchema.optional(),
   nameEn: z.string().min(1).max(200),
   nameFa: z.string().min(1).max(200),
-  logo: z.string().min(1).optional(),
+  // Nullable, not merely optional: on a PATCH an omitted key means "leave it",
+  // so clearing the logo needs an explicit null to say so.
+  logo: z.string().min(1).nullable().optional(),
   status: carBrandStatusSchema,
 };
 

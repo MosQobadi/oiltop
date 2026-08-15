@@ -16,7 +16,7 @@ rewrite.
 
 ## Design decisions (read before Phase A)
 
-**1. `CarEngine` is a *variant*, not an engine — rename the UI, not the schema.** The row already
+**1. `CarEngine` is a _variant_, not an engine — rename the UI, not the schema.** The row already
 holds a free-text bilingual label, a year span, an engine code and a fuel type. That is exactly
 "a version of this model that a customer picks", which in this market is a تیپ (Type/trim), not a
 combustion engine. Every customer-facing string changes from "Engine" / "موتور" to
@@ -38,11 +38,11 @@ second row costs a label, a year span and a photo — nothing is re-entered. Rej
 letting `CarModel` hold several images each tagged with a year range. That is a new concept, a new
 table and a new admin screen to solve what one extra row already solves.
 
-**4. "I'm not sure" is a resolution *mode*, not new data.** No column, no table, no flag. When the
+**4. "I'm not sure" is a resolution _mode_, not new data.** No column, no table, no flag. When the
 customer declines to pick a variant, resolve **every** candidate variant for that model+year and
 compare the results. Nothing is stored; it is a different way of reading data that already exists.
 
-**5. Agreement is computed on *resolved output*, per category and climate — never on profile
+**5. Agreement is computed on _resolved output_, per category and climate — never on profile
 identity.** Two variants can have two different `FitmentProfile` rows that happen to recommend the
 same products; comparing profile ids would report a difference that isn't one, and the customer
 would be asked a question that doesn't matter. Compare, per `(categoryId, climate)` pair, the
@@ -365,17 +365,17 @@ profile, it is the known-good shape the import work checks against.
 
 ## Effort summary
 
-| Task | Size | Estimate |
-| --- | --- | --- |
-| A.1 — Rename step to "Type" | small | < 1 session |
-| A.2 — `CarEngine.image` + admin upload | small | ~½ session |
-| A.3 — Variant step as visual cards | medium | 1 session |
-| B.5 — Identification hints | small | ~½ session |
-| B.1 — Multi-variant resolution + agreement | medium | 1 session |
-| B.2 — Second `fit` param shape | small | ~½ session |
-| B.3 — "I'm not sure" in the wizard | small–medium | ~½ session |
-| B.4 — Unresolved results view | medium | ~1 session |
-| B.6 — E2E | small–medium | ~½ session |
+| Task                                       | Size         | Estimate    |
+| ------------------------------------------ | ------------ | ----------- |
+| A.1 — Rename step to "Type"                | small        | < 1 session |
+| A.2 — `CarEngine.image` + admin upload     | small        | ~½ session  |
+| A.3 — Variant step as visual cards         | medium       | 1 session   |
+| B.5 — Identification hints                 | small        | ~½ session  |
+| B.1 — Multi-variant resolution + agreement | medium       | 1 session   |
+| B.2 — Second `fit` param shape             | small        | ~½ session  |
+| B.3 — "I'm not sure" in the wizard         | small–medium | ~½ session  |
+| B.4 — Unresolved results view              | medium       | ~1 session  |
+| B.6 — E2E                                  | small–medium | ~½ session  |
 
 **Development total: roughly 5 sessions.**
 

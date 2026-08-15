@@ -126,6 +126,33 @@ describe("PATCH /api/admin/car-models/:id", () => {
     expect(res.status).toBe(404);
   });
 
+  // An explicit null is how the form's "Remove" button says "clear it". Sending
+  // undefined instead drops the key from the JSON body, which reads as "leave
+  // this field alone" — so the photo used to come back on the next load.
+  it("clears the image when sent an explicit null", async () => {
+    const carModel = await createTestCarModel({ image: "/uploads/before.jpg" });
+
+    const res = await PATCH(requestWithBody("PATCH", { image: null }), ctx(carModel.id));
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.data.carModel.image).toBeNull();
+    await expect(
+      prisma.carModel.findUniqueOrThrow({ where: { id: carModel.id } }),
+    ).resolves.toMatchObject({ image: null });
+  });
+
+  it("leaves the image alone when the key is absent", async () => {
+    const carModel = await createTestCarModel({ image: "/uploads/keep.jpg" });
+
+    const res = await PATCH(requestWithBody("PATCH", { nameEn: "Renamed" }), ctx(carModel.id));
+
+    expect(res.status).toBe(200);
+    await expect(
+      prisma.carModel.findUniqueOrThrow({ where: { id: carModel.id } }),
+    ).resolves.toMatchObject({ image: "/uploads/keep.jpg" });
+  });
+
   it("rejects a duplicate slug within the same car brand", async () => {
     const carModelA = await createTestCarModel();
     const carModelB = await createTestCarModel();

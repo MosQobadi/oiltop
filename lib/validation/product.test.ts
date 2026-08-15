@@ -124,4 +124,15 @@ describe("productUpdateSchema", () => {
   it("still validates the defaulted fields when they are supplied", () => {
     expect(productUpdateSchema.safeParse({ discountPercent: 150 }).success).toBe(false);
   });
+
+  // A null image is the form's "Remove" button; an absent key still means
+  // "leave the photo alone".
+  it("clears the image when it is explicitly nulled", () => {
+    expect(productUpdateSchema.parse({ image: null })).toEqual({ image: null });
+    expect(productUpdateSchema.parse({ nameEn: "Renamed" })).not.toHaveProperty("image");
+  });
+
+  it("still rejects an empty-string image", () => {
+    expect(productUpdateSchema.safeParse({ image: "" }).success).toBe(false);
+  });
 });

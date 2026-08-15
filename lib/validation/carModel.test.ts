@@ -26,4 +26,16 @@ describe("carModelUpdateSchema", () => {
   it("accepts a partial update", () => {
     expect(carModelUpdateSchema.safeParse({ nameEn: "Corolla Cross" }).success).toBe(true);
   });
+
+  // A null image is the form's "Remove" button; without it the PATCH could only
+  // say "leave the photo alone", never "clear it".
+  it("accepts a null image, so the photo can be cleared", () => {
+    const result = carModelUpdateSchema.safeParse({ image: null });
+    expect(result.success).toBe(true);
+    expect(result.data?.image).toBeNull();
+  });
+
+  it("still rejects an empty-string image", () => {
+    expect(carModelUpdateSchema.safeParse({ image: "" }).success).toBe(false);
+  });
 });
