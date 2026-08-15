@@ -1,5 +1,5 @@
 import path from "node:path";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 /**
  * The storefront is shopped signed-out. `playwright.config.ts` sets the admin
@@ -15,27 +15,59 @@ export const SIGNED_OUT = { storageState: { cookies: [], origins: [] } };
 export const ADMIN_STORAGE_STATE = path.resolve(__dirname, "..", ".auth", "admin.json");
 
 /**
+ * Picks an option from a `SelectMenu` (components/storefront/SelectMenu.tsx).
+ *
+ * These are listboxes, not native <select>s — the open menu is a portaled
+ * element at the end of <body>, so there is no `selectOption` and no `option`
+ * child to wait on. The trigger is addressed by test id because its accessible
+ * name includes the current value, and every option is addressed by the text a
+ * customer actually reads.
+ *
+ * `scope` narrows the *trigger* only, for pages that render the same component
+ * twice (dev-preview shows both wizard modes). The options never need it: only
+ * one menu is ever open.
+ */
+export async function chooseFromMenu(
+  page: Page,
+  testId: string,
+  optionLabel: string,
+  scope: Page | Locator = page,
+) {
+  const trigger = scope.getByTestId(testId);
+  // The menu is per-trigger and only one is ever open, so this is unambiguous.
+  const option = page.getByRole("option", { name: optionLabel, exact: true });
+
+  // Opening is retried rather than clicked once. The trigger is a React-driven
+  // button, so a click that lands before the page hydrates does nothing at all
+  // — and a native <select> gave no way to tell that apart from a step whose
+  // options simply have not been fetched yet. Re-clicking covers both: a click
+  // on an already-open menu closes it, and the next attempt opens it again.
+  await expect(async () => {
+    await trigger.click();
+    await expect(option).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+
+  await option.click();
+  // Closing is what proves the click landed on the option rather than on an
+  // overlay that was still animating in.
+  await expect(option).toBeHidden();
+}
+
+/**
  * Drives the car-finder's Brand → Model → Year steps. Engine is deliberately
  * left to the caller: whether that step even renders is the thing under test
  * (one matching engine auto-resolves on the year, see `useFitmentWizard`).
  *
- * Brands are addressed by slug because that's the option's value; models by
- * label, because theirs is a cuid.
+ * Every step is addressed by its visible label — a listbox has no option
+ * values, so the brand's slug and the model's cuid are equally unusable here.
  */
 export async function fillCarFinder(
   page: Page,
-  car: { brandSlug: string; model: string; year: number },
+  car: { brand: string; model: string; year: number },
 ) {
-  await page.getByLabel("Car brand", { exact: true }).selectOption(car.brandSlug);
-  // Each step's options only exist once the step before it has fetched them,
-  // so wait for the option rather than racing the request.
-  const modelSelect = page.getByLabel("Model", { exact: true });
-  await expect(modelSelect.locator("option", { hasText: car.model })).toHaveCount(1);
-  await modelSelect.selectOption({ label: car.model });
-
-  const yearSelect = page.getByLabel("Year", { exact: true });
-  await expect(yearSelect.locator(`option[value="${car.year}"]`)).toHaveCount(1);
-  await yearSelect.selectOption(String(car.year));
+  await chooseFromMenu(page, "fitment-select-brand", car.brand);
+  await chooseFromMenu(page, "fitment-select-model", car.model);
+  await chooseFromMenu(page, "fitment-select-year", String(car.year));
 }
 
 /**

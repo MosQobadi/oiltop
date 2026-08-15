@@ -31,7 +31,7 @@ test("auto-skips the Engine step and shows a real product beside a spec-only fal
 }) => {
   await page.goto("/en/fitment");
 
-  await fillCarFinder(page, { brandSlug: "peugeot", model: "206", year: 2005 });
+  await fillCarFinder(page, { brand: "Peugeot", model: "206", year: 2005 });
 
   // One matching engine is not a choice, so the wizard resolves on the year and
   // the fourth step is never rendered.
@@ -64,21 +64,24 @@ test("keeps the Engine step when a year matches more than one engine", async ({ 
   await page.goto("/en/fitment");
 
   // Both Tucson engines were sold 2016–2021, so the year can't disambiguate.
-  await fillCarFinder(page, { brandSlug: "hyundai", model: "Tucson", year: 2018 });
+  await fillCarFinder(page, { brand: "Hyundai", model: "Tucson", year: 2018 });
 
   const engineStep = page.getByTestId("fitment-step-engine");
   await expect(engineStep).toBeVisible();
 
-  const engineSelect = page.getByLabel("Engine", { exact: true });
+  // The options only exist while the menu is open, so this opens it, checks
+  // what is on offer, and leaves it open for the pick below.
+  await page.getByTestId("fitment-select-engine").click();
+  const engineOptions = page.getByRole("option");
   // Three options: the placeholder plus the two real engines.
-  await expect(engineSelect.locator("option")).toHaveCount(3);
-  await expect(engineSelect).toContainText("2.0L Nu Petrol (2016–2021)");
-  await expect(engineSelect).toContainText("2.0L CRDi Diesel (2016–2021)");
+  await expect(engineOptions).toHaveCount(3);
+  await expect(engineOptions.filter({ hasText: "2.0L Nu Petrol (2016–2021)" })).toBeVisible();
+  await expect(engineOptions.filter({ hasText: "2.0L CRDi Diesel (2016–2021)" })).toBeVisible();
 
   // Nothing has resolved yet — picking the engine is what does it.
   await expect(page).not.toHaveURL(/[?&]fit=/);
 
-  await engineSelect.selectOption({ label: "2.0L Nu Petrol (2016–2021)" });
+  await engineOptions.filter({ hasText: "2.0L Nu Petrol (2016–2021)" }).click();
   await expectResolvedCar(page, "Hyundai Tucson");
 
   // This engine's profile approves two oil grades, so Engine Oil is a HOT/COLD
@@ -103,7 +106,7 @@ test("turns a spec-only result into a Fitment Inquiry the admin can see", async 
   browser,
 }) => {
   await page.goto("/en/fitment");
-  await fillCarFinder(page, { brandSlug: "peugeot", model: "206", year: 2005 });
+  await fillCarFinder(page, { brand: "Peugeot", model: "206", year: 2005 });
   await expectResolvedCar(page, "Peugeot 206");
 
   const specOnlyCard = fitmentSection(page, "ENGINE_OIL").getByTestId("fitment-spec-only-card");

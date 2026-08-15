@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { fillBilingual, selectOption, searchAndPick } from "./support/fields";
+import { chooseFromMenu } from "./support/storefront";
 import { rowContaining } from "./support/table";
 
 // A category's fitment items render under an <h2>{categoryName}</h2> group
@@ -156,17 +157,17 @@ test.describe.serial("fitment: car brand → model → engine → fitment profil
     // Each step's options only exist once the fetch its predecessor triggered
     // has resolved, so attach the wait before the selection that triggers it.
     const modelsLoaded = page.waitForResponse((res) => res.url().includes("/models"));
-    await wizard.getByLabel("Car brand", { exact: true }).selectOption({ label: brandName });
+    await chooseFromMenu(page, "fitment-select-brand", brandName, wizard);
     await modelsLoaded;
 
     const yearsLoaded = page.waitForResponse((res) => res.url().includes("/years"));
-    await wizard.getByLabel("Model", { exact: true }).selectOption({ label: modelName });
+    await chooseFromMenu(page, "fitment-select-model", modelName, wizard);
     await yearsLoaded;
 
     // This model has exactly one engine, so picking the year is the last thing
     // the customer does: the Engine step is skipped and the wizard resolves
     // straight to the results URL.
-    await wizard.getByLabel("Year", { exact: true }).selectOption(yearStart);
+    await chooseFromMenu(page, "fitment-select-year", yearStart, wizard);
     await page.waitForURL(/\/en\/fitment\?fit=.+/);
 
     // The results the wizard resolved to: the car above the results, the

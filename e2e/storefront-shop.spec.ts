@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { ADMIN_STORAGE_STATE, SIGNED_OUT } from "./support/storefront";
+import { ADMIN_STORAGE_STATE, chooseFromMenu, SIGNED_OUT } from "./support/storefront";
 import { rowContaining } from "./support/table";
 
 // The buying path: browse → filter → PDP → cart → checkout → the order exists
@@ -32,9 +32,9 @@ async function browseToProduct(page: Page) {
 
   // The rail writes the next URL and lets the server re-render the grid, so a
   // filtered view is a navigation — waiting on the URL is waiting on the grid.
-  await page.getByLabel("Category", { exact: true }).selectOption("engine-oil");
+  await chooseFromMenu(page, "filter-category", "Engine Oil");
   await expect(page).toHaveURL(/category=engine-oil/);
-  await page.getByLabel("Brand", { exact: true }).selectOption("castrol");
+  await chooseFromMenu(page, "filter-brand", "Castrol");
   await expect(page).toHaveURL(/brand=castrol/);
 
   // Castrol seeds exactly two engine oils, so the filter did something.

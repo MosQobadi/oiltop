@@ -4,6 +4,7 @@ import { useCallback, useId, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useFitmentWizard, type FitmentStepKey, type FitmentWizardScope } from "./useFitmentWizard";
 import { FITMENT_PATH, navHref } from "../nav-items";
+import { SelectMenu } from "../SelectMenu";
 import { formatDigits, pickLocale, type Locale } from "@/lib/i18n";
 import { formatEngineOptionLabel, withFitContext } from "@/lib/storefront/fitment";
 
@@ -52,11 +53,6 @@ interface StepView {
   emptyMessage: string;
   onChange: (value: string) => void;
 }
-
-const SELECT_CLASS =
-  "focus-visible:border-accent focus-visible:ring-accent min-h-11 w-full rounded-[10px] border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-neutral-50 disabled:text-neutral-400";
-
-const LABEL_CLASS = "text-[12.5px] font-medium text-neutral-600";
 
 export function FitmentWizard({
   locale,
@@ -162,24 +158,19 @@ export function FitmentWizard({
 
     const field = (
       <div className="flex flex-col gap-1.5">
-        <label htmlFor={`${baseId}-${step.key}`} className={LABEL_CLASS}>
-          {step.label}
-        </label>
-        <select
-          id={`${baseId}-${step.key}`}
+        <SelectMenu
+          locale={locale}
+          testId={`fitment-select-${step.key}`}
+          label={step.label}
           value={step.value}
-          disabled={step.disabled || stepFlags.loading}
-          aria-describedby={note ? noteId : undefined}
-          onChange={(event) => step.onChange(event.target.value)}
-          className={SELECT_CLASS}
-        >
-          <option value="">{step.placeholder}</option>
-          {step.options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          // The placeholder is the first entry rather than a true placeholder,
+          // as it was as an empty <option>: picking it again is how a customer
+          // backs a step out.
+          options={[{ value: "", label: step.placeholder }, ...step.options]}
+          isDisabled={step.disabled || stepFlags.loading}
+          describedBy={note ? noteId : undefined}
+          onChange={step.onChange}
+        />
         {note}
       </div>
     );

@@ -3,6 +3,7 @@
 import { useId, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { SelectMenu } from "./SelectMenu";
 import { formatDigits, pickLocale, type Locale } from "@/lib/i18n";
 import {
   activeProductFilterCount,
@@ -45,7 +46,9 @@ export interface ProductFiltersProps {
   className?: string;
 }
 
-const SELECT_CLASS =
+// Kept in step with SelectMenu's trigger so the search box and the dropdowns
+// below it read as one set of controls.
+const INPUT_CLASS =
   "focus-visible:border-accent focus-visible:ring-accent min-h-11 w-full rounded-[10px] border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 transition-colors focus-visible:ring-1 focus-visible:outline-none";
 
 const LABEL_CLASS = "text-[12.5px] font-medium text-neutral-600";
@@ -118,7 +121,7 @@ export function ProductFilters({
               type="search"
               defaultValue={params.search ?? ""}
               placeholder={pickLocale(locale, "Name or part number", "نام یا شماره فنی")}
-              className={`${SELECT_CLASS} min-w-0 flex-1`}
+              className={`${INPUT_CLASS} min-w-0 flex-1`}
             />
             <button
               type="submit"
@@ -132,7 +135,8 @@ export function ProductFilters({
         <div className="mt-4 flex flex-col gap-4">
           {!isPinned("category") && (
             <FilterSelect
-              id={`${baseId}-category`}
+              locale={locale}
+              testId="filter-category"
               label={pickLocale(locale, "Category", "دسته‌بندی")}
               anyLabel={anyLabel}
               value={params.category ?? ""}
@@ -142,7 +146,8 @@ export function ProductFilters({
           )}
 
           <FilterSelect
-            id={`${baseId}-brand`}
+            locale={locale}
+            testId="filter-brand"
             label={pickLocale(locale, "Brand", "برند")}
             anyLabel={anyLabel}
             value={params.brand ?? ""}
@@ -165,14 +170,16 @@ export function ProductFilters({
 }
 
 function FilterSelect({
-  id,
+  locale,
+  testId,
   label,
   anyLabel,
   value,
   options,
   onChange,
 }: {
-  id: string;
+  locale: Locale;
+  testId: string;
   label: string;
   anyLabel: string;
   value: string;
@@ -180,23 +187,15 @@ function FilterSelect({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className={LABEL_CLASS}>
-        {label}
-      </label>
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={SELECT_CLASS}
-      >
-        <option value="">{anyLabel}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
+    <SelectMenu
+      locale={locale}
+      testId={testId}
+      label={label}
+      value={value}
+      onChange={onChange}
+      // "All" is the first entry rather than a placeholder because picking it is
+      // how a customer removes the filter again.
+      options={[{ value: "", label: anyLabel }, ...options]}
+    />
   );
 }
