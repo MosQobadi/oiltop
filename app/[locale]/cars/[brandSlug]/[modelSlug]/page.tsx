@@ -9,7 +9,7 @@ import { FitmentWizard } from "@/components/storefront/fitment/FitmentWizard";
 import { CARS_PATH, FITMENT_PATH, navHref } from "@/components/storefront/nav-items";
 import { pickLocale, type Locale } from "@/lib/i18n";
 import { getActiveCarModelBySlugs, getCarModelFitment } from "@/lib/services/fitment";
-import { formatEngineCount, formatYearSpan } from "@/lib/storefront/fitment";
+import { formatTypeCount, formatYearSpan } from "@/lib/storefront/fitment";
 import { firstFilled, localeAlternates } from "@/lib/storefront/seo";
 import { carBrandSlugParamSchema, carModelSlugParamSchema } from "@/lib/validation";
 
@@ -84,7 +84,7 @@ export default async function CarModelPage({
           {fitment.span && (
             <p className="mt-2 text-[14px] text-neutral-500">
               {formatYearSpan(locale, fitment.span)} ·{" "}
-              {formatEngineCount(locale, fitment.engines.length)}
+              {formatTypeCount(locale, fitment.engines.length)}
             </p>
           )}
 

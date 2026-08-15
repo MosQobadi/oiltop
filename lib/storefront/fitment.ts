@@ -39,16 +39,21 @@ export function formatYearSpan(
   return `${start}–${end}`;
 }
 
-// "4 engines" — how many variants a car model was sold with, next to its year
+// "4 types" — how many variants a car model was sold with, next to its year
 // span on the car content pages. Persian has no plural inflection to match, so
 // only the English form has the singular case.
-export function formatEngineCount(locale: Locale, count: number): string {
+//
+// "Type" (تیپ), not "engine": a CarEngine row is the *version* a customer picks
+// — trim, engine and year span together — and in this market people identify
+// their car as "206 تیپ ۲", never by an engine code. The schema keeps the
+// CarEngine name; only what a customer reads changes.
+export function formatTypeCount(locale: Locale, count: number): string {
   const digits = formatDigits(count, locale);
-  return pickLocale(locale, `${digits} ${count === 1 ? "engine" : "engines"}`, `${digits} موتور`);
+  return pickLocale(locale, `${digits} ${count === 1 ? "type" : "types"}`, `${digits} تیپ`);
 }
 
 // "1.4L TU3 Petrol (2001–2010)". The range is part of the label because two
-// engines of one model often differ by nothing else a customer can see.
+// types of one model often differ by nothing else a customer can see.
 export function formatEngineOptionLabel(locale: Locale, engine: CarEngineLabelParts): string {
   const name = pickLocale(locale, engine.labelEn, engine.labelFa);
   return `${name} (${formatYearSpan(locale, engine)})`;

@@ -11,7 +11,7 @@ import {
   listCarModelSummariesForBrand,
   type CarModelSummary,
 } from "@/lib/services/fitment";
-import { formatEngineCount, formatYearSpan } from "@/lib/storefront/fitment";
+import { formatTypeCount, formatYearSpan } from "@/lib/storefront/fitment";
 import { localeAlternates } from "@/lib/storefront/seo";
 import { carBrandSlugParamSchema } from "@/lib/validation";
 
@@ -148,12 +148,12 @@ function CarModelLink({
         <p className="text-[14.5px] font-medium text-neutral-900">
           {brandName} {modelName}
         </p>
-        {/* A model with no engines listed yet has no span to state — its page
+        {/* A model with no types listed yet has no span to state — its page
             still exists, it just can't say what years it covers. */}
         <p className="mt-0.5 text-[12.5px] text-neutral-500">
           {model.span
-            ? `${formatYearSpan(locale, model.span)} · ${formatEngineCount(locale, model.engineCount)}`
-            : pickLocale(locale, "Engines coming soon", "موتورها به‌زودی")}
+            ? `${formatYearSpan(locale, model.span)} · ${formatTypeCount(locale, model.engineCount)}`
+            : pickLocale(locale, "Types coming soon", "تیپ‌ها به‌زودی")}
         </p>
       </div>
     </Link>

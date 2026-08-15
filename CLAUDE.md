@@ -165,6 +165,22 @@ Do not create unnecessary layers. If a task doesn't need a new top-level folder,
   cover many engines (e.g. multiple trims/years of the same car) without
   re-entering it per engine. Don't add fields to `CarEngine` that duplicate
   what belongs on the profile.
+- **`CarEngine` is a car *type*, not an engine — "تیپ", the thing a customer
+  picks last.** The row carries a free-text bilingual label, a year span, an
+  engine code and a fuel type, which together describe one version of a model.
+  Every customer-facing string calls it a **Type** (تیپ); the model name,
+  columns, route segments (`/admin/cars/.../engines`), service functions and
+  `carEngineId` all keep the `engine` wording. Renaming them is churn that also
+  breaks the importer's `sourceRef` keys — don't.
+  - **The admin rule:** add a new `CarEngine` row whenever the recommended
+    products differ — whether the reason is a different trim (206 Type 2 vs
+    Type 5), a different engine (Pars EF7 vs TU5 vs XU7), or a different year
+    period (Type 2 2000–2003 vs 2004–2010). Where the recommendation is
+    identical, attach the *same* `FitmentProfile` to both rows rather than
+    re-entering it.
+  - **Keep year spans within a model contiguous.** The car finder asks for the
+    year before the type, so a hole between two spans (2000–2003 and 2006–2010)
+    means a customer with a 2004 car matches nothing.
 - Any schema change: update `schema.prisma` and the migration together, then run
   `pnpm prisma generate`.
 

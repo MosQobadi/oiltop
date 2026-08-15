@@ -277,7 +277,7 @@ export default function CarEngineFormPage() {
       if (ignore) return;
 
       if (!result.success) {
-        setLoadError(result.error ?? "Failed to load car engine");
+        setLoadError(result.error ?? "Failed to load car type");
         setIsLoading(false);
         return;
       }
@@ -391,7 +391,7 @@ export default function CarEngineFormPage() {
     const result = await response.json();
 
     if (!result.success) {
-      setSubmitError(result.error ?? "Failed to save car engine");
+      setSubmitError(result.error ?? "Failed to save car type");
       return;
     }
 
@@ -431,21 +431,26 @@ export default function CarEngineFormPage() {
           href={`/admin/cars/brands/${carBrandId}/models/${carModelId}/engines`}
           className="hover:text-neutral-700"
         >
-          Engines
+          Types
         </Link>
       </nav>
 
       <h1 className="text-lg font-semibold text-neutral-900">
-        {isEdit ? "Edit Car Engine" : "Add Car Engine"}
+        {isEdit ? "Edit Car Type" : "Add Car Type"}
       </h1>
 
       <form className="flex max-w-2xl flex-col gap-6" noValidate onSubmit={handleSubmit(onSubmit)}>
+        {/* This is what a customer picks at the last step of the car finder, so
+            write it the way they name their own car — "Type 2 (TU3 1.4L)", not
+            a bare engine code. Add a separate row whenever the recommended
+            products differ: different trim, different engine, or different year
+            period. */}
         <BilingualTextField
           control={control}
           nameEn="labelEn"
           nameFa="labelFa"
           label="Label"
-          placeholderEn="2.5L I4 Petrol"
+          placeholderEn="Type 2 (TU3 1.4L)"
           isRequired
         />
 
@@ -514,7 +519,7 @@ export default function CarEngineFormPage() {
 
           {fitmentProfileLinks.length === 0 ? (
             <p className="text-sm text-neutral-500">
-              No fitment profile attached to this engine yet.
+              No fitment profile attached to this type yet.
             </p>
           ) : (
             <div className="flex flex-wrap gap-2">
@@ -558,7 +563,7 @@ export default function CarEngineFormPage() {
               isDisabled={isCreatingProfile}
               className="self-start"
             >
-              {isCreatingProfile ? "Creating..." : "Create New Profile for This Engine"}
+              {isCreatingProfile ? "Creating..." : "Create New Profile for This Type"}
             </Button>
             {createProfileError && (
               <p role="alert" className="text-danger text-sm">
@@ -583,7 +588,7 @@ export default function CarEngineFormPage() {
                 <AlertDialog.Heading>Detach fitment profile</AlertDialog.Heading>
               </AlertDialog.Header>
               <AlertDialog.Body>
-                <p>Detach &ldquo;{detachTarget?.profile.label}&rdquo; from this car engine?</p>
+                <p>Detach &ldquo;{detachTarget?.profile.label}&rdquo; from this car type?</p>
                 {detachError && (
                   <p role="alert" className="text-danger mt-2 text-sm">
                     {detachError}

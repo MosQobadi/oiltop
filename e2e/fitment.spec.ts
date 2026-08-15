@@ -20,10 +20,12 @@ function resultsCategory(page: Page, categoryName: string) {
   });
 }
 
-test.describe.serial("fitment: car brand → model → engine → fitment profile → preview", () => {
+test.describe.serial("fitment: car brand → model → type → fitment profile → preview", () => {
   const stamp = Date.now();
   const brandName = `E2E Car Brand ${stamp}`;
   const modelName = `E2E Model ${stamp}`;
+  // A CarEngine row is a car *type* in the UI (see CLAUDE.md); the variable
+  // keeps the schema's wording, the button names below track what's on screen.
   const engineLabel = `E2E Engine ${stamp}`;
   const yearStart = "2020";
 
@@ -48,13 +50,13 @@ test.describe.serial("fitment: car brand → model → engine → fitment profil
     await expect(rowContaining(page, modelName)).toBeVisible();
   });
 
-  test("create a car engine under that model", async ({ page }) => {
+  test("create a car type under that model", async ({ page }) => {
     await page.goto("/admin/cars/brands");
     await rowContaining(page, brandName).getByRole("button", { name: "Models" }).click();
-    await rowContaining(page, modelName).getByRole("button", { name: "Engines" }).click();
+    await rowContaining(page, modelName).getByRole("button", { name: "Types" }).click();
     await expect(page).toHaveURL(/\/engines$/);
 
-    await page.getByRole("button", { name: "+ Add Engine" }).click();
+    await page.getByRole("button", { name: "+ Add Type" }).click();
     await fillBilingual(page, 0, engineLabel, "موتور آزمایشی");
     await page.getByLabel("Year Start", { exact: true }).fill(yearStart);
     await selectOption(page, "Fuel Type", "Petrol");
@@ -68,12 +70,12 @@ test.describe.serial("fitment: car brand → model → engine → fitment profil
   }) => {
     await page.goto("/admin/cars/brands");
     await rowContaining(page, brandName).getByRole("button", { name: "Models" }).click();
-    await rowContaining(page, modelName).getByRole("button", { name: "Engines" }).click();
+    await rowContaining(page, modelName).getByRole("button", { name: "Types" }).click();
     await rowContaining(page, engineLabel).getByRole("button", { name: "Edit" }).click();
 
-    // Creates a fresh FitmentProfile, auto-attaches it to this engine, and
+    // Creates a fresh FitmentProfile, auto-attaches it to this type, and
     // navigates straight to the profile's detail page.
-    await page.getByRole("button", { name: "Create New Profile for This Engine" }).click();
+    await page.getByRole("button", { name: "Create New Profile for This Type" }).click();
     await expect(page).toHaveURL(/\/admin\/cars\/fitment-profiles\/[^/]+$/);
 
     // Both the profile page (Label/Internal Note) and the item modal have
@@ -139,10 +141,10 @@ test.describe.serial("fitment: car brand → model → engine → fitment profil
     ).toBeVisible();
   });
 
-  test("the storefront car-finder wizard walks the same car and auto-skips the Engine step", async ({
+  test("the storefront car-finder wizard walks the same car and auto-skips the Type step", async ({
     page,
   }) => {
-    // Same brand → model → year → engine path as the admin preview above, but
+    // Same brand → model → year → type path as the admin preview above, but
     // through the public /api/storefront/cars/* routes. The wizard has no
     // customer-facing home until the homepage (Task 3.4) and the results page
     // (Task 3.2) land, so it's exercised where it currently renders.
@@ -164,8 +166,8 @@ test.describe.serial("fitment: car brand → model → engine → fitment profil
     await chooseFromMenu(page, "fitment-select-model", modelName, wizard);
     await yearsLoaded;
 
-    // This model has exactly one engine, so picking the year is the last thing
-    // the customer does: the Engine step is skipped and the wizard resolves
+    // This model has exactly one type, so picking the year is the last thing
+    // the customer does: the Type step is skipped and the wizard resolves
     // straight to the results URL.
     await chooseFromMenu(page, "fitment-select-year", yearStart, wizard);
     await page.waitForURL(/\/en\/fitment\?fit=.+/);

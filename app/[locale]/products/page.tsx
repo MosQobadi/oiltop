@@ -104,8 +104,8 @@ export default async function ProductsPage({
       <p className="mt-2 max-w-[60ch] text-[14.5px] text-neutral-500">
         {pickLocale(
           locale,
-          "Every oil and filter we carry. Filter by what you're after, or let the car finder match your engine.",
-          "همه‌ی روغن‌ها و فیلترهایی که داریم. بر اساس آنچه می‌خواهید فیلتر کنید، یا بگذارید جست‌وجوی خودرو موتور شما را پیدا کند.",
+          "Every oil and filter we carry. Filter by what you're after, or let the car finder match your car.",
+          "همه‌ی روغن‌ها و فیلترهایی که داریم. بر اساس آنچه می‌خواهید فیلتر کنید، یا بگذارید جست‌وجوی خودرو، خودروی شما را پیدا کند.",
         )}
       </p>
 

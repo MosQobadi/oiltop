@@ -113,7 +113,7 @@ export default function CarEnginesPage() {
       if (ignore) return;
 
       if (!result.success) {
-        setLoadError(result.error ?? "Failed to load car engines");
+        setLoadError(result.error ?? "Failed to load car types");
         setIsLoading(false);
         return;
       }
@@ -141,7 +141,7 @@ export default function CarEnginesPage() {
     setIsDeleting(false);
 
     if (!result.success) {
-      setDeleteError(result.error ?? "Failed to delete car engine");
+      setDeleteError(result.error ?? "Failed to delete car type");
       return;
     }
 
@@ -225,14 +225,14 @@ export default function CarEnginesPage() {
 
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-neutral-900">
-          {carModel ? `${carModel.nameEn} — Engines` : "Engines"}
+          {carModel ? `${carModel.nameEn} — Types` : "Types"}
         </h1>
         <Button
           onPress={() =>
             router.push(`/admin/cars/brands/${carBrandId}/models/${carModelId}/engines/add`)
           }
         >
-          + Add Engine
+          + Add Type
         </Button>
       </div>
 
@@ -245,7 +245,7 @@ export default function CarEnginesPage() {
       <DataTable
         columns={columns}
         rows={carEngines}
-        searchPlaceholder="Search car engines..."
+        searchPlaceholder="Search car types..."
         onSearch={(value) => {
           setPage(1);
           setSearch(value);
@@ -265,8 +265,8 @@ export default function CarEnginesPage() {
         pageSize={PAGE_SIZE}
         total={total}
         onPageChange={setPage}
-        emptyMessage={isLoading ? "Loading..." : "No car engines found."}
-        aria-label="Car Engines"
+        emptyMessage={isLoading ? "Loading..." : "No car types found."}
+        aria-label="Car Types"
       />
 
       <AlertDialog
@@ -280,7 +280,7 @@ export default function CarEnginesPage() {
             <AlertDialog.Dialog>
               <AlertDialog.Header>
                 <AlertDialog.Icon status="danger" />
-                <AlertDialog.Heading>Delete car engine</AlertDialog.Heading>
+                <AlertDialog.Heading>Delete car type</AlertDialog.Heading>
               </AlertDialog.Header>
               <AlertDialog.Body>
                 <p>

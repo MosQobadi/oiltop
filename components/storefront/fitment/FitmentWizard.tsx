@@ -8,8 +8,9 @@ import { SelectMenu } from "../SelectMenu";
 import { formatDigits, pickLocale, type Locale } from "@/lib/i18n";
 import { formatEngineOptionLabel, withFitContext } from "@/lib/storefront/fitment";
 
-// The headline interaction: Brand → Model → Year → Engine, four public list
-// endpoints, one resolved car engine at the end of it.
+// The headline interaction: Brand → Model → Year → Type, four public list
+// endpoints, one resolved car engine at the end of it. The last step is named
+// "Type" (تیپ) for the customer and `engine` in the code — see the step below.
 //
 // The resolved engine is handed to the URL, not to a store. `?fit=<id>` is what
 // the results page (Task 3.2), the PLP banner and the PDP's "fits your car"
@@ -124,9 +125,12 @@ export function FitmentWizard({
       onChange: wizard.selectYear,
     },
     {
+      // "Type" (تیپ), not "Engine": the step key, the state field and the id it
+      // resolves to all stay `engine`/`carEngineId` — only what a customer reads
+      // changes. A 206 owner knows they have a تیپ ۲, not a TU3.
       key: "engine",
-      label: pickLocale(locale, "Engine", "موتور"),
-      placeholder: pickLocale(locale, "Select an engine", "موتور را انتخاب کنید"),
+      label: pickLocale(locale, "Type", "تیپ"),
+      placeholder: pickLocale(locale, "Select a type", "تیپ را انتخاب کنید"),
       value: selection.carEngineId,
       options: engines.map((engine) => ({
         value: engine.id,
@@ -135,8 +139,8 @@ export function FitmentWizard({
       disabled: !selection.year,
       emptyMessage: pickLocale(
         locale,
-        "No engines listed for that year.",
-        "برای آن سال موتوری ثبت نشده است.",
+        "No types listed for that year.",
+        "برای آن سال تیپی ثبت نشده است.",
       ),
       onChange: wizard.selectEngine,
     },

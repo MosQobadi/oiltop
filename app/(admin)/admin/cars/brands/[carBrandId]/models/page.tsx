@@ -134,7 +134,7 @@ export default function CarModelsPage() {
     },
     { key: "nameEn", label: "Model" },
     { key: "slug", label: "Slug" },
-    { key: "engineCount", label: "Engines" },
+    { key: "engineCount", label: "Types" },
     {
       key: "status",
       label: "Status",
@@ -150,7 +150,7 @@ export default function CarModelsPage() {
             size="sm"
             onPress={() => router.push(`/admin/cars/brands/${carBrandId}/models/${row.id}/engines`)}
           >
-            Engines
+            Types
           </Button>
           <Button
             variant="ghost"
