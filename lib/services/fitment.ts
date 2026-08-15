@@ -129,6 +129,9 @@ const carEngineSelect = {
   labelFa: true,
   yearStart: true,
   yearEnd: true,
+  // Often null; the type step falls back to the model's photo rather than
+  // showing a gap. Read it through variantImage(), never on its own.
+  image: true,
   fuelType: true,
   displacementCc: true,
   engineCode: true,

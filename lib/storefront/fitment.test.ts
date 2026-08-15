@@ -8,9 +8,11 @@ import {
   formatEngineOptionLabel,
   formatSpecAttributes,
   formatSpecSummary,
+  formatTypeCount,
   formatYearSpan,
   sortFitmentGroups,
   splitItemsByClimate,
+  variantImage,
   withFitContext,
 } from "./fitment";
 
@@ -41,6 +43,37 @@ describe("formatYearSpan", () => {
   it("reads a null yearEnd as still in production, not as unknown", () => {
     expect(formatYearSpan("en", { yearStart: 2011, yearEnd: null })).toBe("2011–Present");
     expect(formatYearSpan("fa", { yearStart: 2011, yearEnd: null })).toBe("۲۰۱۱–تاکنون");
+  });
+});
+
+describe("formatTypeCount", () => {
+  it("counts types, not engines, in the reader's digits", () => {
+    expect(formatTypeCount("en", 4)).toBe("4 types");
+    expect(formatTypeCount("fa", 4)).toBe("۴ تیپ");
+  });
+
+  it("has a singular only in English — Persian doesn't inflect for plural", () => {
+    expect(formatTypeCount("en", 1)).toBe("1 type");
+    expect(formatTypeCount("fa", 1)).toBe("۱ تیپ");
+  });
+});
+
+describe("variantImage", () => {
+  it("prefers the type's own photo", () => {
+    expect(variantImage({ image: "/type-2.jpg" }, { image: "/206.jpg" })).toBe("/type-2.jpg");
+  });
+
+  it("falls back to the model's when the type has none", () => {
+    expect(variantImage({ image: null }, { image: "/206.jpg" })).toBe("/206.jpg");
+  });
+
+  it("returns null only when neither has one", () => {
+    expect(variantImage({ image: null }, { image: null })).toBeNull();
+  });
+
+  it("tolerates a missing model, for callers that only hold the type", () => {
+    expect(variantImage({ image: "/type-2.jpg" }, null)).toBe("/type-2.jpg");
+    expect(variantImage({ image: null }, undefined)).toBeNull();
   });
 });
 

@@ -10,6 +10,7 @@ import { AlertDialog, Button, Chip, ComboBox, Input, Label, ListBox } from "@her
 import {
   BilingualTextField,
   FormActions,
+  ImageUploadField,
   SelectField,
   TextField,
   ToggleField,
@@ -178,6 +179,7 @@ const carEngineFormSchema = z
     displacementCc: z.string(),
     engineCode: z.string().max(50),
     isActive: z.boolean(),
+    image: z.custom<File | string | null>(),
   })
   .superRefine((data, ctx) => {
     if (!data.stillInProduction && data.yearEnd) {
@@ -220,7 +222,22 @@ const emptyDefaults: CarEngineFormValues = {
   displacementCc: "",
   engineCode: "",
   isActive: true,
+  image: null,
 };
+
+async function uploadImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch("/api/admin/upload", {
+    method: "POST",
+    body: formData,
+  });
+  const result = await response.json();
+  if (!result.success) {
+    throw new Error(result.error ?? "Failed to upload image");
+  }
+  return result.data.url as string;
+}
 
 export default function CarEngineFormPage() {
   const router = useRouter();
@@ -293,6 +310,7 @@ export default function CarEngineFormPage() {
         displacementCc: carEngine.displacementCc == null ? "" : String(carEngine.displacementCc),
         engineCode: carEngine.engineCode ?? "",
         isActive: carEngine.status === "ACTIVE",
+        image: carEngine.image ?? null,
       });
       setEngineLabelEn(carEngine.labelEn);
       setFitmentProfileLinks(carEngine.fitmentProfileLinks ?? []);
@@ -364,6 +382,21 @@ export default function CarEngineFormPage() {
   const onSubmit = async (values: CarEngineFormValues) => {
     setSubmitError(null);
 
+    // null rather than undefined when the admin removed the photo: undefined
+    // would leave the old one in place on a PATCH, so "Remove" would silently
+    // do nothing. The Zod schema accepts null for exactly this.
+    let imageUrl: string | null;
+    if (values.image instanceof File) {
+      try {
+        imageUrl = await uploadImage(values.image);
+      } catch (error) {
+        setSubmitError(error instanceof Error ? error.message : "Failed to upload image");
+        return;
+      }
+    } else {
+      imageUrl = values.image ?? null;
+    }
+
     const payload = {
       ...(isEdit ? {} : { carModelId }),
       labelEn: values.labelEn,
@@ -378,6 +411,7 @@ export default function CarEngineFormPage() {
       displacementCc: values.displacementCc ? Number(values.displacementCc) : undefined,
       engineCode: values.engineCode || undefined,
       status: values.isActive ? "ACTIVE" : "INACTIVE",
+      image: imageUrl,
     };
 
     const response = await fetch(
@@ -453,6 +487,14 @@ export default function CarEngineFormPage() {
           placeholderEn="Type 2 (TU3 1.4L)"
           isRequired
         />
+
+        <div className="flex flex-col gap-1">
+          <ImageUploadField control={control} name="image" label="Photo" />
+          <p className="text-sm text-neutral-500">
+            Optional — falls back to the model&rsquo;s photo when empty. Add one only where types
+            actually look different (206 Type 2 vs Type 5, a 2015 facelift vs a 2025).
+          </p>
+        </div>
 
         <div className="flex flex-col gap-6 sm:flex-row">
           <TextField

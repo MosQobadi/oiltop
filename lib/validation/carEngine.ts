@@ -10,6 +10,9 @@ const carEngineShape = {
   // Nullable (not just optional) so a PATCH can explicitly clear it back to
   // "still in production" — omitting the key on PATCH leaves it untouched.
   yearEnd: z.number().int().min(1900).max(2100).nullable().optional(),
+  // Nullable for the same reason yearEnd is: a PATCH has to be able to clear the
+  // photo back to "fall back to the model's", which `optional` alone can't say.
+  image: z.string().min(1).nullable().optional(),
   fuelType: fuelTypeSchema,
   displacementCc: z.number().int().positive().optional(),
   engineCode: z.string().min(1).max(50).optional(),

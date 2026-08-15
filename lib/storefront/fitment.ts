@@ -23,6 +23,21 @@ export interface CarEngineLabelParts {
   yearEnd: number | null;
 }
 
+// Which photo a car type shows: its own if it has one, otherwise its model's.
+// A 206 Type 2 and a Type 5 don't look alike, and a 2015 Tucson doesn't look
+// like a 2025 one — but most types never need their own picture, so the column
+// is null far more often than not and the model's photo is the honest default.
+//
+// Everything that renders a type goes through here rather than reading
+// `engine.image`, which is what stops one surface from showing a gap where
+// another shows the model. Null from here means genuinely no photo anywhere.
+export function variantImage(
+  engine: { image: string | null },
+  model: { image: string | null } | null | undefined,
+): string | null {
+  return engine.image ?? model?.image ?? null;
+}
+
 // "2001–2010", or "2001–Present" while the car is still being built — a null
 // `yearEnd` means still in production, not unknown. Takes a bare span rather
 // than an engine so the PDP can write a whole model's range with it too.

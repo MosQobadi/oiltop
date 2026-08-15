@@ -423,6 +423,13 @@ model CarEngine {
   yearStart Int
   yearEnd   Int? // nullable means still in production
 
+  // A photo of this specific type, for the car finder's type step: a 206 Type 2
+  // and a Type 5 don't look alike, and neither does a 2015 Tucson next to a 2025
+  // one. Null means "no photo of its own" and falls back to the model's image —
+  // see variantImage() in lib/storefront/fitment.ts. Nothing reads this column
+  // directly, so the fallback can never be skipped by accident.
+  image String?
+
   fuelType       FuelType
   displacementCc Int?
   engineCode     String?
