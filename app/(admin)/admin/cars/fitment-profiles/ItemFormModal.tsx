@@ -304,7 +304,16 @@ export function ItemFormModal({
             <Modal.Header>
               <Modal.Heading>{isEdit ? "Edit Item" : "Add Item"}</Modal.Heading>
             </Modal.Header>
-            <form noValidate onSubmit={handleSubmit(onSubmit)}>
+            {/* The form has to carry the dialog's flex column itself: Modal.Body
+                only scrolls while it's a flex child that can shrink, and wrapping
+                it in a plain block would let the content grow past the dialog's
+                max height and clip the footer away. `mt-2` replaces the
+                header-to-body gap the sibling selector no longer matches. */}
+            <form
+              noValidate
+              onSubmit={handleSubmit(onSubmit)}
+              className="mt-2 flex min-h-0 flex-1 flex-col"
+            >
               <Modal.Body>
                 <div className="flex flex-col gap-6">
                   <SelectField
