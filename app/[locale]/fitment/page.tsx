@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Breadcrumbs } from "@/components/storefront/Breadcrumbs";
+import { FitmentCarCard } from "@/components/storefront/fitment/FitmentCarCard";
 import { FitmentResults } from "@/components/storefront/fitment/FitmentResults";
 import { FitmentWizard } from "@/components/storefront/fitment/FitmentWizard";
 import { FITMENT_PATH, navHref } from "@/components/storefront/nav-items";
 import { pickLocale, type Locale } from "@/lib/i18n";
 import { getActiveCarEngineContext, resolveFitmentForEngine } from "@/lib/services/fitment";
-import { FIT_PARAM, formatCarName, formatEngineOptionLabel } from "@/lib/storefront/fitment";
+import { FIT_PARAM, formatCarName } from "@/lib/storefront/fitment";
 import { localeAlternates } from "@/lib/storefront/seo";
 import { storefrontIdParamSchema } from "@/lib/validation";
 
@@ -100,29 +100,12 @@ export default async function FitmentPage({
         ]}
       />
 
-      {/* The car stays above the results the whole way down the page — a
-          customer scrolling past four categories of parts has to be able to see
-          which car they're buying for without scrolling back. */}
-      <header className="mt-5 flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6">
-        <div className="min-w-0">
-          <p className="font-mono text-[10.5px] tracking-[0.09em] text-neutral-500 uppercase">
-            {pickLocale(locale, "Parts for your car", "قطعات خودروی شما")}
-          </p>
-          <h1 className="mt-2 text-[23px] font-semibold tracking-[-0.025em] text-neutral-900">
-            {carName}
-          </h1>
-          <p dir="auto" className="mt-1 text-[14px] text-neutral-500">
-            {formatEngineOptionLabel(locale, car.carEngine)}
-          </p>
-        </div>
-
-        <Link
-          href={navHref(locale, FITMENT_PATH)}
-          className="focus-visible:ring-accent min-h-11 rounded-[9px] border border-neutral-200 bg-white px-4 py-2.5 text-[13px] font-medium text-neutral-600 transition-colors hover:border-neutral-400 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-        >
-          {pickLocale(locale, "Change car", "تغییر خودرو")}
-        </Link>
-      </header>
+      <FitmentCarCard
+        locale={locale}
+        car={car}
+        changeHref={navHref(locale, FITMENT_PATH)}
+        className="mt-5"
+      />
 
       <FitmentResults locale={locale} car={car} groups={groups} className="mt-8" />
 

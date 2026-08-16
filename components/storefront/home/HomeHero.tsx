@@ -1,14 +1,13 @@
 import Link from "next/link";
 import {
   ArrowIcon,
-  FilterCanisterIcon,
-  FilterPanelIcon,
+  CATEGORY_ICONS,
   GearIcon,
   GridIcon,
   MedalIcon,
-  OilBottleIcon,
   ShieldIcon,
   TruckIcon,
+  type StorefrontIcon,
 } from "../icons";
 import { FitmentWizard } from "../fitment/FitmentWizard";
 import { categoryHref, navHref, PRODUCTS_PATH } from "../nav-items";
@@ -33,18 +32,6 @@ const HERO_STYLE = {
     "radial-gradient(80% 70% at 78% 8%, oklch(0.36 0.06 42 / 0.75) 0%, transparent 62%)",
     "radial-gradient(60% 60% at 8% 100%, oklch(0.30 0.03 50 / 0.6) 0%, transparent 70%)",
   ].join(","),
-};
-
-// A glyph per category, keyed on slug like every other piece of category-specific
-// behaviour in this codebase (never on `nameEn`, never on `partType` — see
-// CLAUDE.md). Purely decorative: a category the seed doesn't know about still
-// renders, it just gets the generic tile.
-const CATEGORY_ICONS: Record<string, typeof OilBottleIcon> = {
-  "engine-oil": OilBottleIcon,
-  "oil-filter": FilterCanisterIcon,
-  "fuel-filter": FilterCanisterIcon,
-  "air-filter": FilterPanelIcon,
-  "cabin-filter": FilterPanelIcon,
 };
 
 // The shortcut row is a taste of the catalogue, not a second navigation: three
@@ -84,7 +71,7 @@ export function HomeHero({
                 // The optical tightening a big Latin headline wants is the same
                 // adjustment that pulls joined Persian letterforms into each
                 // other, so it stops at the English tree too.
-                isEn ? "uppercase tracking-[-0.02em]" : ""
+                isEn ? "tracking-[-0.02em] uppercase" : ""
               }`}
             >
               <span className="block">{pickLocale(locale, "The right parts", "قطعه‌ی درست")}</span>
@@ -149,12 +136,12 @@ function ShortcutTile({
   capsClass,
 }: {
   href: string;
-  icon: typeof OilBottleIcon;
+  icon: StorefrontIcon;
   label: string;
   capsClass: string;
 }) {
   return (
-    <li className="border-s border-white/12 first:border-s-0 first:ps-0 ps-5 pe-5 last:pe-0">
+    <li className="border-s border-white/12 ps-5 pe-5 first:border-s-0 first:ps-0 last:pe-0">
       <Link
         href={href}
         className="group focus-visible:ring-accent-on-dark flex w-[86px] flex-col items-center gap-2.5 rounded-lg py-1 text-center focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900 focus-visible:outline-none"

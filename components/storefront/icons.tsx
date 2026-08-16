@@ -69,6 +69,21 @@ export function OilBottleIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+// The stand-in for a car with no photo — neither the type nor its model has one
+// (see `variantImage`). A three-quarter-flat silhouette rather than a camera or
+// a broken-image glyph, for the same reason as OilBottleIcon above.
+export function CarIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M4 16.5v2.2a.8.8 0 0 1-.8.8H2.4a.8.8 0 0 1-.8-.8v-2.2M22.4 16.5v2.2a.8.8 0 0 1-.8.8h-.8a.8.8 0 0 1-.8-.8v-2.2" />
+      <path d="M2.6 16.5v-3.2a2 2 0 0 1 .5-1.3l1-1.2 1.7-4A2 2 0 0 1 7.6 5.5h8.8a2 2 0 0 1 1.8 1.3l1.7 4 1 1.2a2 2 0 0 1 .5 1.3v3.2Z" />
+      <path d="M4.6 11.5h14.8" />
+      <circle cx="7.4" cy="14" r="1" />
+      <circle cx="16.6" cy="14" r="1" />
+    </Svg>
+  );
+}
+
 export function MailIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <Svg {...props}>
@@ -166,3 +181,21 @@ export function TruckIcon(props: SVGProps<SVGSVGElement>) {
     </Svg>
   );
 }
+
+export type StorefrontIcon = typeof OilBottleIcon;
+
+// A glyph per category, keyed on slug like every other piece of
+// category-specific behaviour in this codebase (never on `nameEn`, never on
+// `partType` — see CLAUDE.md). Purely decorative, so a category the seed
+// doesn't know about still renders; callers fall back to `GridIcon`.
+//
+// A map rather than a `categoryIcon(slug)` helper on purpose: a function that
+// returns a component reads as a component factory, and both React's rules and
+// the lint rule enforcing them want the lookup to be a plain property access.
+export const CATEGORY_ICONS: Record<string, StorefrontIcon> = {
+  "engine-oil": OilBottleIcon,
+  "oil-filter": FilterCanisterIcon,
+  "fuel-filter": FilterCanisterIcon,
+  "air-filter": FilterPanelIcon,
+  "cabin-filter": FilterPanelIcon,
+};

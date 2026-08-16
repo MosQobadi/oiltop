@@ -47,6 +47,12 @@ export interface ProductCardProps {
   onAddToCart?: (product: ProductCardProduct) => void;
   /** `sizes` for the product image; the default matches the PLP grid. */
   imageSizes?: string;
+  /**
+   * How tall the image box is. `"tall"` is for grids wider than the PLP's
+   * four-up — a contained bottle in a 360px-wide card is lost in a 140px
+   * letterbox, and the space around it reads as a mistake.
+   */
+  imageBox?: ImageBoxSize;
   /** Appended to the card's own classes — layout only. */
   className?: string;
 }
@@ -59,7 +65,18 @@ const DEFAULT_IMAGE_SIZES = "(min-width: 1024px) 216px, (min-width: 640px) 33vw,
 const CARD_CLASS =
   "focus-within:border-accent/50 hover:border-accent/50 flex h-full flex-col gap-2.5 rounded-2xl border border-neutral-200 bg-white p-3.5 transition-colors";
 
-const IMAGE_BOX_CLASS = "relative h-[140px] overflow-hidden rounded-lg bg-neutral-100";
+export type ImageBoxSize = "default" | "tall";
+
+const IMAGE_BOX_CLASS = "relative overflow-hidden rounded-lg bg-neutral-100";
+
+const IMAGE_BOX_HEIGHT: Record<ImageBoxSize, string> = {
+  default: "h-[140px]",
+  tall: "h-[172px]",
+};
+
+function imageBoxClass(size: ImageBoxSize): string {
+  return `${IMAGE_BOX_CLASS} ${IMAGE_BOX_HEIGHT[size]}`;
+}
 
 // The name block is a fixed two lines of title plus one of the secondary name —
 // 2×19px + 2px + 18px at the leadings set on them below. Product names here run
@@ -86,6 +103,7 @@ export function ProductCard({
   fitsRibbon,
   onAddToCart,
   imageSizes = DEFAULT_IMAGE_SIZES,
+  imageBox = "default",
   className,
 }: ProductCardProps) {
   const [notifyOpen, setNotifyOpen] = useState(false);
@@ -138,7 +156,7 @@ export function ProductCard({
       data-testid="product-card"
       className={className ? `${CARD_CLASS} ${className}` : CARD_CLASS}
     >
-      <div className={IMAGE_BOX_CLASS}>
+      <div className={imageBoxClass(imageBox)}>
         {/* Duplicate of the title link below, hidden from assistive tech and the
             tab order so the card offers one link, not two identical ones. */}
         <Link href={productHref} aria-hidden="true" tabIndex={-1} className="block h-full w-full">
@@ -301,7 +319,7 @@ const STEP_BUTTON_CLASS =
 export function ProductCardSkeleton() {
   return (
     <div data-testid="product-card-skeleton" aria-hidden="true" className={CARD_CLASS}>
-      <div className={IMAGE_BOX_CLASS} />
+      <div className={imageBoxClass("default")} />
       <div className="flex items-center justify-between gap-2">
         <span className="h-3 w-16 rounded bg-neutral-100" />
         <span className="h-3 w-14 rounded bg-neutral-100" />

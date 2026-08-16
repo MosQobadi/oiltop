@@ -1,4 +1,4 @@
-import { formatDigits, pickLocale, type Locale } from "@/lib/i18n";
+import { formatDigits, NUMBER_LOCALE, pickLocale, type Locale } from "@/lib/i18n";
 
 // The car-finder's shared vocabulary: how a resolved car travels between pages,
 // and how an engine reads once it gets there. The wizard, the results page, the
@@ -65,6 +65,34 @@ export function formatYearSpan(
 export function formatTypeCount(locale: Locale, count: number): string {
   const digits = formatDigits(count, locale);
   return pickLocale(locale, `${digits} ${count === 1 ? "type" : "types"}`, `${digits} تیپ`);
+}
+
+// The `FuelType` enum, as a customer reads it. A value this doesn't know about
+// is returned as-is rather than dropped — a new enum member should show up as
+// its own name, not vanish from the car's spec line.
+const FUEL_TYPE_LABELS: Record<string, { en: string; fa: string }> = {
+  PETROL: { en: "Petrol", fa: "بنزینی" },
+  DIESEL: { en: "Diesel", fa: "دیزلی" },
+  HYBRID: { en: "Hybrid", fa: "هیبریدی" },
+  ELECTRIC: { en: "Electric", fa: "برقی" },
+  LPG_CNG: { en: "LPG/CNG", fa: "دوگانه‌سوز" },
+};
+
+export function formatFuelType(locale: Locale, fuelType: string): string {
+  const label = FUEL_TYPE_LABELS[fuelType];
+  return label ? pickLocale(locale, label.en, label.fa) : fuelType;
+}
+
+// 1598cc → "1.6L". Cubic centimetres are how the column stores it and how
+// nobody says it; the rounded litre figure is the one on the car's boot lid.
+// Not `formatDigits` — that drops the fraction this exists to show.
+export function formatDisplacement(locale: Locale, displacementCc: number): string {
+  const litres = new Intl.NumberFormat(NUMBER_LOCALE[locale], {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(displacementCc / 1000);
+
+  return pickLocale(locale, `${litres}L`, `${litres} لیتر`);
 }
 
 // "1.4L TU3 Petrol (2001–2010)". The range is part of the label because two

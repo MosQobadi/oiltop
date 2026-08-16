@@ -5,7 +5,9 @@ import {
   FIT_PARAM,
   formatCarLabel,
   formatCarName,
+  formatDisplacement,
   formatEngineOptionLabel,
+  formatFuelType,
   formatSpecAttributes,
   formatSpecSummary,
   formatTypeCount,
@@ -74,6 +76,29 @@ describe("variantImage", () => {
   it("tolerates a missing model, for callers that only hold the type", () => {
     expect(variantImage({ image: "/type-2.jpg" }, null)).toBe("/type-2.jpg");
     expect(variantImage({ image: null }, undefined)).toBeNull();
+  });
+});
+
+describe("formatFuelType", () => {
+  it("writes the enum as a customer reads it, in either tree", () => {
+    expect(formatFuelType("en", "PETROL")).toBe("Petrol");
+    expect(formatFuelType("fa", "PETROL")).toBe("بنزینی");
+    expect(formatFuelType("fa", "LPG_CNG")).toBe("دوگانه‌سوز");
+  });
+
+  it("shows an unknown value as itself rather than dropping it", () => {
+    expect(formatFuelType("en", "HYDROGEN")).toBe("HYDROGEN");
+  });
+});
+
+describe("formatDisplacement", () => {
+  it("states cubic centimetres as the litre figure on the boot lid", () => {
+    expect(formatDisplacement("en", 1598)).toBe("1.6L");
+    expect(formatDisplacement("fa", 1598)).toBe("۱٫۶ لیتر");
+  });
+
+  it("keeps one decimal place, so 2000cc is 2.0L and not 2L", () => {
+    expect(formatDisplacement("en", 2000)).toBe("2.0L");
   });
 });
 
