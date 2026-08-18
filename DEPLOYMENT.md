@@ -78,24 +78,39 @@ disturbing.
 `ns1.hostiran.net` / `ns2.hostiran.net`, so records are edited in the HostIran
 panel, not the Arvan panel or API.
 
-As of the last check the domain already resolves:
+**The A record is currently wrong and must be changed before deploying.** As of
+the last check:
 
 ```
-oil-top.ir.      A      95.38.232.127
-www.oil-top.ir.  CNAME  oil-top.ir.
+oil-top.ir.      A      95.38.232.127     <- not the VPS
+www.oil-top.ir.  CNAME  oil-top.ir.       <- correct, leave alone
 ```
 
-Confirm that `95.38.232.127` is the VPS you are deploying to — run this **on
-the VPS**, and it must print that same address:
+The VPS is **95.38.235.233**. The address the domain points at belongs to a
+different /24 and answers nothing, so until this is fixed the site cannot come
+up and certbot cannot issue a certificate — the ACME challenge is served by
+whichever machine the name resolves to.
+
+In the HostIran DNS panel, change the `oil-top.ir` A record:
+
+```
+oil-top.ir.  A  95.38.235.233
+```
+
+Leave the `www` CNAME as it is — it follows the apex automatically.
+
+The current TTL is 14400s (4h), so allow for that before expecting the change
+to take. Confirm it has propagated before running certbot:
 
 ```bash
-curl -s ifconfig.me
+dig +short oil-top.ir
 ```
 
-If it prints something else, update the A record at HostIran to the VPS's real
-IP and wait for the TTL (currently 14400s / 4h) before continuing — certbot
-cannot issue a certificate until the name points at the box answering the
-challenge.
+That must print `95.38.235.233`. Cross-check from the other side by running
+`curl -s ifconfig.me` **on the VPS** — it should print the same address. If the
+VPS reports a different public IP than the one you SSH to, it is behind NAT or
+a CDN, and the A record needs to point at whatever fronts it rather than at the
+VPS directly.
 
 ---
 
