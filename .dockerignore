@@ -8,6 +8,7 @@ node_modules
 .env.*
 !.env.example
 !.env.test.example
+!.env.production.example
 
 # generated / local-only
 lib/generated/prisma
@@ -34,3 +35,6 @@ yarn-error.log*
 Dockerfile
 docker-compose*.yml
 .dockerignore
+
+# host-nginx config, deployed to the VPS by hand — never needed in the image
+deploy

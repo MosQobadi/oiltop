@@ -27,6 +27,14 @@ RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# `NEXT_PUBLIC_*` is substituted into the bundle at build time, not read from
+# the environment at runtime, so passing this only via `env_file:` would ship a
+# sitemap and robots.txt full of http://localhost:3000 URLs. It has to be here,
+# before `next build`. docker-compose.prod.yml forwards it as a build arg.
+ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+
 RUN pnpm prisma generate
 RUN pnpm build
 

@@ -1,3 +1,16 @@
+# Production stack for a SHARED VPS — this project is a guest on a machine that
+# already runs other sites. Two rules follow from that, and both are load-bearing:
+#
+#   1. Nothing here binds a public port. There is no nginx service; the VPS's
+#      existing web server already owns :80/:443 and keeps them. The app is
+#      published on the loopback interface only, so the sole way in is through
+#      that existing nginx (see deploy/nginx/oil-top.ir.conf).
+#   2. `name:` is set explicitly. Compose otherwise derives the project name from
+#      the directory, and every container, network and volume is prefixed with
+#      it — pinning it to `topoil` guarantees no other stack's `postgres_data`
+#      or `app` can be adopted or clobbered by this one.
+name: topoil
+
 services:
   postgres:
     image: postgres:16
@@ -6,8 +19,8 @@ services:
       - .env.production
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    # No `ports:` — not exposed to the host or the public internet, only
-    # reachable by other services on this compose network.
+    # No `ports:` — reachable only by other services on this compose network,
+    # never from the host or the internet.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -32,6 +45,10 @@ services:
     build:
       context: .
       target: runner
+      args:
+        # Build-time only (see Dockerfile) — the runtime copy still arrives via
+        # env_file, but the bundled sitemap/robots URLs are fixed at build.
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
     restart: unless-stopped
     env_file:
       - .env.production
@@ -42,26 +59,16 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-    # Not published to the host — only nginx talks to it, over the compose
-    # network, on the port the standalone server listens on (see Dockerfile).
-    expose:
-      - "3000"
-
-  nginx:
-    image: nginx:1.27-alpine
-    restart: unless-stopped
-    depends_on:
-      - app
+    # Bound to 127.0.0.1 on purpose: the port is reachable by the host's nginx
+    # and by nothing else, so this can never conflict with — or be exposed
+    # alongside — whatever else the VPS is serving.
+    #
+    # TOPOIL_PORT comes from .env.production, which means every compose command
+    # must pass `--env-file .env.production`; `env_file:` above feeds the
+    # container's environment but NOT the interpolation done on this line.
+    # DEPLOYMENT.md spells the full command out.
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      # Host paths, not named volumes: certbot runs directly on the VPS (see
-      # DEPLOYMENT.md), so both it and this container need the same
-      # filesystem paths for the ACME webroot challenge and issued certs.
-      - /var/www/certbot:/var/www/certbot:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - "127.0.0.1:${TOPOIL_PORT:-3001}:3000"
 
 volumes:
   postgres_data:
