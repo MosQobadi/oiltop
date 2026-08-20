@@ -43,6 +43,10 @@ systemctl is-active caddy nginx; docker ps --format '{{.Names}}\t{{.Ports}}'
 docker compose version
 ```
 
+```bash
+free -h; df -h /var/lib/docker; nproc
+```
+
 Those are, in order: what already listens on 80/443 and whether the port we
 want is free; which web server owns those ports and whether it is a host
 service or a container; and whether Docker and the Compose plugin are present.
@@ -61,6 +65,29 @@ If `docker compose version` fails, install Docker from the official repo
 (<https://docs.docker.com/engine/install/ubuntu/>) — but check first that the
 other projects are not already running under a different runtime you would be
 disturbing.
+
+### The one way this deploy can hurt the neighbours
+
+Everything else in this document is isolated by design, but `next build` is
+memory-hungry — it routinely wants 2-4GB — and it runs on the same kernel as
+the production containers. If it exhausts RAM, the Linux OOM killer does not
+politely fail the build: it picks a victim by score and kills it, and a large
+neighbouring container is a very plausible victim.
+
+Read the `free -h` output before building. If **available** memory is under
+about 3GB, do not build on this box. Build the image somewhere else and pull it
+in instead:
+
+```bash
+docker build --target runner -t topoil-app:latest . && docker save topoil-app:latest | gzip > topoil-app.tar.gz
+```
+
+Copy that over, `docker load < topoil-app.tar.gz` on the VPS, and change the
+`app` service from `build:` to `image: topoil-app:latest` before starting it.
+
+If there is headroom but not a lot, at least confirm swap exists (`free -h`
+shows a Swap row above zero) so a spike degrades into slowness rather than a
+kill.
 
 ---
 
