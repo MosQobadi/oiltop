@@ -173,6 +173,52 @@ copied into `DATABASE_URL`). Three values deserve particular attention:
 
 ---
 
+## 3a. Build off-box, then load the image
+
+Skip this section only if §1's `free -h` showed comfortable headroom. On the
+current VPS it did not — 2.5GB available with 1.3GB of swap already in use —
+so the image is built elsewhere and copied in. A `next build` on that box risks
+the OOM killer choosing a production container as its victim.
+
+Both images are built for `linux/amd64`, so build them on any amd64 machine
+with Docker (a laptop is fine):
+
+```bash
+docker build --target runner --build-arg NEXT_PUBLIC_SITE_URL=https://oil-top.ir -t topoil-app:latest .
+```
+
+```bash
+docker build --target migrator -t topoil-migrate:latest .
+```
+
+The `--build-arg` matters: `NEXT_PUBLIC_SITE_URL` is inlined at build time, so
+the origin has to be correct _here_, not just in `.env.production`.
+
+Bundle both into one file — they share base layers, so saving them together is
+smaller than saving each alone (about 420MB gzipped):
+
+```bash
+docker save topoil-app:latest topoil-migrate:latest | gzip -6 > topoil-images.tar.gz
+```
+
+Copy it over and load it:
+
+```bash
+scp topoil-images.tar.gz ubuntu@95.38.235.233:/srv/topoil/
+```
+
+```bash
+cd /srv/topoil && gunzip -c topoil-images.tar.gz | docker load && rm topoil-images.tar.gz
+```
+
+`docker load` only adds the two `topoil-*` tags. It cannot overwrite another
+project's image unless that project happens to use the same tag, which nothing
+on this box does.
+
+Then start with `--no-build` in §4 so Compose uses what you just loaded instead
+of trying to build. Repeat this section on every redeploy in place of the
+`--build` in §7.
+
 ## 4. Build and start the app
 
 `--env-file .env.production` is required on **every** compose command in this
@@ -181,11 +227,19 @@ doc. `env_file:` inside the compose file populates the containers, but the
 interpolated by Compose itself, before any container exists, and it reads those
 from `--env-file`.
 
+If you built off-box in §3a, use `--no-build` so Compose uses the loaded image:
+
+```bash
+cd /srv/topoil && docker compose --env-file .env.production -f docker-compose.prod.yml up -d --no-build
+```
+
+Only if §1 showed enough memory to build in place, use `--build` instead:
+
 ```bash
 cd /srv/topoil && docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 ```
 
-This starts Postgres, waits for it to report healthy, runs `migrate`
+Either way this starts Postgres, waits for it to report healthy, runs `migrate`
 (`prisma migrate deploy`, which exits when done), then starts `app`.
 
 Verify — and confirm you have disturbed nothing:

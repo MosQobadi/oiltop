@@ -32,6 +32,10 @@ services:
   # `prisma migrate deploy` itself on boot) so migrations run exactly once
   # per deploy even if `app` is later scaled to multiple replicas.
   migrate:
+    # Tagged so the image can be built off-box and loaded here (see
+    # DEPLOYMENT.md §3a). With both `image:` and `build:` present, `up --build`
+    # builds and tags it, while `up --no-build` uses whatever is already loaded.
+    image: topoil-migrate:latest
     build:
       context: .
       target: migrator
@@ -42,6 +46,7 @@ services:
         condition: service_healthy
 
   app:
+    image: topoil-app:latest
     build:
       context: .
       target: runner
