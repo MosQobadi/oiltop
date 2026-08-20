@@ -6,7 +6,7 @@ constraint: nothing in this stack may take a port, a config file, a firewall
 rule, a container name or a volume that another project is already using.
 
 The pieces: `Dockerfile`, `docker-compose.prod.yml`,
-`deploy/nginx/oil-top.ir.conf`, and `.env.production.example` at the repo root.
+`deploy/caddy/oil-top.ir.caddy`, and `.env.production.example` at the repo root.
 
 Out of scope: local development (`README.md`) and CI (`.github/workflows/ci.yml`).
 
@@ -19,7 +19,7 @@ deliberately not what you would expect:
 
 | Usual approach                                  | What this does instead                                                                       | Why                                                                                                                              |
 | ----------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Compose runs its own nginx on `80:80`/`443:443` | **No nginx service at all.** The app publishes `127.0.0.1:3001` only                         | The VPS's existing web server already owns 80/443. A second binder either fails to start or takes the ports from the other sites |
+| Compose runs its own nginx on `80:80`/`443:443` | **No web server in this stack at all.** The app publishes `127.0.0.1:3001` only              | The VPS's existing web server already owns 80/443. A second binder either fails to start or takes the ports from the other sites |
 | `docker compose up` in the project dir          | `--env-file .env.production` on every command, and `name: topoil` pinned in the compose file | Compose derives the project name from the directory; pinning it keeps containers and volumes namespaced away from the neighbours |
 | `sudo ufw enable`                               | **Do not touch the firewall**                                                                | The other sites are reachable, so 80/443 are already open. Enabling ufw fresh on a live box drops every port you did not list    |
 | `docker system prune -a` to clean up            | Never run it                                                                                 | It deletes images and networks belonging to the other projects too                                                               |
@@ -36,34 +36,26 @@ sudo ss -tlnp | grep -E ':(80|443|3001)\s'
 ```
 
 ```bash
-systemctl is-active nginx; docker ps --format '{{.Names}}\t{{.Ports}}\t{{.Image}}'
+systemctl is-active caddy nginx; docker ps --format '{{.Names}}\t{{.Ports}}'
 ```
 
 ```bash
 docker compose version
 ```
 
-```bash
-sudo certbot certificates | grep -E 'Certificate Name|Domains'
-```
-
 Those are, in order: what already listens on 80/443 and whether the port we
-want is free; whether the thing on 80/443 is a host nginx package or a
-container; whether Docker and the Compose plugin are present; and which
-certificates already exist, so we add one rather than replace one.
+want is free; which web server owns those ports and whether it is a host
+service or a container; and whether Docker and the Compose plugin are present.
 
-Record which case you are in:
-
-- **Case A — host nginx** (`systemctl is-active nginx` says `active`): the
-  server block goes in `/etc/nginx/conf.d/` or `/etc/nginx/sites-available/`.
-  This is the common case and the rest of the doc assumes it.
-- **Case B — nginx/Traefik/Caddy in a container** owning 80/443: the same
-  server block content still applies, but it goes wherever that proxy reads
-  its config from (a bind-mounted `conf.d` on the host, usually), and the
-  `proxy_pass` target changes — see §5.1.
+As surveyed on 2026-08-20, this box runs **Caddy as a host process** owning
+:80 and :443, with nginx installed but `inactive`, and two existing compose
+stacks (`adliran24-*` and `tehran_erp_*`) whose published ports sit on
+`127.0.0.1:5241-5244` and `:9000`. Port 3001 was free. §5 is written for that
+arrangement — re-run the survey before trusting it, since the neighbours
+change independently of this repo.
 
 If port **3001** is taken, pick another free port and use it consistently in
-`TOPOIL_PORT` (§3) and in the `proxy_pass` lines of the nginx config (§5).
+`TOPOIL_PORT` (§3) and in the `reverse_proxy` line of the Caddy config (§5).
 
 If `docker compose version` fails, install Docker from the official repo
 (<https://docs.docker.com/engine/install/ubuntu/>) — but check first that the
@@ -88,7 +80,7 @@ www.oil-top.ir.  CNAME  oil-top.ir.       <- correct, leave alone
 
 The VPS is **95.38.235.233**. The address the domain points at belongs to a
 different /24 and answers nothing, so until this is fixed the site cannot come
-up and certbot cannot issue a certificate — the ACME challenge is served by
+up and Caddy cannot obtain a certificate — the ACME challenge is answered by
 whichever machine the name resolves to.
 
 In the HostIran DNS panel, change the `oil-top.ir` A record:
@@ -100,7 +92,7 @@ oil-top.ir.  A  95.38.235.233
 Leave the `www` CNAME as it is — it follows the apex automatically.
 
 The current TTL is 14400s (4h), so allow for that before expecting the change
-to take. Confirm it has propagated before running certbot:
+to take. Confirm it has propagated before reloading Caddy in §5:
 
 ```bash
 dig +short oil-top.ir
@@ -150,7 +142,7 @@ copied into `DATABASE_URL`). Three values deserve particular attention:
   build time (see the `ARG` in the Dockerfile), so changing it later means a
   rebuild, not just a restart.
 - `TOPOIL_PORT` must match the port you confirmed free in §1 and the
-  `proxy_pass` port in the nginx config.
+  `reverse_proxy` port in the Caddy config.
 
 ---
 
@@ -191,74 +183,71 @@ show the other projects' containers `Up`.
 
 ---
 
-## 5. Wire it into the existing nginx
+## 5. Wire it into the existing Caddy
 
-### 5.1 Install the server block
+This VPS serves :80 and :443 from **Caddy**, running as a host process. nginx is
+installed but `inactive` — leave it that way. Starting it would fight Caddy for
+the ports and take every site on the box down.
 
-**Case A — host nginx:**
+Caddy handles TLS itself, so there is no certbot step and nothing to bootstrap:
+it requests a Let's Encrypt certificate the first time someone asks for a
+hostname it is configured to serve. That is why §2's DNS change has to land
+_before_ this step — the ACME challenge is answered by whichever machine the
+name resolves to, so a stale A record means Caddy retries and fails.
+
+### 5.1 Find how the Caddyfile is organised
 
 ```bash
-sudo cp /srv/topoil/deploy/nginx/oil-top.ir.conf /etc/nginx/conf.d/oil-top.ir.conf
+sudo ls /etc/caddy/ && sudo grep -n import /etc/caddy/Caddyfile
 ```
 
-On a Debian/Ubuntu layout using `sites-available`, copy it there instead and
-symlink it into `sites-enabled`.
+- If there is an `import` line (e.g. `import /etc/caddy/sites/*`), drop the
+  site file into that directory — the neighbouring sites each have their own
+  file and this one joins them.
+- If not, everything lives in one `Caddyfile` and the block gets appended to it.
 
-**Case B — containerised proxy:** copy the same file into whatever host
-directory that container bind-mounts as its `conf.d`, then change both
-`proxy_pass http://127.0.0.1:3001;` lines — inside a container `127.0.0.1` is
-the container itself, not the host. Either use `http://host.docker.internal:3001`
-with `extra_hosts: ["host.docker.internal:host-gateway"]` on the proxy, or
-attach the proxy to this stack's network and use `http://app:3000`.
+### 5.2 Install the site block
 
-The config is written to be a safe neighbour: `gzip` is set per-server rather
-than globally, and the WebSocket upgrade map is named
-`$topoil_connection_upgrade` — a duplicate `$connection_upgrade` would make
-nginx refuse to start and take **every** site on the box down with it.
-
-### 5.2 Certificate
-
-The config references a certificate that does not exist yet, so nginx will fail
-its config test until certbot has run. Get the cert first, using the webroot
-the other sites already use if there is one:
+Split-file layout — adjust the destination to match the `import` path:
 
 ```bash
-sudo mkdir -p /var/www/certbot
+sudo cp /srv/topoil/deploy/caddy/oil-top.ir.caddy /etc/caddy/sites/oil-top.ir.caddy
 ```
 
+Single-file layout — append, and take a backup first, because this file is what
+keeps the other sites online:
+
 ```bash
-sudo certbot certonly --webroot -w /var/www/certbot -d oil-top.ir -d www.oil-top.ir --email you@example.com --agree-tos --non-interactive
+sudo cp /etc/caddy/Caddyfile /etc/caddy/Caddyfile.bak-$(date +%F) && sudo tee -a /etc/caddy/Caddyfile < /srv/topoil/deploy/caddy/oil-top.ir.caddy
 ```
 
-If the existing nginx has no `/.well-known/acme-challenge/` location at the
-server level, the webroot challenge will 404. In that case use the nginx
-plugin, which writes a temporary block and cleans up after itself:
+### 5.3 Validate, then reload (never restart)
 
 ```bash
-sudo certbot --nginx -d oil-top.ir -d www.oil-top.ir
-```
-
-Do **not** pass `--force-renewal`, and do not reuse a `--cert-name` that
-belongs to an existing certificate — that is how you revoke a neighbour's TLS
-by accident.
-
-### 5.3 Test, then reload (never restart)
-
-```bash
-sudo nginx -t
+sudo caddy validate --config /etc/caddy/Caddyfile
 ```
 
 ```bash
-sudo systemctl reload nginx
+sudo systemctl reload caddy
 ```
 
-`nginx -t` must pass before you go anywhere near a reload. `reload` re-reads the
-config without dropping connections; `restart` briefly takes every site on the
-box offline. If `nginx -t` fails, remove the file you just added and re-test —
-the other sites keep running on the old config as long as you never reloaded a
-broken one.
+Validate first and only reload if it passes. `reload` swaps the config with no
+dropped connections; `restart` briefly takes every site on the box offline. If
+validation fails, restore the backup (or delete the file you added) and
+re-validate — the running Caddy keeps serving the old config either way, as
+long as you never reloaded a broken one.
 
-Confirm from your own machine — the second should be a 301 to the bare domain:
+Watch the certificate being issued:
+
+```bash
+sudo journalctl -u caddy -f
+```
+
+Look for `certificate obtained successfully` for `oil-top.ir`. Issuance usually
+takes a few seconds after the first request. Repeated `no such host` or
+challenge failures mean DNS has not propagated yet — go back to §2.
+
+### 5.4 Confirm
 
 ```bash
 curl -sSI https://oil-top.ir/ | head -5
@@ -268,19 +257,8 @@ curl -sSI https://oil-top.ir/ | head -5
 curl -sSI https://www.oil-top.ir/ | head -5
 ```
 
-Then load one of the other sites in a browser before you call this done.
-
-### 5.4 Renewal
-
-Certbot's systemd timer handles renewal, but host nginx needs a reload
-afterwards to pick up the new certificate. If a deploy hook already exists from
-another project, leave it alone — one reload serves every site. Otherwise
-create `/etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh` containing
-`#!/bin/sh` and `systemctl reload nginx`, make it executable, and verify:
-
-```bash
-sudo certbot renew --dry-run
-```
+The second should be a `301` to the bare domain. Then open one of the
+neighbouring sites in a browser before calling this done.
 
 ---
 
@@ -317,12 +295,12 @@ cd /srv/topoil && git pull && docker compose --env-file .env.production -f docke
 ```
 
 Compose rebuilds only what changed, reruns `migrate` to apply new Prisma
-migrations, then recreates `app`. Nginx is untouched — it is not part of this
+migrations, then recreates `app`. Caddy is untouched — it is not part of this
 stack — so the other sites are unaffected by a redeploy.
 
 This causes a few seconds of downtime while `app` is recreated (the old
 container stops before the new one is serving). Zero-downtime rollout
-(blue/green behind nginx) is a worthwhile improvement, not implemented here.
+(blue/green behind Caddy) is a worthwhile improvement, not implemented here.
 
 ```bash
 docker compose --env-file .env.production -f docker-compose.prod.yml logs -f app
@@ -353,8 +331,11 @@ cd /srv/topoil && docker compose --env-file .env.production -f docker-compose.pr
 ```
 
 ```bash
-sudo rm /etc/nginx/conf.d/oil-top.ir.conf && sudo nginx -t && sudo systemctl reload nginx
+sudo rm /etc/caddy/sites/oil-top.ir.caddy && sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy
 ```
+
+(If the block was appended to a single `Caddyfile`, delete those lines from it
+or restore the `.bak` you took in §5.2 instead.)
 
 `down` without `-v` keeps the database and uploads volumes. Add `-v` only when
 you genuinely want the data gone — and note that `name: topoil` in the compose

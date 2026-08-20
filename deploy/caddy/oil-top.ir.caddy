@@ -1,0 +1,38 @@
+# oil-top.ir — site block for the VPS's existing Caddy.
+#
+# Caddy runs as a host process on this box and owns :80 and :443 (nginx is
+# installed but inactive — leave it that way; starting it would fight Caddy
+# for the ports and take every site down). This project adds a site to that
+# Caddy rather than running a web server of its own; the app itself listens on
+# 127.0.0.1:3001 and is reachable no other way.
+#
+# TLS needs no certbot here. Caddy provisions and renews Let's Encrypt
+# certificates automatically on first request for a hostname it serves — which
+# is also why the DNS A record must already point at this VPS before reloading
+# (see DEPLOYMENT.md §2). The ACME challenge is answered by whichever machine
+# the name resolves to.
+#
+# Unlike nginx, Caddy imposes no default request body limit, so the 5MB image
+# uploads in server/upload.ts pass through without extra configuration.
+
+oil-top.ir {
+	encode gzip zstd
+
+	# reverse_proxy sets X-Forwarded-For, X-Forwarded-Proto and X-Forwarded-Host
+	# on its own; X-Real-IP is the one Next.js-side convention it does not add.
+	reverse_proxy 127.0.0.1:3001 {
+		header_up X-Real-IP {remote_host}
+	}
+
+	header {
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+}
+
+# One canonical origin, so NEXT_PUBLIC_SITE_URL, the sitemap and the canonical
+# tags all agree with what the browser shows.
+www.oil-top.ir {
+	redir https://oil-top.ir{uri} permanent
+}
