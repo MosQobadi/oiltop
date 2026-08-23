@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseYearSpanFromName } from "./enrich";
+import { findExactModel, matchKey, parseYearSpanFromName } from "./enrich";
 import { toLatinDigits } from "./import";
 
 const parse = (name: string) => parseYearSpanFromName(name, toLatinDigits);
@@ -70,5 +70,55 @@ describe("parseYearSpanFromName", () => {
 
   it("takes the first span when a name somehow carries two", () => {
     expect(parse("کرولا 2005-2012 و 2013-2017")?.yearEnd).toBe(2012);
+  });
+});
+
+describe("matchKey", () => {
+  it("joins our brand and model into the shape the other source names one", () => {
+    // hamrah-mechanic titles carry the maker; our rows keep it separate.
+    expect(matchKey("پژو", "405 SLX")).toBe(matchKey("پژو 405 SLX"));
+  });
+
+  it("ignores differences that are not differences", () => {
+    // ZWNJ, Arabic vs Persian yeh, doubled spaces, Persian digits.
+    expect(matchKey("پژو", "۴۰۵ SLX")).toBe(matchKey("پژو  405 SLX"));
+    expect(matchKey("كيا", "سراتو")).toBe(matchKey("کیا سراتو"));
+  });
+
+  it("drops empty parts rather than leaving a double space", () => {
+    expect(matchKey("پژو", null, "پارس")).toBe(matchKey("پژو پارس"));
+  });
+});
+
+describe("findExactModel", () => {
+  const candidates = [
+    { nameFa: "پژو 405 SLX", yearStart: 1388, yearEnd: 1400 },
+    { nameFa: "پژو 206 صندوقدار", yearStart: 1385, yearEnd: 1400 },
+    { nameFa: "پژو پارس", yearStart: 1380, yearEnd: 1403 },
+  ];
+
+  it("matches a name that is exactly ours", () => {
+    const found = findExactModel(matchKey("پژو", "405 SLX"), candidates);
+    expect(found.kind).toBe("matched");
+    expect(found.kind === "matched" && found.model.yearStart).toBe(1388);
+  });
+
+  // The pair this rule exists for. Real rows, one letter and one word apart —
+  // and a wrong year span means a customer picking their year is told their car
+  // is not supported. A gap gets fixed by hand; a wrong span looks right and is
+  // never revisited.
+  it("refuses a near-miss rather than guessing", () => {
+    expect(findExactModel(matchKey("پژو", "206 صندقدار اتوماتیک"), candidates).kind).toBe("none");
+    expect(findExactModel(matchKey("پژو", "پارس TU5 اتوماتیک"), candidates).kind).toBe("none");
+  });
+
+  it("reports ambiguity instead of taking the first", () => {
+    const twins = [
+      { nameFa: "سایپا کوییک", yearStart: 1397, yearEnd: 1402 },
+      { nameFa: "سایپا کوییک", yearStart: 1400, yearEnd: 1404 },
+    ];
+    const found = findExactModel(matchKey("سایپا", "کوییک"), twins);
+    expect(found.kind).toBe("ambiguous");
+    expect(found.kind === "ambiguous" && found.count).toBe(2);
   });
 });

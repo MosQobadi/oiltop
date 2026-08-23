@@ -27,12 +27,40 @@
 // full span; Task F.4 scrapes hamrah-mechanic for the rest and feeds the same
 // update path.
 
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { prisma } from "../lib/db";
-import { parseYearSpanFromName } from "../lib/enrich";
+import { findExactModel, matchKey, parseYearSpanFromName } from "../lib/enrich";
 import { IMPORTED_YEAR_CALENDAR, IMPORTED_YEAR_START, toLatinDigits } from "../lib/import";
+import { parseEnrichmentFile, type EnrichmentModel } from "../lib/validation/enrichment";
 
 const SOURCE_PREFIX = "oil-city:";
 const MAX_PRINTED = 20;
+const HAMRAH_FILE = path.join("scrape", "hamrah-mechanic", "models.json");
+
+/**
+ * The second provider's models, or none when it has not been scraped.
+ *
+ * Absent is a normal state, not an error: the first provider (the years a car
+ * states in its own name) works without it, and did so for 272 models before
+ * this file existed.
+ */
+async function loadHamrahModels(): Promise<EnrichmentModel[]> {
+  let text: string;
+  try {
+    text = await readFile(HAMRAH_FILE, "utf8");
+  } catch {
+    console.log(`(no ${HAMRAH_FILE} — running with the model-name provider only)\n`);
+    return [];
+  }
+
+  const parsed = parseEnrichmentFile(HAMRAH_FILE, JSON.parse(text));
+  if (!parsed.success) {
+    throw new Error(`${HAMRAH_FILE} is not valid:\n  ${parsed.errors.slice(0, 10).join("\n  ")}`);
+  }
+  console.log(`${parsed.data.models.length} hamrah-mechanic models loaded\n`);
+  return parsed.data.models;
+}
 
 function parseArgs(argv: string[]): { dryRun: boolean } {
   let dryRun = false;
@@ -64,7 +92,11 @@ async function main() {
     `${models.length} imported car models${dryRun ? " — DRY RUN, nothing will be written" : ""}\n`,
   );
 
+  const hamrah = await loadHamrahModels();
+
   const updated: string[] = [];
+  const fromHamrah: string[] = [];
+  const ambiguous: string[] = [];
   const noYears: string[] = [];
   const alreadySet: string[] = [];
   const oddShape: string[] = [];
@@ -73,7 +105,25 @@ async function main() {
     await prisma.$transaction(async (tx) => {
       for (const model of models) {
         const label = `${model.carBrand.nameFa} ${model.nameFa}`;
-        const span = parseYearSpanFromName(model.nameFa, toLatinDigits);
+        // The car's own name first — free, and already proven on 272 models.
+        // hamrah-mechanic is the fallback for the rest, and only ever on an
+        // exact name match.
+        let span = parseYearSpanFromName(model.nameFa, toLatinDigits);
+        let viaHamrah = false;
+
+        if (span === null && hamrah.length > 0) {
+          const outcome = findExactModel(matchKey(model.carBrand.nameFa, model.nameFa), hamrah);
+          if (outcome.kind === "matched") {
+            span = {
+              yearStart: outcome.model.yearStart,
+              yearEnd: outcome.model.yearEnd,
+              yearCalendar: outcome.model.yearCalendar,
+            };
+            viaHamrah = true;
+          } else if (outcome.kind === "ambiguous") {
+            ambiguous.push(`${label} — ${outcome.count} hamrah-mechanic models share this name`);
+          }
+        }
 
         if (span === null) {
           noYears.push(label);
@@ -107,7 +157,8 @@ async function main() {
           where: { id: engine.id },
           data: { yearStart: span.yearStart, yearEnd: span.yearEnd },
         });
-        updated.push(`${label} → ${span.yearStart}–${span.yearEnd} ${span.yearCalendar}`);
+        const line = `${label} → ${span.yearStart}–${span.yearEnd} ${span.yearCalendar}`;
+        (viaHamrah ? fromHamrah : updated).push(line);
       }
 
       if (dryRun) throw new DryRunRollback();
@@ -123,6 +174,8 @@ async function main() {
   };
 
   report("Years read from the model's own name", updated);
+  report("Years from hamrah-mechanic, exact name match", fromHamrah);
+  report("Left alone — the name matches more than one hamrah-mechanic model", ambiguous);
   // Not necessarily a human: a previous run of this script leaves exactly the
   // same trace. Either way the span is no longer the import's placeholder, and
   // re-deriving it from the name would undo whatever narrowed it.
@@ -131,8 +184,9 @@ async function main() {
   console.log(`\n  No span stated in the name (${noYears.length}) — these wait for Task F.4.`);
 
   console.log(
-    `\nSummary: ${updated.length} updated, ${alreadySet.length} already set, ` +
-      `${oddShape.length} odd shape, ${noYears.length} without years.`,
+    `\nSummary: ${updated.length} from names, ${fromHamrah.length} from hamrah-mechanic, ` +
+      `${alreadySet.length} already set, ${ambiguous.length} ambiguous, ` +
+      +`${oddShape.length} odd shape, ${noYears.length} still without years.`,
   );
   if (dryRun) console.log("DRY RUN — the transaction above was rolled back.");
 }

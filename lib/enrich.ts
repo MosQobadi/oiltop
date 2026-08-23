@@ -18,6 +18,7 @@
 // stored.
 
 import { calendarForYear, type YearCalendar } from "./year";
+import { normaliseForMatch } from "./import";
 
 export interface ParsedYearSpan {
   yearStart: number;
@@ -58,4 +59,57 @@ export function parseYearSpanFromName(
   if (yearEnd < yearStart) return null;
 
   return { yearStart, yearEnd, yearCalendar: startCalendar };
+}
+
+// ---------------------------------------------------------------------------
+// Matching a second source's models to ours
+// ---------------------------------------------------------------------------
+
+export interface MatchableModel {
+  /** As the other source names it, maker included — "پژو 405 SLX". */
+  nameFa: string;
+}
+
+/**
+ * The key both sides are compared on.
+ *
+ * hamrah-mechanic's model titles carry the maker ("پژو 405 SLX") while ours keep
+ * it in a separate row, so ours is joined back together before comparing. That
+ * is also what avoids mapping between two sets of brand slugs — a mapping that
+ * would have been wrong immediately, because hamrah files Peugeots under
+ * `irankhodro` while oil-city calls the brand "پژو".
+ *
+ * `normaliseForMatch` handles the differences that are not differences: ZWNJ,
+ * Arabic vs Persian yeh and kaf, Persian digits, doubled spaces.
+ */
+export function matchKey(...parts: Array<string | null | undefined>): string {
+  return normaliseForMatch(parts.filter((part) => part != null && part !== "").join(" "));
+}
+
+export type MatchOutcome<T> =
+  { kind: "matched"; model: T } | { kind: "none" } | { kind: "ambiguous"; count: number };
+
+/**
+ * Finds the one model in `candidates` whose name is exactly ours, or says why
+ * not.
+ *
+ * **Exact after normalisation, and nothing looser.** A near-miss like
+ * "206 صندقدار اتوماتیک" against "پژو 206 صندوقدار" — a real pair, differing by
+ * one letter and one word — is reported rather than matched. The cost of being
+ * wrong here is not a cosmetic error: a car whose year span is wrong matches
+ * nothing when a customer picks their year, and they are told their car is not
+ * supported. A gap is recoverable by hand; a wrong span looks correct and is
+ * never looked at again.
+ *
+ * Ambiguity is reported too. Two candidates with the same normalised name are
+ * two different cars, and picking the first would be a coin toss.
+ */
+export function findExactModel<T extends MatchableModel>(
+  ourKey: string,
+  candidates: readonly T[],
+): MatchOutcome<T> {
+  const hits = candidates.filter((candidate) => matchKey(candidate.nameFa) === ourKey);
+  if (hits.length === 1) return { kind: "matched", model: hits[0] };
+  if (hits.length === 0) return { kind: "none" };
+  return { kind: "ambiguous", count: hits.length };
 }
