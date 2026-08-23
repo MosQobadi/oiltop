@@ -106,10 +106,37 @@ Also add `scripts/scrape/README.md`, five lines, saying what this directory is a
 in `scrape/.cache/` is disposable.
 ```
 
-### Task F.2 — oil-city product extractor
+### Task F.2 — oil-city product extractor — **BUILT**
 
 **DoD:** `pnpm tsx scripts/scrape/oil-city/products.ts` writes `scrape/oil-city/01-products-<n>.json` files
 that pass `parseScrapeBatchJson`; a `--limit` flag caps pages for a test run.
+
+> **Built.** Sitemaps enumerate **3,469 unique product URLs** across four files, matching the survey's
+> ~3,454. `product-page.ts` is the pure parser (HTML in, record out, testable over the cache);
+> `products.ts` is the CLI. `cheerio` added as a devDependency — parsing in Node rather than in the
+> browser is what keeps the disk cache worth having, since a selector fix then costs no traffic.
+>
+> **The page's JSON-LD is a trap and is deliberately unused.** It looks authoritative and is mostly
+> wrong: `offers.price` / `lowPrice` / `highPrice` are `0` on every product checked, including ones
+> displaying a real price; `description` is one site-wide marketing sentence repeated everywhere; and
+> `sku` / `mpn` are the WordPress post id. Reading `oemPartNumbers` out of `mpn` would have invented
+> part numbers wholesale — mismatch 3.3 stands, this source has none.
+>
+> **Three other traps, each now a test.** Related products further down a page carry their own
+> `.price_box`, so every price lookup is scoped to `.product_d_right` or products get priced at their
+> neighbour's cost. The description tab falls back to the product's own name or `"قیمت و خرید <name>"`,
+> which is a placeholder rather than a description. And `categoryGuess` matches the source's own
+> taxonomy slug **exactly** — their `oil-filter-heavy`, `air-filter-heavy`, `fuel-filter-heavy`,
+> `battery-filter`, `gearbox-filter` and `bike-oil-engine` are not our car parts despite the similar
+> names, and all correctly resolve to null.
+>
+> Verified against real pages: discounted in-stock oils parse to the right current and original price,
+> with full specs (`برند`, `نوع`, `کیفیت`, `درجه گرانروی`, `حجم`) — which is what A.3's `viscosity` and
+> `apiGrade` columns need. Out-of-stock products get a null price rather than a zero.
+>
+> **Still to do at full scale:** the run is long (a real browser plus a 1/sec rate limit over 3,469
+> pages), and much of the catalog is out of stock, so most imported products will land with no price.
+
 **Prompt:**
 
 ```
