@@ -350,10 +350,36 @@ What to look at, in order of how expensive it is to discover later:
 Write the findings into `oil-city-import-notes.md` as a new section. Do not fix anything here.
 ```
 
-### Task G.2 — Full import run
+### Task G.2 — Full import run — **DONE**
 
 **DoD:** All oil-city batches imported for real; row counts recorded; every created row INACTIVE.
-**Prompt:**
+
+> **Run 2026-08-24.** Scrape: **3,469 products and 803 cars, zero failures and zero problems** across
+> 35 batch files, after a purge-and-refetch cleared 15 pages that had cached non-answers (see the
+> fetcher commit). Import: 3,469 products, 131 brands, 83 car brands, 802 car models, 802 engines,
+> 802 profiles, **71,303 fitment items**.
+>
+> **Every fitment item resolved to a real product — none spec-only.** In the G.1 probe 1,743 of 1,769
+> fell back to spec-only because the product sample did not overlap what the cars referenced. Running
+> the whole catalog in one pass, products first, resolved all 71,303. That is the entire justification
+> for the `01-`/`50-` filename convention, and it is now measured rather than assumed.
+>
+> **Idempotency confirmed.** The re-run immediately afterwards reports every row `unchanged` — zero
+> created, zero updated, across 3,469 products and 71,303 items. This is the check G.1 structurally
+> could not perform, because two dry runs both roll back.
+>
+> **Dedup: 1.0 engines per profile across all 85 brands.** The Toyota caveat is closed — Iranian
+> domestic models do not share recommendations either. Section 6.2 of the notes stands: expect one
+> profile per car.
+>
+> Database state after: 1,051 imported products at price 0 (the source stated none), 0 imported rows
+> ACTIVE, and only the 16 hand-seeded inventory rows carrying stock.
+>
+> **Measured for Task F.4: only 302 of 802 model names (38%) carry a year, and 259 (32%) a full
+> range** — "A6 2011-2015", "Q7 موتور 3000 مدل 2011-2015". So oil-city answers the year question for
+> about a third of cars and F.4 is still needed for the rest. Its scope shrinks rather than vanishing:
+> G.3 can parse the 38% for free and only fall back to hamrah-mechanic for the remainder.
+> **Prompt:**
 
 ```
 Run the full scrape and the full import. This is an operations task, not a coding one — if it needs
