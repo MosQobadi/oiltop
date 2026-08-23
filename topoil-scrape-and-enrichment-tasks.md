@@ -399,7 +399,28 @@ code changes, stop and do them as their own commit first.
 Do not activate anything. Do not "quickly fix" data by hand in the admin panel during this task.
 ```
 
-### Task G.3 — Year enrichment applier
+### Task G.3 — Year enrichment applier — **PART ONE DONE**
+
+> **Built and run 2026-08-24, with the oil-city provider only.** `scripts/enrich-years.ts` reads the
+> years a car states in its own name and applies them to importer-owned rows: **272 of 802 models
+> updated**, 530 waiting on Task F.4. Re-running touches nothing.
+>
+> Both calendars appear in the same run and each derives from its own numbers — BMWs and Audis as
+> `2010-2013 GREGORIAN`, and all six Peugeot 206 types as `1386-1401 JALALI` / `1381-1385 JALALI`.
+> That is A.5's design working on real data rather than on a fixture.
+>
+> **Only a full RANGE is trusted, never a single year.** The source names engines by displacement:
+> "اسکالا 2000" and "اسکالا 1600" are 2000cc and 1600cc cars, and a lone 2000 sits squarely inside the
+> Gregorian year window. A single-number parse would have dated a Renault Scala to the year 2000. Both
+> ends must also agree on a calendar, which rules out the "از 1404 تا 2024" shape F.4 will meet on
+> hamrah-mechanic before it can ever be stored.
+>
+> The constraints the prompt below asks for are all in place — year fields only, `oil-city:` rows only,
+> `--dry-run`, and never overwriting a span that is no longer the import's placeholder.
+>
+> **Still to do:** point the same update path at F.4's hamrah-mechanic data for the remaining 530.
+
+**Prompt (F.4's hamrah-mechanic provider — the remaining half):**
 
 **DoD:** `pnpm tsx scripts/enrich-years.ts --dry-run` reports proposed year spans; the real run writes
 ONLY year fields, ONLY to rows carrying an `oil-city:` sourceRef, and flags every unmatched or

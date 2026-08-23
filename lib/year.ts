@@ -59,6 +59,27 @@ export function yearRangeMessage(calendar: YearCalendar): string {
   return `Enter a valid ${name} year between ${min} and ${max}`;
 }
 
+// How a bare year is classified when no calendar is stated — the enrichment
+// pass's rule. The two windows MUST NOT overlap; that non-overlap is the whole
+// reason a year can identify its own calendar without a per-source rule.
+const JALALI_WINDOW = { min: 1300, max: 1450 };
+const GREGORIAN_WINDOW = { min: 1900, max: 2100 };
+
+/**
+ * Which calendar a bare year belongs to, or null when it belongs to neither.
+ *
+ * Works because Jalali model years (~1370-1405) and Gregorian ones (~1990-2026)
+ * occupy disjoint numeric windows: 1390 can only be Jalali and 2018 can only be
+ * Gregorian. A value outside both is returned as null to be reported rather than
+ * guessed at.
+ */
+export function calendarForYear(year: number): YearCalendar | null {
+  if (!Number.isInteger(year)) return null;
+  if (year >= JALALI_WINDOW.min && year <= JALALI_WINDOW.max) return "JALALI";
+  if (year >= GREGORIAN_WINDOW.min && year <= GREGORIAN_WINDOW.max) return "GREGORIAN";
+  return null;
+}
+
 // The widest window any stored year can fall in. Two things rely on it: the Zod
 // schemas, which validate a request before its model's calendar is known, and
 // the Fitment Profile engine picker, which is the one year filter that searches
