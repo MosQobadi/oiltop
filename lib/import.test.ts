@@ -11,6 +11,7 @@ import {
   fitmentSpecNote,
   importHashNote,
   isImportHashNote,
+  DEFAULT_FUEL_TYPE,
   mapFuelType,
   normaliseForMatch,
   parseApiGrade,
@@ -212,9 +213,20 @@ describe("mapFuelType", () => {
     expect(mapFuelType("دوگانه سوز بنزین و گاز", null)?.fuelType).toBe("LPG_CNG");
   });
 
-  it("reports no match rather than defaulting to petrol", () => {
+  // Null is "the page did not say", which the caller turns into
+  // DEFAULT_FUEL_TYPE — the distinction is kept here so the report can separate
+  // what the source stated from what we assumed.
+  it("returns null when the wording says nothing about fuel", () => {
     expect(mapFuelType("تویوتا CHR", null)).toBeNull();
+    expect(mapFuelType("هایلوکس 2005-2013", null)).toBeNull();
     expect(mapFuelType(null, null)).toBeNull();
+  });
+
+  it("still wins over the default when the wording is explicit", () => {
+    // The Toyota pages say "هیبرید" on a dozen models. Flattening those to the
+    // market default would discard something the source actually told us.
+    expect(mapFuelType(null, "کمری هیبرید 2023-2025 موتور 2000")?.fuelType).toBe("HYBRID");
+    expect(DEFAULT_FUEL_TYPE).toBe("PETROL");
   });
 });
 

@@ -244,12 +244,27 @@ export function discountPercentFrom(
 
 export type ImportFuelType = "PETROL" | "DIESEL" | "HYBRID" | "ELECTRIC" | "LPG_CNG";
 
+// The fuel type a model gets when its own wording says nothing about fuel.
+//
+// Iran's car market runs on petrol. Diesel is a later concern — when it arrives,
+// this is the line to revisit, not the table below, which already reads "دیزل"
+// wherever a model actually says it.
+//
+// Task G.1 is why this exists. The importer used to skip a car whose fuel was
+// unstated, on the reasoning that defaulting 800 cars to PETROL was worse than
+// importing none of them. Measured against real data, 40 of 59 Toyota models say
+// nothing about fuel, so that rule was discarding two thirds of the
+// recommendations — the entire point of the import — to avoid a guess that is
+// right almost every time. Assumed values are still tallied separately in the
+// report, because "we assumed" and "the page said" are different claims.
+export const DEFAULT_FUEL_TYPE = "PETROL" as const;
+
 // CarEngine.fuelType is a required enum and the source publishes no such field
 // — only whatever the model's own title happens to say ("1800cc هیبرید"). So it
-// is read from that wording through this table and nothing else: an unmatched
-// model is reported and gets no engine, because the alternative is defaulting
-// 800 cars to PETROL, and a customer filtering by fuel type would never know
-// which of those we actually knew.
+// is read from that wording through this table, and DEFAULT_FUEL_TYPE covers
+// the rest. An explicit wording always wins over the default: the same Toyota
+// pages say "هیبرید" on a dozen Camrys and RAV4s, and flattening those to petrol
+// would be losing something the source actually told us.
 //
 // Order is the rule, not decoration. A hybrid's title says "بنزینی هیبرید" and
 // a dual-fuel car's says "دوگانه سوز بنزین/گاز", so the more specific terms

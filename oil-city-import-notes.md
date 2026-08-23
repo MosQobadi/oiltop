@@ -307,6 +307,18 @@ cheap; picking one is a decision, not a discovery:
 - or make `CarEngine.fuelType` nullable, which is the honest model — the source
   genuinely does not state it.
 
+> **Resolved 2026-08-23: unstated fuel means petrol.** Iran's car market runs on
+> petrol; diesel is a later concern, and when it arrives the line to revisit is
+> `DEFAULT_FUEL_TYPE` in `lib/import.ts`, not the wording table — which already
+> reads "دیزل" wherever a model says it. An explicit wording still wins over the
+> default, so the dozen Toyotas whose names say "هیبرید" import as HYBRID rather
+> than being flattened. Assumed values stay tallied separately in the report,
+> because "we assumed" and "the page said" are different claims and the review
+> queue is where the difference gets settled.
+>
+> Re-running the same probe afterwards: **59 of 59 engines created, 6,825 fitment
+> items** — against 19 and 1,769 before.
+
 ### 6.2 Profile dedup does not happen — 1.0 engines per profile
 
     Fitment: 19 engine(s) across 19 profile(s) — 1.0 engines per profile

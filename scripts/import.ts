@@ -59,6 +59,7 @@ import {
   fitmentProfileLabel,
   fitmentSpecNote,
   IMPORT_HASH_NOTE_PREFIX,
+  DEFAULT_FUEL_TYPE,
   IMPORTED_YEAR_CALENDAR,
   IMPORTED_YEAR_START,
   importHashNote,
@@ -350,7 +351,10 @@ class ImportReport {
       this.missingSectionProducts,
       "Products a car page recommends that this catalog doesn't have — imported as spec-only items",
     );
-    printTally(this.unmappedFuelWording, "Fuel wording the table doesn't map — no engine created");
+    printTally(
+      this.unmappedFuelWording,
+      `Models stating no fuel type — imported as ${DEFAULT_FUEL_TYPE}, the market default`,
+    );
 
     if (this.brandLabelDisagreements.length > 0) {
       console.log("");
@@ -1091,12 +1095,23 @@ async function upsertCarEngine(
   carModelId: string,
   modelRef: string,
 ): Promise<string | null> {
+  // An unstated fuel type means petrol. Iran's car market runs on petrol; diesel
+  // is a later concern and dual-fuel conversions are not what a model name is
+  // describing when it says nothing at all.
+  //
+  // This used to skip the car instead, on the reasoning that defaulting 800 cars
+  // to PETROL was worse than importing none. Task G.1 measured it: 40 of 59
+  // Toyota models say nothing about fuel, so two thirds of the recommendations
+  // — the entire point of the import — were being dropped to avoid a guess that
+  // is right almost every time. An explicit wording still wins: the same page
+  // set says "هیبرید" on a dozen Camrys and RAV4s, and those still import as
+  // HYBRID rather than being flattened.
   const fuel = mapFuelType(car.modelDescriptorText, car.modelNameFa);
+  const fuelType = fuel?.fuelType ?? DEFAULT_FUEL_TYPE;
   if (fuel === null) {
+    // Still tallied, because "we assumed" is a different claim from "the page
+    // said", and the review queue is where the difference gets settled.
     ctx.report.countUnmappedFuelWording(car.modelDescriptorText ?? car.modelNameFa);
-    ctx.report.record(ctx.counts, "carEngines", "skipped", `${modelRef}#engine`);
-    ctx.report.note(`car "${car.modelNameFa}": no fuel type in the source wording, no engine`);
-    return null;
   }
 
   const labelFa = truncate(car.modelDescriptorText ?? car.modelNameFa, ENGINE_LABEL_MAX);
@@ -1111,7 +1126,7 @@ async function upsertCarEngine(
     return null;
   }
 
-  const desired = { labelEn: labelFa, labelFa, fuelType: fuel.fuelType };
+  const desired = { labelEn: labelFa, labelFa, fuelType };
 
   if (engines.length === 1) {
     const changes = changedFields(engines[0], desired);
