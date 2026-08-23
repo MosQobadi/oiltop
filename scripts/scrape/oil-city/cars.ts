@@ -26,10 +26,12 @@ const BATCH_SIZE = 50;
 
 interface Options {
   limit: number | null;
+  brand: string | null;
 }
 
 function parseArgs(argv: string[]): Options {
   let limit: number | null = null;
+  let brand: string | null = null;
 
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === "--limit") {
@@ -39,12 +41,31 @@ function parseArgs(argv: string[]): Options {
       }
       limit = value;
       i += 1;
+    } else if (argv[i] === "--brand") {
+      const value = argv[i + 1];
+      if (value === undefined || value.startsWith("--")) {
+        throw new Error("--brand needs a brand slug, e.g. --brand toyota");
+      }
+      brand = decodeURIComponent(value);
+      i += 1;
     } else {
-      throw new Error(`Unknown argument "${argv[i]}". Usage: cars.ts [--limit <n>]`);
+      throw new Error(
+        `Unknown argument "${argv[i]}". Usage: cars.ts [--brand <slug>] [--limit <n>]`,
+      );
     }
   }
 
-  return { limit };
+  return { limit, brand };
+}
+
+/** The brand segment of a model URL — `toyota` in `/car/toyota/chr/`, decoded. */
+export function brandSlugOf(url: string): string | null {
+  try {
+    const segments = new URL(url).pathname.split("/").filter((segment) => segment !== "");
+    return segments[1] === undefined ? null : decodeURIComponent(segments[1]);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -111,13 +132,29 @@ async function writeBatch(
 }
 
 async function main() {
-  const { limit } = parseArgs(process.argv.slice(2));
+  const { limit, brand } = parseArgs(process.argv.slice(2));
 
   const xml = await fetchPage(SITEMAP, { asText: true });
   const allModels = carModelUrlsFrom(xml);
-  const targets = limit === null ? allModels : allModels.slice(0, limit);
+
+  // --brand exists because sitemap order groups by brand and starts with
+  // motorcycles, so --limit alone cannot reach a car. Useful beyond the probe
+  // too: a full run is hours, and a brand is a resumable unit of it.
+  const ofBrand =
+    brand === null ? allModels : allModels.filter((url) => brandSlugOf(url) === brand);
+  if (brand !== null && ofBrand.length === 0) {
+    const known = [...new Set(allModels.map(brandSlugOf))].filter((slug) => slug !== null);
+    throw new Error(
+      `No models under brand "${brand}". Known brands include:\n  ${known.slice(0, 20).join(", ")}`,
+    );
+  }
+
+  const targets = limit === null ? ofBrand : ofBrand.slice(0, limit);
   console.log(
-    `${allModels.length} car model URLs${limit === null ? "" : `, taking the first ${targets.length}`}\n`,
+    `${allModels.length} car model URLs` +
+      (brand === null ? "" : `, ${ofBrand.length} under "${brand}"`) +
+      (limit === null ? "" : `, taking the first ${targets.length}`) +
+      "\n",
   );
 
   let batchIndex = 1;

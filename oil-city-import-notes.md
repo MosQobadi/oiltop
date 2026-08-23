@@ -267,3 +267,118 @@ Start with: <<< SCOPE >>>
 4. Profile dedup is what makes this worth doing: hash each car's normalised
    fitment rows and create one `FitmentProfile` per distinct hash, linking every
    engine that shares it — 801 model pages should collapse to far fewer profiles.
+
+---
+
+## 6. Probe import findings (Task G.1) — 2026-08-23
+
+The importer's first contact with real scraped data. **Nothing was written**: two
+`--dry-run` passes over 200 products and all 59 Toyota models, both rolled back,
+both producing byte-identical reports. No fixes were made — this section is the
+whole output, and each finding below is a separate piece of work.
+
+**The sample.** `products.ts --limit 200` (the first 200 URLs in sitemap order)
+and `cars.ts --brand تویوتا` (all 59 Toyota models, 6,825 fitment rows).
+`batch-01.json` was set aside for the run so the old hand-made fixture could not
+contaminate it.
+
+### 6.1 The big one: 68% of cars import with no fitment at all
+
+    carEngines       19 created, 40 skipped
+    fitmentProfiles  19 created, 40 skipped
+    Fuel wording the table doesn't map — no engine created (40)
+
+`CarEngine.fuelType` is required, the source has no such field, and the importer
+reads it out of the model's own wording via `FUEL_TYPE_TERMS`. A model whose name
+says "بنزینی" or "هیبرید" matches; **"هایلوکس 2005-2013", "کرولا 2013-2017",
+"پریوس 2016-2019" and 37 others say nothing about fuel at all**, so they get no
+engine — and with no engine there is nothing to hang a recommendation on, so the
+entire car's fitment is dropped.
+
+Refusing to default 800 cars to PETROL is the right instinct and the comment on
+that table argues it well. But the consequence at real scale is that two thirds
+of the fitment data — the thing this whole phase exists to import — silently
+does not arrive. **This has to be resolved before Task G.2.** The options are all
+cheap; picking one is a decision, not a discovery:
+
+- widen what `mapFuelType` reads (the section headings and نکته notes on the same
+  page frequently say "بنزینی" even when the model name does not),
+- import the engine with fuel type unknown and let D.4's review queue fill it,
+- or make `CarEngine.fuelType` nullable, which is the honest model — the source
+  genuinely does not state it.
+
+### 6.2 Profile dedup does not happen — 1.0 engines per profile
+
+    Fitment: 19 engine(s) across 19 profile(s) — 1.0 engines per profile
+
+Step 4 of section 5 above assumes "801 model pages should collapse to far fewer
+profiles", and that is the stated economic argument for the whole phase. It does
+not hold. Every Toyota model produced a distinct hash, because each carries ~116
+product rows across nine sections and no two cars recommend exactly the same set.
+
+Two caveats before concluding the idea was wrong: this is one brand, and the long
+tail of the row set (27 additives, 16 air fresheners) is doing most of the
+distinguishing. Deduping on the five categories we actually carry, rather than on
+every row, would likely collapse a great deal. Worth measuring before D.3's
+premise is either fixed or abandoned.
+
+### 6.3 The catalog is mostly priceless, and nulls import as zero
+
+Of 200 products: **3 priced, 134 "ناموجود", 63 "تماس بگیرید"**. The importer notes
+each null as `no price on the page, imported at 0`, so at full scale the great
+majority of the catalog would land at a price of zero — which on a storefront
+reads as free, not as unknown.
+
+"تماس بگیرید" ("call for price") is a third price state the extractor did not
+know about; it currently reports all 63 as `unrecognised price text`, which is
+correct behaviour but the wrong classification now that we know what it is. It
+should become a recognised `stockRawText` value rather than a problem.
+
+### 6.4 Almost every slug is a hash
+
+199 of 200 source slugs are Persian, so `deriveSlug` falls through to
+`product-<hash>` for effectively the entire catalog. That is by design (mismatch
+3.4) and it is stable and unique, but it means imported products get URLs like
+`/fa/products/product-3f2a9c11ab` — worth knowing before deciding what the
+storefront does with imported rows.
+
+### 6.5 What worked
+
+- **Two dry runs, identical reports.** Deterministic over real data.
+- **Brand adoption works.** `brand "دنسو": linked to an existing row, left
+untouched` — the hand-entered row was adopted, not duplicated.
+- **Brand disagreements are caught.** ~35 products whose title names one brand and
+  whose "برند :" label names another, all reported and none auto-corrected.
+- **The holding category works.** 199 of 200 products and 141 car sections were
+  filed under `imported-uncategorised`, INACTIVE, with the source's own wording
+  tallied — which is exactly the count DECISION 2 was waiting on.
+
+### 6.6 What this probe could NOT test
+
+- **Fitment resolution.** 1,743 of 1,769 items imported spec-only, because the
+  first 200 sitemap URLs are spark plugs, suspension and brake pads while Toyota's
+  cars reference 547 quite different products. This is a sampling artifact, not a
+  finding about the importer. A real test needs the products a car page actually
+  links to — which the full run gets for free, and which is the reason products
+  must be imported before cars.
+- **The spec-key tables.** Only `برند`, `نوع` and `حجم` appeared, because the
+  sample contains no engine oils. `viscosity` and `apiGrade` are still untested
+  against real data, though the F.2 spot-checks showed `درجه گرانروی` and `کیفیت`
+  present and correctly shaped on real oil pages.
+- **Idempotency.** Step 3 of G.1's prompt asks for a second run reporting
+  "unchanged", but two dry runs both roll back, so both legitimately report
+  "created". Determinism is what a dry run can prove; idempotency needs a real
+  run followed by a dry run, and that belongs to G.2.
+
+### 6.7 Correction to section 2 — the source does publish years
+
+The survey above says the source has "no year picker and no trim picker", and
+DECISION 1 rests on it. Both are true of the page _furniture_, but the model
+names themselves carry years and engines constantly: "یاریس 2005-2012 اتوماتیک",
+"راوفور RAV4 2500cc 2013-2019", "کمری بنزینی 2023-2025 موتور 2000",
+"لندکروزر VXR هشت سیلندر اتاق 100 مدل 2003-2008".
+
+The extractor is right not to split them out — that would be deriving one field
+from another. But it means Task G.3 may have a far cheaper source of years than
+hamrah-mechanic for a large share of cars, and Task F.4 may be less essential
+than the plan assumes. Worth measuring across all 803 models before building F.4.
