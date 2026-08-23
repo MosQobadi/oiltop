@@ -329,10 +329,40 @@ not hold. Every Toyota model produced a distinct hash, because each carries ~116
 product rows across nine sections and no two cars recommend exactly the same set.
 
 Two caveats before concluding the idea was wrong: this is one brand, and the long
-tail of the row set (27 additives, 16 air fresheners) is doing most of the
-distinguishing. Deduping on the five categories we actually carry, rather than on
-every row, would likely collapse a great deal. Worth measuring before D.3's
-premise is either fixed or abandoned.
+tail of the row set (27 additives, 16 air fresheners) might be doing most of the
+distinguishing.
+
+> **Measured 2026-08-23, and the second caveat is wrong.** Four variants over the
+> same 59 Toyota models — every row vs. only our five categories, each with the
+> `نکته` note included in the hash and excluded from it — all give **59 distinct
+> profiles for 59 cars, no sharing whatsoever**:
+>
+> | hashed over                  | profiles | engines/profile |
+> | ---------------------------- | -------- | --------------- |
+> | every row, note in hash      | 59       | 1.00            |
+> | our five only, note in hash  | 59       | 1.00            |
+> | every row, note excluded     | 59       | 1.00            |
+> | our five only, note excluded | 59       | 1.00            |
+>
+> The recommendations genuinely differ per car, which on reflection is what the
+> source is _for_: each model gets its own oil filter, air filter and cabin filter
+> part, and its own curated oil list. There is nothing to collapse.
+>
+> **So D.3's premise does not hold for this source, and step 4 of section 5 above
+> should be read as wishful.** Nothing breaks — one profile per car is a perfectly
+> good shape, and the dedup code correctly finds no duplicates rather than
+> inventing any. What changes is the expectation: ~803 profiles will exist after
+> the import, not "far fewer", and the reusable-profile feature is exercised by
+> hand-entered cars rather than by imported ones.
+>
+> One caveat survives: this is a single foreign brand. Iranian domestic models —
+> the 206 types, the Pride variants — plausibly share filters with each other in a
+> way Toyota's line-up does not. Worth re-measuring across all 803 models during
+> Task G.2, where the number comes for free in the report.
+>
+> Also measured: **only 33% of fitment rows (2,234 of 6,825) fall in the five
+> categories we carry.** The other two thirds are coolant, brake fluid, ATF,
+> hydraulic oil, additives, air freshener and spare parts.
 
 ### 6.3 The catalog is mostly priceless, and nulls import as zero
 
