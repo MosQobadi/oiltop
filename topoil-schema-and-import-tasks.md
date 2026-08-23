@@ -30,6 +30,13 @@ captured without shipping a half-built category to the storefront.
 **3. Phase B is a genuine fork in the road.** Read its rationale before starting it. If the answer is
 "we want to keep hand-picking products per car", skip Phase B entirely — nothing else depends on it.
 
+**4. Year calendars are per model, and years are stored as typed.** Iranian-built cars are sold as
+Jalali model years and imported ones as Gregorian, and a single brand carries both — Saipa sells
+Pride 131 as 1390-1399 and CS35 Plus as 2024. `CarModel.yearCalendar` records which, derived on
+import from the year values themselves, since the two calendars occupy disjoint numeric ranges.
+Neither is converted to a canonical form: a model year is a label rather than a date, and every year
+comparison in this app is scoped to a single model, so the two never meet. See Task A.5.
+
 ---
 
 ## Phase A — Schema hardening (do before importing anything)
@@ -126,6 +133,76 @@ On the PDP: when a product has a non-null variantGroup, query its ACTIVE sibling
 variantGroup, different id) and render them as a compact size selector linking to each sibling's
 PDP, ordered by volumeMl ascending. Use A.3's volumeMl for the label, falling back to the product
 name when volumeMl is null. Nothing renders when there are no siblings.
+```
+
+### Task A.5 — Per-model year calendar (Jalali or Gregorian)
+
+**DoD:** `CarModel` carries a `yearCalendar` enum; existing rows keep today's meaning; year
+validation bounds follow the model's calendar; the admin form and every year-span display say which
+calendar a number is in; the importer derives the calendar from the year values themselves and sends
+disagreements to review rather than guessing.
+**Prompt:**
+
+```
+`CarEngine.yearStart/yearEnd` are bare Ints validated as 1900-2100, which silently assumes every car
+in the catalog uses the Gregorian calendar. Iranian-market cars are not sold or spoken about that
+way: a Pride or a 206 is "model 90" — Jalali 1390 — and a customer picking their year in the car
+finder will look for 1390, not 2011. Imported cars (Toyota, imported Kia) genuinely are Gregorian.
+Both have to coexist.
+
+The failure this prevents is silent: 1390 is a valid-looking Gregorian year, so it passes
+`min(1900).max(2100)` today and lands as a car built in the 14th century. 1402 is rejected outright,
+which is at least visible. Neither is acceptable at 800 models.
+
+THE FLAG BELONGS ON CarModel, NOT CarBrand. This was checked against hamrah-mechanic.com, and a
+brand-level flag cannot express what is actually out there: under a single Saipa brand, Pride 131 is
+"از 1390 تا 1399" (Jalali) while CS35 Plus is priced as "2024صفر" (Gregorian). Grouping by assembler
+instead of marque does not help — that site files Iranian-built Kias under /carprice/saipa/kiacerato/
+in Jalali and imported ones under /carprice/kia/k3/ in Gregorian, so both groupings mix. Do not add a
+brand-level default "for convenience": the value is derived on import (below), so a second field
+would be a knob nobody turns.
+
+Schema + migration:
+- `enum YearCalendar { JALALI GREGORIAN }`
+- `CarModel.yearCalendar YearCalendar` — backfill every existing row to GREGORIAN, because that is
+  what the hand-entered spans already mean. No default on new rows: the admin form must ask.
+
+Years are stored EXACTLY AS TYPED — do not convert to a canonical calendar. A model year is a label,
+not a date: Jalali 1390 spans March 2011 to March 2012, so "1390 = 2011" invents precision that isn't
+in the source, and an admin who typed 1390 would reopen the form and see 2011. Conversion is safe to
+skip because every year comparison in this app is scoped to a single model (the finder is brand ->
+model -> year -> type, and lib/storefront/fitment.ts + the admin preview only ever compare spans
+within one model), so a Jalali year is never compared against a Gregorian one.
+
+Validation (lib/validation/carEngine.ts):
+- Bounds depend on the owning model's calendar: JALALI 1370-<current Jalali year + 1>, GREGORIAN
+  1900-2100. The upper bound is computed, not hardcoded, so it doesn't expire.
+- The route handler must read the model's calendar rather than trusting anything client-supplied.
+
+Admin (app/(admin)/admin/cars/brands/...):
+- The car model add/edit form gets a required calendar selector, using the shared SelectField.
+- The car engine form labels its year fields with the active calendar and enforces its range; the
+  engines list column does the same.
+
+Storefront:
+- lib/storefront/fitment.ts already has the single year-span formatter, and it already takes a
+  locale and converts digits. Extend it with the calendar — do not add a second formatter anywhere.
+- Render four digits (1390), not two (90). Persian digits in the fa locale as today.
+
+Importer (scripts/import.ts, lib/import.ts) — derive, don't ask:
+- Jalali model years (~1370-1405) and Gregorian ones (~1990-2026) occupy disjoint numeric ranges, so
+  a single year value identifies its own calendar with no site-specific parsing: 1300-1450 is JALALI,
+  1900-2100 is GREGORIAN, anything else is a problem to report.
+- Derive the model's calendar from the years on its own rows. Where rows under one model disagree,
+  import the model and flag it for D.4's review queue — do not pick a winner. Disagreement is the
+  expected signal for a nameplate sold both Iranian-built and imported.
+- IMPORTED_YEAR_START is the Gregorian 2000 that DECISION 1 in oil-city-import-notes.md settled. A
+  synthesised engine under a JALALI model must get the Jalali equivalent (1379) instead, or the
+  placeholder span is nonsense in its own calendar. Same rule as before: written at create time only,
+  never updated, so narrowing by hand survives later runs.
+- Any scraper feeding this must record which page section a year came from. hamrah-mechanic lists
+  used cars by Jalali year and zero-km ("صفر") cars by Gregorian model year on the SAME model page,
+  which is why a naive read of that page can appear to show a span running "از 1404 تا 2024".
 ```
 
 ---
