@@ -51,15 +51,37 @@ queue is how it gets activated. No task in this list may bulk-activate rows as a
 
 ## Phase F — Extraction
 
-### Task F.1 — A polite, cacheable fetcher
+### Task F.1 — A polite, cacheable fetcher — **BUILT**
 
-**DoD:** `scrape/lib/fetch.ts` fetches a URL with rate limiting and an on-disk cache; a second run of
-any scraper does zero network requests; `robots.txt` is checked before the first fetch of a host.
+**DoD:** `scripts/scrape/fetch.ts` fetches a URL with rate limiting and an on-disk cache; a second run
+of any scraper does zero network requests; `robots.txt` is checked before the first fetch of a host.
+
+> **Built, with two departures from the prompt below.**
+>
+> **It lives in `scripts/scrape/`, not `scrape/lib/`.** `.gitignore` excludes `/scrape/` wholesale, so
+> scraper source placed there would never have been committed. Output still goes to
+> `scrape/<source>/` and the cache to `scrape/.cache/`, both correctly ignored.
+>
+> **It drives real Chrome, not `fetch()`.** oil-city.ir sits behind ArvanCloud, which answers a plain
+> HTTP client with a ~6KB JavaScript "Transferring to the website…" page at HTTP 200 — for every URL,
+> including robots.txt and the sitemaps. `fetch()` cannot read that site at all, which invalidates the
+> premise that its pages "return full content on a plain GET": that observation came from browsing in
+> a real browser. Chrome gets the real thing (297KB for one car page), and the shim is polled for
+> rather than slept through, so a page that arrives intact costs nothing extra. Playwright was already
+> a dependency, and `channel: "chrome"` matches what `playwright.config.ts` already does.
+>
+> **oil-city.ir's real robots.txt**, readable only through the browser, allows `/product/…`,
+> `/product-category/…`, `/car/…` and the sitemaps, and disallows `/cart`, `/checkout`, `/signin`,
+> `/signup`, `/profile/*`, `/compare/*`, `/wp-admin/`, and — importantly — **`/*?`, every URL carrying
+> a query string**. So enumeration must go through the sitemaps and pagination through `/page/{n}/`,
+> never `?`-parameterised URLs. Search (`/?s=`) is off the table. The rules are pinned as a test case
+> in `fetch.test.ts`. hamrah-mechanic.com's robots.txt allows every `/carprice/` path F.4 needs.
+
 **Prompt:**
 
 ```
 Every scraper in this phase needs the same three things, and writing them three times guarantees two
-of the copies are wrong. Build them once, in `scrape/lib/fetch.ts`. This is the only shared
+of the copies are wrong. Build them once, in `scripts/scrape/fetch.ts`. This is the only shared
 abstraction this phase gets — resist adding a framework around it.
 
   fetchPage(url: string): Promise<string>   // returns HTML
@@ -80,13 +102,13 @@ Behaviour:
   a runtime option.
 - Set a real, honest User-Agent identifying the project and a contact address. No spoofing a browser.
 
-Also add `scrape/lib/README.md`, five lines, saying what this directory is and that everything in
-`scrape/.cache/` is disposable.
+Also add `scripts/scrape/README.md`, five lines, saying what this directory is and that everything
+in `scrape/.cache/` is disposable.
 ```
 
 ### Task F.2 — oil-city product extractor
 
-**DoD:** `pnpm tsx scrape/oil-city/products.ts` writes `scrape/oil-city/01-products-<n>.json` files
+**DoD:** `pnpm tsx scripts/scrape/oil-city/products.ts` writes `scrape/oil-city/01-products-<n>.json` files
 that pass `parseScrapeBatchJson`; a `--limit` flag caps pages for a test run.
 **Prompt:**
 
@@ -129,7 +151,7 @@ what decision D.2 in the notes deferred, and it is only actionable once it exist
 
 ### Task F.3 — oil-city car + fitment extractor
 
-**DoD:** `pnpm tsx scrape/oil-city/cars.ts` writes `scrape/oil-city/50-cars-<n>.json` files that pass
+**DoD:** `pnpm tsx scripts/scrape/oil-city/cars.ts` writes `scrape/oil-city/50-cars-<n>.json` files that pass
 `parseScrapeBatchJson`, one car record per model page, with sections in page order.
 **Prompt:**
 
@@ -162,7 +184,7 @@ not match (in "problems", not silently skipped).
 
 ### Task F.4 — hamrah-mechanic year & type extractor
 
-**DoD:** `pnpm tsx scrape/hamrah-mechanic/cars.ts` writes `scrape/hamrah-mechanic/*.json` in a small
+**DoD:** `pnpm tsx scripts/scrape/hamrah-mechanic/cars.ts` writes `scrape/hamrah-mechanic/*.json` in a small
 purpose-built shape (NOT D.1's batch format), carrying brand, model, type label, year span and the
 calendar each year was printed in.
 **Prompt:**
