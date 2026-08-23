@@ -7,9 +7,36 @@ import type {
   CarEngineSearchableQuery,
   CarEngineUpdateInput,
 } from "@/lib/validation";
+import { isYearInCalendar, yearRangeMessage } from "@/lib/year";
 
 export class CarEngineNotFoundError extends Error {}
 export class CarEngineHasFitmentProfileLinksError extends Error {}
+export class CarEngineYearCalendarError extends Error {}
+
+// A year is only meaningful next to the calendar it was written in, and that
+// calendar lives on the engine's model. Checking it here rather than in the Zod
+// schema is deliberate: the schema sees one request in isolation, while the
+// answer depends on a row in the database — and reading the calendar from the
+// client would let a caller declare 1390 Gregorian and store a 14th-century car.
+async function assertYearsMatchModelCalendar(
+  carModelId: string,
+  years: { yearStart?: number; yearEnd?: number | null },
+) {
+  const model = await prisma.carModel.findUnique({
+    where: { id: carModelId },
+    select: { yearCalendar: true },
+  });
+  if (!model) {
+    throw new CarEngineNotFoundError(`Car model "${carModelId}" was not found`);
+  }
+
+  for (const year of [years.yearStart, years.yearEnd]) {
+    if (year === undefined || year === null) continue;
+    if (!isYearInCalendar(year, model.yearCalendar)) {
+      throw new CarEngineYearCalendarError(yearRangeMessage(model.yearCalendar));
+    }
+  }
+}
 
 export async function listCarEngines(query: CarEngineListQuery) {
   const where: Prisma.CarEngineWhereInput = {
@@ -65,6 +92,7 @@ export async function getCarEngineById(id: string) {
 }
 
 export async function createCarEngine(input: CarEngineCreateInput) {
+  await assertYearsMatchModelCalendar(input.carModelId, input);
   return prisma.carEngine.create({ data: input });
 }
 
@@ -73,6 +101,16 @@ export async function updateCarEngine(id: string, input: CarEngineUpdateInput) {
   if (!existing) {
     throw new CarEngineNotFoundError(`Car engine "${id}" was not found`);
   }
+
+  // A PATCH may move the engine to another model, change the years, or both, so
+  // the check runs the years it will END UP with against the model it will end
+  // up on. Moving a 1390 car to a Gregorian model without touching its years is
+  // just as wrong as typing 1390 into one, and omitting a key means "leave it",
+  // not "it's fine".
+  await assertYearsMatchModelCalendar(input.carModelId ?? existing.carModelId, {
+    yearStart: input.yearStart ?? existing.yearStart,
+    yearEnd: input.yearEnd === undefined ? existing.yearEnd : input.yearEnd,
+  });
 
   return prisma.carEngine.update({ where: { id }, data: input });
 }

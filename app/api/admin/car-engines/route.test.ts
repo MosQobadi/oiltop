@@ -76,6 +76,7 @@ beforeAll(async () => {
   });
   seededCarModelA = await prisma.carModel.create({
     data: {
+      yearCalendar: "GREGORIAN",
       slug: `${SLUG_PREFIX}-model-a`,
       nameEn: "Test Model A",
       nameFa: "مدل آزمایشی الف",
@@ -85,6 +86,7 @@ beforeAll(async () => {
   });
   seededCarModelB = await prisma.carModel.create({
     data: {
+      yearCalendar: "GREGORIAN",
       slug: `${SLUG_PREFIX}-model-b`,
       nameEn: "Test Model B",
       nameFa: "مدل آزمایشی ب",
@@ -262,5 +264,66 @@ describe("POST /api/admin/car-engines", () => {
 
     expect(res.status).toBe(400);
     expect(json.success).toBe(false);
+  });
+
+  // The bug this pair exists to prevent: 1390 is an ordinary Jalali model year
+  // and a car built in the 14th century if the model counts in Gregorian. The
+  // calendar is read from the model in the database, never from the request.
+  it("rejects a Jalali year on a Gregorian model", async () => {
+    const res = await POST(
+      postRequest(
+        validCarEnginePayload({
+          carModelId: seededCarModelA.id,
+          labelEn: `${SLUG_PREFIX} Jalali On Gregorian`,
+          yearStart: 1390,
+          yearEnd: 1399,
+        }),
+      ),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.success).toBe(false);
+    expect(json.error).toContain("Gregorian");
+  });
+
+  it("accepts a Jalali year on a Jalali model, and rejects a Gregorian one", async () => {
+    const jalaliModel = await prisma.carModel.create({
+      data: {
+        yearCalendar: "JALALI",
+        slug: `${SLUG_PREFIX}-model-jalali`,
+        nameEn: "Test Model Jalali",
+        nameFa: "مدل آزمایشی شمسی",
+        carBrandId: seededCarBrand.id,
+        status: "ACTIVE",
+      },
+    });
+
+    const accepted = await POST(
+      postRequest(
+        validCarEnginePayload({
+          carModelId: jalaliModel.id,
+          labelEn: `${SLUG_PREFIX} Jalali OK`,
+          yearStart: 1390,
+          yearEnd: 1399,
+        }),
+      ),
+    );
+    expect(accepted.status).toBe(201);
+
+    const rejected = await POST(
+      postRequest(
+        validCarEnginePayload({
+          carModelId: jalaliModel.id,
+          labelEn: `${SLUG_PREFIX} Gregorian On Jalali`,
+          yearStart: 2015,
+          yearEnd: 2020,
+        }),
+      ),
+    );
+    const json = await rejected.json();
+
+    expect(rejected.status).toBe(400);
+    expect(json.error).toContain("Jalali");
   });
 });

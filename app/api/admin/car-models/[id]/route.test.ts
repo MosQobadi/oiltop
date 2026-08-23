@@ -46,6 +46,7 @@ let seededCarBrand: { id: string };
 async function createTestCarModel(overrides: Record<string, unknown> = {}) {
   return prisma.carModel.create({
     data: {
+      yearCalendar: "GREGORIAN",
       slug: `${SLUG_PREFIX}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       nameEn: "Test Car Model For ID Route",
       nameFa: "مدل خودرو آزمایشی",

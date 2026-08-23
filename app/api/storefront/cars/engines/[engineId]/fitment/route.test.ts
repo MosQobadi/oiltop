@@ -268,6 +268,7 @@ describe("GET /api/storefront/cars/engines/:engineId/fitment", () => {
     });
     const carModel = await prisma.carModel.create({
       data: {
+        yearCalendar: "GREGORIAN",
         carBrandId: carBrand.id,
         slug: `${SLUG_PREFIX}-model`,
         nameEn: "Fitment Model",
@@ -301,6 +302,7 @@ describe("GET /api/storefront/cars/engines/:engineId/fitment", () => {
     });
     const carModel = await prisma.carModel.create({
       data: {
+        yearCalendar: "GREGORIAN",
         carBrandId: carBrand.id,
         slug: `${SLUG_PREFIX}-bare-model`,
         nameEn: "Bare Fitment Model",

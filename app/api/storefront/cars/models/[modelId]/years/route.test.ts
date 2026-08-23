@@ -52,6 +52,7 @@ async function createModel(
   });
   return prisma.carModel.create({
     data: {
+      yearCalendar: "GREGORIAN",
       carBrandId: carBrand.id,
       slug: `${SLUG_PREFIX}-${suffix}`,
       nameEn: `Years Model ${suffix}`,

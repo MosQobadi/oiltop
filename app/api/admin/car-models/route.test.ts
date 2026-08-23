@@ -48,6 +48,7 @@ function validCarModelPayload(overrides: Record<string, unknown> = {}) {
     nameEn: "Test Car Model 8.2",
     nameFa: "مدل خودرو آزمایشی",
     status: "ACTIVE",
+    yearCalendar: "GREGORIAN",
     ...overrides,
   };
 }
@@ -81,6 +82,7 @@ beforeAll(async () => {
 
   seededCarModel = await prisma.carModel.create({
     data: {
+      yearCalendar: "GREGORIAN",
       slug: `${SLUG_PREFIX}-seed`,
       nameEn: "Corolla Test Seed",
       nameFa: "کرولا آزمایشی",

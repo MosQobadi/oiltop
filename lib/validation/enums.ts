@@ -14,6 +14,7 @@ export const carBrandStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 export const carModelStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 export const carEngineStatusSchema = z.enum(["ACTIVE", "INACTIVE"]);
 export const fuelTypeSchema = z.enum(["PETROL", "DIESEL", "HYBRID", "ELECTRIC", "LPG_CNG"]);
+export const yearCalendarSchema = z.enum(["JALALI", "GREGORIAN"]);
 export const fitmentClimateSchema = z.enum(["STANDARD", "HOT", "COLD"]);
 export const fitmentInquiryStatusSchema = z.enum(["NEW", "CONTACTED", "RESOLVED"]);
 export const orderStatusSchema = z.enum(["PENDING", "SENDING", "SENT", "DELIVERED", "CANCELLED"]);

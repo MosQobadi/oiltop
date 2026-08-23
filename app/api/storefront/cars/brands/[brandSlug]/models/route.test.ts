@@ -68,6 +68,7 @@ describe("GET /api/storefront/cars/brands/:brandSlug/models", () => {
     });
     await prisma.carModel.create({
       data: {
+        yearCalendar: "GREGORIAN",
         carBrandId: carBrand.id,
         slug: `${SLUG_PREFIX}-hidden`,
         nameEn: "Hidden Model",
@@ -91,6 +92,7 @@ describe("GET /api/storefront/cars/brands/:brandSlug/models", () => {
     });
     await prisma.carModel.create({
       data: {
+        yearCalendar: "GREGORIAN",
         carBrandId: carBrand.id,
         slug: `${SLUG_PREFIX}-active`,
         nameEn: "Active Model",
@@ -100,6 +102,7 @@ describe("GET /api/storefront/cars/brands/:brandSlug/models", () => {
     });
     await prisma.carModel.create({
       data: {
+        yearCalendar: "GREGORIAN",
         carBrandId: carBrand.id,
         slug: `${SLUG_PREFIX}-inactive`,
         nameEn: "Inactive Model",

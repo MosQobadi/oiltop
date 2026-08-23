@@ -149,6 +149,7 @@ describe("DELETE /api/admin/car-brands/:id", () => {
     const carBrand = await createTestCarBrand();
     const carModel = await prisma.carModel.create({
       data: {
+        yearCalendar: "GREGORIAN",
         slug: `${SLUG_PREFIX}-model-${Date.now()}`,
         nameEn: "Test Car Model",
         nameFa: "مدل خودرو آزمایشی",

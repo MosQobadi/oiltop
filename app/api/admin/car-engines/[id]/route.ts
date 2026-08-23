@@ -4,6 +4,7 @@ import { AuthError, requireAdmin } from "@/server/auth";
 import {
   CarEngineHasFitmentProfileLinksError,
   CarEngineNotFoundError,
+  CarEngineYearCalendarError,
   deleteCarEngine,
   getCarEngineById,
   updateCarEngine,
@@ -59,6 +60,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   } catch (error) {
     if (error instanceof CarEngineNotFoundError) {
       return NextResponse.json({ success: false, error: error.message }, { status: 404 });
+    }
+    if (error instanceof CarEngineYearCalendarError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
     throw error;
   }

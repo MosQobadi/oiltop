@@ -59,6 +59,7 @@ import {
   fitmentProfileLabel,
   fitmentSpecNote,
   IMPORT_HASH_NOTE_PREFIX,
+  IMPORTED_YEAR_CALENDAR,
   IMPORTED_YEAR_START,
   importHashNote,
   isImportHashNote,
@@ -1058,7 +1059,17 @@ async function upsertCarModel(
   }
 
   const created = await ctx.tx.carModel.create({
-    data: { sourceRef, carBrandId, slug, nameEn: name, nameFa: name, status: "INACTIVE" },
+    data: {
+      sourceRef,
+      carBrandId,
+      slug,
+      nameEn: name,
+      nameFa: name,
+      status: "INACTIVE",
+      // Pairs with the synthesised engine's IMPORTED_YEAR_START below — the
+      // placeholder span is Gregorian, so the model that holds it says so.
+      yearCalendar: IMPORTED_YEAR_CALENDAR,
+    },
     select: { id: true },
   });
   ctx.report.record(ctx.counts, "carModels", "created", sourceRef);

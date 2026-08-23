@@ -7,11 +7,26 @@ const validCarModel = {
   nameFa: "کرولا",
   slug: "corolla",
   status: "ACTIVE",
+  yearCalendar: "GREGORIAN",
 };
 
 describe("carModelCreateSchema", () => {
   it("accepts a valid car model", () => {
     expect(carModelCreateSchema.safeParse(validCarModel).success).toBe(true);
+  });
+
+  // Required with no default: a model that doesn't say which calendar its years
+  // are in produces spans nobody can read correctly.
+  it("rejects a car model with no year calendar", () => {
+    const withoutCalendar: Record<string, unknown> = { ...validCarModel };
+    delete withoutCalendar.yearCalendar;
+    expect(carModelCreateSchema.safeParse(withoutCalendar).success).toBe(false);
+  });
+
+  it("rejects an unknown year calendar", () => {
+    expect(
+      carModelCreateSchema.safeParse({ ...validCarModel, yearCalendar: "HIJRI" }).success,
+    ).toBe(false);
   });
 
   it("rejects a missing carBrandId", () => {

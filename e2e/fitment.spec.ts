@@ -45,6 +45,9 @@ test.describe.serial("fitment: car brand → model → type → fitment profile 
 
     await page.getByRole("button", { name: "+ Add Model" }).click();
     await fillBilingual(page, 0, modelName, "مدل آزمایشی");
+    // Required with no default, so the model has to state which calendar its
+    // types' years are in. Gregorian here, to match the yearStart below.
+    await selectOption(page, "Year calendar", "Gregorian — e.g. 2011");
     await page.getByRole("button", { name: "Save" }).click();
 
     await expect(rowContaining(page, modelName)).toBeVisible();
@@ -58,7 +61,7 @@ test.describe.serial("fitment: car brand → model → type → fitment profile 
 
     await page.getByRole("button", { name: "+ Add Type" }).click();
     await fillBilingual(page, 0, engineLabel, "موتور آزمایشی");
-    await page.getByLabel("Year Start", { exact: true }).fill(yearStart);
+    await page.getByLabel("Year Start (Gregorian)", { exact: true }).fill(yearStart);
     await selectOption(page, "Fuel Type", "Petrol");
     await page.getByRole("button", { name: "Save" }).click();
 

@@ -11,6 +11,7 @@ import {
   PaymentStatus,
   UserRole,
   UserStatus,
+  YearCalendar,
 } from "../lib/generated/prisma/client";
 import { slugify } from "../lib/slug";
 
@@ -824,6 +825,11 @@ async function main() {
           nameFa: modelSeed.nameFa,
           slug: modelSeed.slug,
           status: "ACTIVE",
+          // Every seeded span is Gregorian, including the Iranian-built 206 —
+          // the e2e specs assert on "(2000–2010)" and pick the year 2005, so
+          // this is the seed staying honest about what it already contains
+          // rather than a claim that a 206 is sold by Gregorian year.
+          yearCalendar: YearCalendar.GREGORIAN,
         },
       });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -16,6 +16,13 @@ import {
   ToggleField,
 } from "@/components/admin/form";
 import { CloseIcon } from "@/components/admin/icons";
+import {
+  ANY_CALENDAR_YEAR_MAX,
+  ANY_CALENDAR_YEAR_MIN,
+  yearBoundsFor,
+  yearRangeMessage,
+  type YearCalendar,
+} from "@/lib/year";
 
 interface ProfileOption {
   id: string;
@@ -157,60 +164,75 @@ const FUEL_TYPE_OPTIONS = [
   { label: "LPG/CNG", value: "LPG_CNG" },
 ];
 
-const YEAR_MIN = 1900;
-const YEAR_MAX = 2100;
+// What counts as a valid year depends on the calendar the owning model uses:
+// 1390 is an ordinary Jalali model year and a nonsense Gregorian one. So the
+// schema is built per model rather than defined once, and falls back to the
+// widest window while the model is still loading. A stale bound is never the
+// last word — server/carEngine.ts re-checks against the model on every write.
+function makeCarEngineFormSchema(calendar: YearCalendar | null) {
+  const { min, max } =
+    calendar === null
+      ? { min: ANY_CALENDAR_YEAR_MIN, max: ANY_CALENDAR_YEAR_MAX }
+      : yearBoundsFor(calendar);
+  const rangeMessage =
+    calendar === null ? `Enter a valid year between ${min} and ${max}` : yearRangeMessage(calendar);
 
-function isValidYear(value: string) {
-  const year = Number(value);
-  return Number.isInteger(year) && year >= YEAR_MIN && year <= YEAR_MAX;
+  const isValidYear = (value: string) => {
+    const year = Number(value);
+    return Number.isInteger(year) && year >= min && year <= max;
+  };
+
+  return z
+    .object({
+      labelEn: z.string().min(1, "English label is required").max(100),
+      labelFa: z.string().min(1, "Persian label is required").max(100),
+      yearStart: z.string().min(1, "Year start is required").refine(isValidYear, rangeMessage),
+      stillInProduction: z.boolean(),
+      yearEnd: z.string(),
+      fuelType: z.string().min(1, "Fuel type is required"),
+      displacementCc: z.string(),
+      engineCode: z.string().max(50),
+      isActive: z.boolean(),
+      image: z.custom<File | string | null>(),
+    })
+    .superRefine((data, ctx) => {
+      if (!data.stillInProduction && data.yearEnd) {
+        if (!isValidYear(data.yearEnd)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["yearEnd"],
+            message: rangeMessage,
+          });
+        } else if (Number(data.yearEnd) < Number(data.yearStart)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["yearEnd"],
+            message: "Year end must be greater than or equal to year start",
+          });
+        }
+      }
+
+      if (data.displacementCc) {
+        const cc = Number(data.displacementCc);
+        if (!Number.isInteger(cc) || cc <= 0) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["displacementCc"],
+            message: "Displacement must be a positive whole number",
+          });
+        }
+      }
+    });
 }
 
-const carEngineFormSchema = z
-  .object({
-    labelEn: z.string().min(1, "English label is required").max(100),
-    labelFa: z.string().min(1, "Persian label is required").max(100),
-    yearStart: z
-      .string()
-      .min(1, "Year start is required")
-      .refine(isValidYear, `Enter a valid year between ${YEAR_MIN} and ${YEAR_MAX}`),
-    stillInProduction: z.boolean(),
-    yearEnd: z.string(),
-    fuelType: z.string().min(1, "Fuel type is required"),
-    displacementCc: z.string(),
-    engineCode: z.string().max(50),
-    isActive: z.boolean(),
-    image: z.custom<File | string | null>(),
-  })
-  .superRefine((data, ctx) => {
-    if (!data.stillInProduction && data.yearEnd) {
-      if (!isValidYear(data.yearEnd)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["yearEnd"],
-          message: `Enter a valid year between ${YEAR_MIN} and ${YEAR_MAX}`,
-        });
-      } else if (Number(data.yearEnd) < Number(data.yearStart)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["yearEnd"],
-          message: "Year end must be greater than or equal to year start",
-        });
-      }
-    }
+// The label says which calendar the number is in, because "Year Start" alone is
+// exactly the ambiguity this whole field pair exists to remove.
+function yearLabel(base: string, calendar: YearCalendar | null): string {
+  if (calendar === null) return base;
+  return `${base} (${calendar === "JALALI" ? "Jalali" : "Gregorian"})`;
+}
 
-    if (data.displacementCc) {
-      const cc = Number(data.displacementCc);
-      if (!Number.isInteger(cc) || cc <= 0) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["displacementCc"],
-          message: "Displacement must be a positive whole number",
-        });
-      }
-    }
-  });
-
-type CarEngineFormValues = z.infer<typeof carEngineFormSchema>;
+type CarEngineFormValues = z.infer<ReturnType<typeof makeCarEngineFormSchema>>;
 
 const emptyDefaults: CarEngineFormValues = {
   labelEn: "",
@@ -263,6 +285,13 @@ export default function CarEngineFormPage() {
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   const [createProfileError, setCreateProfileError] = useState<string | null>(null);
 
+  // Fetched rather than passed down: the year fields cannot be labelled or
+  // bounded until the owning model says which calendar it uses. Null means "not
+  // known yet", which the schema treats as the widest window rather than
+  // guessing a calendar and rejecting a year the admin typed correctly.
+  const [yearCalendar, setYearCalendar] = useState<YearCalendar | null>(null);
+  const formSchema = useMemo(() => makeCarEngineFormSchema(yearCalendar), [yearCalendar]);
+
   const {
     control,
     handleSubmit,
@@ -271,9 +300,25 @@ export default function CarEngineFormPage() {
     reset,
     formState: { isSubmitting },
   } = useForm<CarEngineFormValues>({
-    resolver: zodResolver(carEngineFormSchema),
+    resolver: zodResolver(formSchema),
     defaultValues: emptyDefaults,
   });
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadModelCalendar() {
+      const response = await fetch(`/api/admin/car-models/${carModelId}`);
+      const result = await response.json();
+      if (ignore || !result.success) return;
+      setYearCalendar(result.data.carModel.yearCalendar as YearCalendar);
+    }
+
+    void loadModelCalendar();
+    return () => {
+      ignore = true;
+    };
+  }, [carModelId]);
 
   const stillInProduction = watch("stillInProduction");
 
@@ -500,7 +545,7 @@ export default function CarEngineFormPage() {
           <TextField
             control={control}
             name="yearStart"
-            label="Year Start"
+            label={yearLabel("Year Start", yearCalendar)}
             type="number"
             isRequired
             className="flex-1"
@@ -509,7 +554,7 @@ export default function CarEngineFormPage() {
             <TextField
               control={control}
               name="yearEnd"
-              label="Year End"
+              label={yearLabel("Year End", yearCalendar)}
               type="number"
               className="flex-1"
             />

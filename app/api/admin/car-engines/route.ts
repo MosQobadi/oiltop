@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { carEngineCreateSchema, carEngineListQuerySchema } from "@/lib/validation";
 import { AuthError, requireAdmin } from "@/server/auth";
-import { createCarEngine, listCarEngines } from "@/server/carEngine";
+import {
+  CarEngineNotFoundError,
+  CarEngineYearCalendarError,
+  createCarEngine,
+  listCarEngines,
+} from "@/server/carEngine";
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,6 +59,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const carEngine = await createCarEngine(parsed.data);
-  return NextResponse.json({ success: true, data: { carEngine } }, { status: 201 });
+  try {
+    const carEngine = await createCarEngine(parsed.data);
+    return NextResponse.json({ success: true, data: { carEngine } }, { status: 201 });
+  } catch (error) {
+    // The model is read from the database to learn its calendar, so a bad
+    // carModelId surfaces here rather than as a foreign-key crash.
+    if (error instanceof CarEngineNotFoundError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 404 });
+    }
+    if (error instanceof CarEngineYearCalendarError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
+    throw error;
+  }
 }

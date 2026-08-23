@@ -41,6 +41,14 @@ export function variantImage(
 // "2001–2010", or "2001–Present" while the car is still being built — a null
 // `yearEnd` means still in production, not unknown. Takes a bare span rather
 // than an engine so the PDP can write a whole model's range with it too.
+//
+// It deliberately does NOT take the model's `yearCalendar`, and that is not an
+// oversight. Years are stored exactly as written (see lib/year.ts), so a Jalali
+// span already renders as ۱۳۹۰–۱۳۹۹ and a Gregorian one as ۲۰۱۵–۲۰۲۰ — and the
+// number says which it is, for the same reason the two calendars never collide:
+// no Gregorian car has a year 1390. A brand page listing both, as Saipa's does,
+// reads the way every Iranian car site presents it. Adding a calendar marker
+// here would label something the reader has already read.
 export function formatYearSpan(
   locale: Locale,
   span: { yearStart: number; yearEnd: number | null },

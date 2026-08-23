@@ -356,6 +356,18 @@ export const UNKNOWN_BRAND = {
 // leaving it alone on re-import.
 export const IMPORTED_YEAR_START = 2000;
 
+// The calendar that placeholder span is written in, and the calendar an
+// imported model is therefore created with. Gregorian, because 2000 is — the
+// two are one statement and must not drift apart.
+//
+// This is not a guess about the car. oil-city.ir publishes no years at all, so
+// there is nothing to derive a calendar from; what it is instead is the honest
+// pairing of "we know nothing about this car's years" with a span wide enough
+// to cover every modern car. A model's real calendar arrives with its real
+// years — both replaced together by the enrichment pass, never separately,
+// because a calendar without matching years says something false.
+export const IMPORTED_YEAR_CALENDAR = "GREGORIAN" as const;
+
 // ---------------------------------------------------------------------------
 // Fitment
 // ---------------------------------------------------------------------------

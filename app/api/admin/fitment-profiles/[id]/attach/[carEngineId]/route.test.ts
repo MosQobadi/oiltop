@@ -58,6 +58,7 @@ beforeAll(async () => {
   });
   const carModel = await prisma.carModel.create({
     data: {
+      yearCalendar: "GREGORIAN",
       slug: `${SLUG_PREFIX}-model`,
       nameEn: "Test Model For Detach Route",
       nameFa: "مدل آزمایشی",

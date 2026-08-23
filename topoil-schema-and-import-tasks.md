@@ -32,10 +32,12 @@ captured without shipping a half-built category to the storefront.
 
 **4. Year calendars are per model, and years are stored as typed.** Iranian-built cars are sold as
 Jalali model years and imported ones as Gregorian, and a single brand carries both — Saipa sells
-Pride 131 as 1390-1399 and CS35 Plus as 2024. `CarModel.yearCalendar` records which, derived on
-import from the year values themselves, since the two calendars occupy disjoint numeric ranges.
-Neither is converted to a canonical form: a model year is a label rather than a date, and every year
-comparison in this app is scoped to a single model, so the two never meet. See Task A.5.
+Pride 131 as 1390-1399 and CS35 Plus as 2024. `CarModel.yearCalendar` records which. Where a source
+supplies years, the calendar is derived from the values rather than configured, since the two
+calendars occupy disjoint numeric ranges; oil-city supplies none, so its imports pair a Gregorian
+placeholder span with a Gregorian calendar until Task G.3 replaces both. Neither calendar is
+converted to a canonical form: a model year is a label rather than a date, and every year comparison
+in this app is scoped to a single model, so the two never meet. See Task A.5.
 
 ---
 
@@ -204,6 +206,23 @@ Importer (scripts/import.ts, lib/import.ts) — derive, don't ask:
   used cars by Jalali year and zero-km ("صفر") cars by Gregorian model year on the SAME model page,
   which is why a naive read of that page can appear to show a span running "از 1404 تا 2024".
 ```
+
+> **Built, with two departures from the prompt above — both found while implementing.**
+>
+> **The importer derives nothing.** oil-city.ir publishes no years at all, so there was no input for a
+> derivation to run on. Instead `IMPORTED_YEAR_CALENDAR` (GREGORIAN) sits beside
+> `IMPORTED_YEAR_START` (2000) in `lib/import.ts` as one statement — the placeholder span is
+> Gregorian, so the model holding it says so. A model's real calendar arrives with its real years,
+> replaced together by Task G.3 and never separately. The derivation rule itself is unchanged and
+> still needed; it lives in Tasks F.4 and G.3 of `topoil-scrape-and-enrichment-tasks.md`, with the
+> source that actually has years.
+>
+> **The storefront renders no calendar marker.** Years are stored as written, so a Jalali span already
+> reads ۱۳۹۰–۱۳۹۹ and a Gregorian one ۲۰۱۵–۲۰۲۰ — and the number says which it is, for the same reason
+> the two never collide. A brand page listing both, as Saipa's does, is how every Iranian car site
+> presents it. `formatYearSpan` therefore keeps its signature and carries a comment saying so, to stop
+> a later reader "fixing" the omission. The admin forms _do_ name the calendar, because there the
+> number is being typed rather than read.
 
 ---
 

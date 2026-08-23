@@ -74,6 +74,14 @@ enum FuelType {
   LPG_CNG
 }
 
+// Which calendar a car model's year spans are written in. Iranian-built cars
+// are sold by Jalali model year and imported ones by Gregorian, and the years
+// are stored exactly as written rather than converted — see lib/year.ts for why.
+enum YearCalendar {
+  JALALI
+  GREGORIAN
+}
+
 enum FitmentClimate {
   STANDARD
   HOT
@@ -401,6 +409,13 @@ model CarModel {
 
   image  String?
   status CarModelStatus
+
+  // Applies to every year on this model's types. On CarModel rather than
+  // CarBrand because one brand carries both: Saipa sells Pride 131 as
+  // 1390–1399 (Jalali) and CS35 Plus as 2024 (Gregorian). No default — a new
+  // model has to say which calendar it means, and the importer derives it from
+  // the year values themselves.
+  yearCalendar YearCalendar
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

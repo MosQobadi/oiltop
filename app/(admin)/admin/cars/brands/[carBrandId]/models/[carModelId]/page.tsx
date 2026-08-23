@@ -12,15 +12,29 @@ import {
   BilingualTextareaField,
   FormActions,
   ImageUploadField,
+  SelectField,
   TextField,
   ToggleField,
 } from "@/components/admin/form";
 import { slugify } from "@/lib/slug";
 
+// Which calendar this model's type year spans are written in. Iranian-built
+// cars are sold by Jalali model year and imported ones by Gregorian, and one
+// brand carries both — so it is asked per model, and the example years are in
+// the label because that is what makes the choice obvious at a glance.
+const YEAR_CALENDAR_OPTIONS = [
+  { label: "Jalali — e.g. 1390", value: "JALALI" },
+  { label: "Gregorian — e.g. 2011", value: "GREGORIAN" },
+];
+
 const carModelFormSchema = z.object({
   slug: z.string().min(1, "Slug is required"),
   nameEn: z.string().min(1, "English name is required").max(200),
   nameFa: z.string().min(1, "Persian name is required").max(200),
+  // A plain required string, matching how the engine form treats fuelType: the
+  // empty default is what forces the admin to choose rather than inherit a
+  // guess, and the API's Zod schema is what proves the value is a real one.
+  yearCalendar: z.string().min(1, "Year calendar is required"),
   metaTitleEn: z.string().max(70),
   metaTitleFa: z.string().max(70),
   metaDescriptionEn: z.string().max(160),
@@ -35,6 +49,7 @@ const emptyDefaults: CarModelFormValues = {
   slug: "",
   nameEn: "",
   nameFa: "",
+  yearCalendar: "",
   metaTitleEn: "",
   metaTitleFa: "",
   metaDescriptionEn: "",
@@ -106,6 +121,7 @@ export default function CarModelFormPage() {
         slug: carModel.slug,
         nameEn: carModel.nameEn,
         nameFa: carModel.nameFa,
+        yearCalendar: carModel.yearCalendar,
         metaTitleEn: carModel.metaTitleEn ?? "",
         metaTitleFa: carModel.metaTitleFa ?? "",
         metaDescriptionEn: carModel.metaDescriptionEn ?? "",
@@ -153,6 +169,7 @@ export default function CarModelFormPage() {
       slug: values.slug,
       nameEn: values.nameEn,
       nameFa: values.nameFa,
+      yearCalendar: values.yearCalendar,
       status: values.isActive ? "ACTIVE" : "INACTIVE",
       metaTitleEn: values.metaTitleEn || undefined,
       metaTitleFa: values.metaTitleFa || undefined,
@@ -223,6 +240,14 @@ export default function CarModelFormPage() {
         />
 
         <TextField control={control} name="slug" label="Slug" isRequired />
+
+        <SelectField
+          control={control}
+          name="yearCalendar"
+          label="Year calendar"
+          options={YEAR_CALENDAR_OPTIONS}
+          isRequired
+        />
 
         <ImageUploadField control={control} name="image" label="Image" />
 
