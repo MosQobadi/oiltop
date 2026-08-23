@@ -291,7 +291,33 @@ commercial vehicle-data API is a legitimate alternative to scraping.
 
 **Prerequisite: Task A.5 must be complete before anything in this phase runs.**
 
-### Task G.1 — Probe import
+**Phase G now runs BEFORE Task F.4, reversing the order this list was written in.**
+F.4 exists to feed G.3, and G.3 can only update car rows that the oil-city import
+has already created — so F.4's output has nowhere to go until G.2 has run. G.1
+also found that oil-city's model names carry their own years constantly
+("یاریس 2005-2012 اتوماتیک", "کمری بنزینی 2023-2025 موتور 2000"), which may make
+F.4 much smaller than planned or unnecessary for most cars. Measure that against
+all 803 models after G.2 before building it.
+
+### Task G.1 — Probe import — **DONE**
+
+> **Run 2026-08-23; findings are section 6 of `oil-city-import-notes.md`.** Four
+> things came out of it, three now fixed as separate commits:
+>
+> - **Fuel type — fixed.** 40 of 59 models stated no fuel and were being skipped
+>   entirely, taking two thirds of the recommendations with them. Unstated now
+>   means petrol (`DEFAULT_FUEL_TYPE`); explicit wording still wins, so "هیبرید"
+>   models stay HYBRID. 59/59 engines afterwards.
+> - **Zero prices — fixed.** 197 of 200 products state no price, and the importer
+>   stores 0. `updateProduct` now refuses to activate a product priced at zero, so
+>   D.4's bulk activate cannot put a free-looking row on the storefront.
+> - **"تماس بگیرید" — fixed.** A price state, not a parse failure; 63 false
+>   problems were burying real ones.
+> - **Profile dedup — measured, premise abandoned.** No hashing variant produces
+>   any sharing; the recommendations genuinely differ per car. Expect ~803
+>   profiles, not "far fewer". See section 6.2 of the notes.
+
+### Task G.1 — the prompt as run
 
 **DoD:** One product batch and one car brand imported with `--dry-run` against a real scrape; a short
 written findings note; no schema or importer changes made in this task.
