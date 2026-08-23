@@ -68,6 +68,9 @@ export function parseYearSpanFromName(
 export interface MatchableModel {
   /** As the other source names it, maker included — "پژو 405 SLX". */
   nameFa: string;
+  yearStart: number;
+  yearEnd: number;
+  yearCalendar: YearCalendar;
 }
 
 /**
@@ -90,8 +93,7 @@ export type MatchOutcome<T> =
   { kind: "matched"; model: T } | { kind: "none" } | { kind: "ambiguous"; count: number };
 
 /**
- * Finds the one model in `candidates` whose name is exactly ours, or says why
- * not.
+ * Finds the span in `candidates` whose name is exactly ours, or says why not.
  *
  * **Exact after normalisation, and nothing looser.** A near-miss like
  * "206 صندقدار اتوماتیک" against "پژو 206 صندوقدار" — a real pair, differing by
@@ -101,15 +103,24 @@ export type MatchOutcome<T> =
  * supported. A gap is recoverable by hand; a wrong span looks correct and is
  * never looked at again.
  *
- * Ambiguity is reported too. Two candidates with the same normalised name are
- * two different cars, and picking the first would be a coin toss.
+ * Ambiguity is judged on the SPAN, not on the number of candidates. The source
+ * lists many models under two maker paths — "پژو 405 SLX" appears under
+ * `irankhodro` twice, and 102 of 103 duplicated names carry identical spans —
+ * so counting rows would call a duplicate an ambiguity and throw away a perfectly
+ * certain answer. Two rows that say the same thing are not a disagreement.
+ *
+ * Where the spans genuinely differ they are reported and nothing is written:
+ * "هاوال H6" is 2013-2016 under `greatwall` and 2024-2025 under `haval`, which
+ * are two different cars sharing a name, and picking either would be a coin toss.
  */
 export function findExactModel<T extends MatchableModel>(
   ourKey: string,
   candidates: readonly T[],
 ): MatchOutcome<T> {
   const hits = candidates.filter((candidate) => matchKey(candidate.nameFa) === ourKey);
-  if (hits.length === 1) return { kind: "matched", model: hits[0] };
   if (hits.length === 0) return { kind: "none" };
-  return { kind: "ambiguous", count: hits.length };
+
+  const spans = new Set(hits.map((hit) => `${hit.yearStart}-${hit.yearEnd}-${hit.yearCalendar}`));
+  if (spans.size === 1) return { kind: "matched", model: hits[0] };
+  return { kind: "ambiguous", count: spans.size };
 }

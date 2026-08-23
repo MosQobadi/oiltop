@@ -487,7 +487,27 @@ Matching is the hard part and must fail loudly, not creatively:
 Print, at the end: matched, unmatched, skipped-human-edited, calendar-conflict. Four numbers.
 ```
 
-### Task G.4 — Review and activate
+### Task G.4 — Review and activate — **RUNBOOK DONE, NOTHING ACTIVATED**
+
+> **`docs/import-review-runbook.md`, written 2026-08-24.** The checklist, the order of work, the admin
+> mechanics and the traps, written to be usable by someone who never read this task list.
+>
+> **Nothing was activated, deliberately.** Judging whether a given oil suits a given engine is a
+> question about cars, not about code, and "the import said so" is not a reason to put a
+> recommendation in front of a customer who will act on it. The runbook exists so that judgement is
+> made once, in order, with the traps already known.
+>
+> Two things the review will run into, both measured rather than guessed:
+>
+> - **About 50 of the 65 priority Iranian models still carry the import's placeholder year span.**
+>   Neither year provider could reach them: oil-city does not state their years, and hamrah-mechanic
+>   names them without the engine and transmission ours carry — "پژو پارس" against
+>   "پارس TU5 اتوماتیک". Setting those by hand is the single highest-value review task, and A.5's
+>   calendar-aware form is already waiting for it.
+> - **Bulk activate is 20 rows at a time**, which is ~86 pages for the 1,720 in-scope products. That
+>   is deliberate rather than a limitation, but it should be expected rather than discovered.
+
+**Prompt:**
 
 **DoD:** A documented, repeatable review pass; the highest-traffic cars reviewed and activated; the
 long tail explicitly left INACTIVE.

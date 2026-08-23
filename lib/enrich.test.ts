@@ -92,9 +92,9 @@ describe("matchKey", () => {
 
 describe("findExactModel", () => {
   const candidates = [
-    { nameFa: "پژو 405 SLX", yearStart: 1388, yearEnd: 1400 },
-    { nameFa: "پژو 206 صندوقدار", yearStart: 1385, yearEnd: 1400 },
-    { nameFa: "پژو پارس", yearStart: 1380, yearEnd: 1403 },
+    { nameFa: "پژو 405 SLX", yearStart: 1388, yearEnd: 1400, yearCalendar: "JALALI" as const },
+    { nameFa: "پژو 206 صندوقدار", yearStart: 1385, yearEnd: 1400, yearCalendar: "JALALI" as const },
+    { nameFa: "پژو پارس", yearStart: 1380, yearEnd: 1403, yearCalendar: "JALALI" as const },
   ];
 
   it("matches a name that is exactly ours", () => {
@@ -112,12 +112,27 @@ describe("findExactModel", () => {
     expect(findExactModel(matchKey("پژو", "پارس TU5 اتوماتیک"), candidates).kind).toBe("none");
   });
 
-  it("reports ambiguity instead of taking the first", () => {
-    const twins = [
-      { nameFa: "سایپا کوییک", yearStart: 1397, yearEnd: 1402 },
-      { nameFa: "سایپا کوییک", yearStart: 1400, yearEnd: 1404 },
+  // The source lists many models under two maker paths, and 102 of 103
+  // duplicated names carry identical spans. Counting rows would call those an
+  // ambiguity and discard a perfectly certain answer.
+  it("treats duplicate rows that agree as one answer", () => {
+    const twice = [
+      { nameFa: "پژو 405 SLX", yearStart: 1388, yearEnd: 1400, yearCalendar: "JALALI" as const },
+      { nameFa: "پژو 405 SLX", yearStart: 1388, yearEnd: 1400, yearCalendar: "JALALI" as const },
     ];
-    const found = findExactModel(matchKey("سایپا", "کوییک"), twins);
+    const found = findExactModel(matchKey("پژو", "405 SLX"), twice);
+    expect(found.kind).toBe("matched");
+    expect(found.kind === "matched" && found.model.yearStart).toBe(1388);
+  });
+
+  it("reports ambiguity when the spans genuinely disagree", () => {
+    // Real pair: "هاوال H6" is 2013-2016 under greatwall and 2024-2025 under
+    // haval — two different cars sharing a name.
+    const twins = [
+      { nameFa: "هاوال H6", yearStart: 2013, yearEnd: 2016, yearCalendar: "GREGORIAN" as const },
+      { nameFa: "هاوال H6", yearStart: 2024, yearEnd: 2025, yearCalendar: "GREGORIAN" as const },
+    ];
+    const found = findExactModel(matchKey("هاوال", "H6"), twins);
     expect(found.kind).toBe("ambiguous");
     expect(found.kind === "ambiguous" && found.count).toBe(2);
   });

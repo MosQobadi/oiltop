@@ -34,21 +34,28 @@ export function useBulkActivate(resource: "products" | "categories") {
             body: JSON.stringify({ status: "ACTIVE" }),
           });
           const result = await response.json();
-          return result.success === true;
+          return result.success === true ? null : ((result.error as string) ?? "Unknown error");
         } catch {
-          return false;
+          return "Request failed";
         }
       }),
     );
 
-    const activated = results.filter(Boolean).length;
-    const failed = results.length - activated;
-    if (failed > 0) {
-      setError(`${failed} of ${results.length} could not be activated.`);
+    const activated = results.filter((reason) => reason === null).length;
+    const reasons = results.filter((reason): reason is string => reason !== null);
+    if (reasons.length > 0) {
+      // The count alone is not actionable, and after the import most refusals
+      // have one specific cause: a product the source gave no price for cannot
+      // go live at zero. Naming the commonest reason turns "6 of 20 failed"
+      // into something the reviewer can actually do something about.
+      const commonest = [...new Set(reasons)].sort(
+        (a, b) => reasons.filter((r) => r === b).length - reasons.filter((r) => r === a).length,
+      )[0];
+      setError(`${reasons.length} of ${results.length} could not be activated. ${commonest}`);
     }
 
     setIsActivating(false);
-    return { activated, failed };
+    return { activated, failed: reasons.length };
   };
 
   return { activate, isActivating, error, clearError: () => setError(null) };
