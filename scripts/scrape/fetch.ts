@@ -267,19 +267,31 @@ async function loadInBrowser(url: string, asText: boolean): Promise<Fetched> {
     // that beats a fixed delay in both directions: no wait at all for a page
     // that arrived intact, and no truncated read for one that took longer than
     // a guess would have allowed.
-    // `page.content()` throws outright while a navigation is in flight, which is
-    // exactly what the shim does on its way out — so a throw counts as "still
-    // settling" rather than as a failure.
-    const stillSettling = async () => {
+    // Two separate things have to finish before the page is worth reading, and
+    // conflating them cost a whole scrape once.
+    //
+    //   1. The shim has to swap itself for the real page.
+    //   2. The body has to actually contain something. The XML sitemaps are
+    //      served with an XSL stylesheet, so Chrome renders them into a
+    //      document whose text appears AFTER the load event — "the document
+    //      arrived" and "there is anything in it" are different questions, and
+    //      reading between the two returns an empty string.
+    //
+    // `page.content()` also throws outright while a navigation is in flight,
+    // which is exactly what the shim does on its way out, so a throw counts as
+    // "still settling" rather than as a failure.
+    const settled = async () => {
       try {
-        return isCdnInterstitial(await page.content());
+        if (isCdnInterstitial(await page.content())) return false;
+        const text = await page.evaluate(() => document.body?.innerText ?? "");
+        return text.trim() !== "";
       } catch {
-        return true;
+        return false;
       }
     };
 
     const deadline = Date.now() + INTERSTITIAL_TIMEOUT_MS;
-    while ((await stillSettling()) && Date.now() < deadline) {
+    while (!(await settled()) && Date.now() < deadline) {
       await page.waitForTimeout(250);
     }
     await page.waitForLoadState("domcontentloaded");
@@ -446,7 +458,13 @@ export async function fetchPage(url: string, options: FetchPageOptions = {}): Pr
         // A 4xx is an answer, not a hiccup. Retrying one is just noise.
         if (status >= 400 && status < 500) throw new HttpStatusError(status, url);
 
-        if (status >= 200 && status < 400) {
+        // An empty body is a failure, never a result — and above all never a
+        // cache entry. Caching one poisons every later run silently: the cached
+        // empty string is returned instantly, forever, and the scraper reports
+        // that the page held nothing rather than that it was never read.
+        if (status >= 200 && status < 400 && body.trim() === "") {
+          lastError = new Error(`${url} returned an empty body`);
+        } else if (status >= 200 && status < 400) {
           await writeCache(cacheFile, {
             url,
             fetchedAt: new Date().toISOString(),
@@ -454,8 +472,9 @@ export async function fetchPage(url: string, options: FetchPageOptions = {}): Pr
             body,
           });
           return body;
+        } else {
+          lastError = new HttpStatusError(status, url);
         }
-        lastError = new HttpStatusError(status, url);
       } catch (error) {
         if (error instanceof HttpStatusError && error.status < 500) throw error;
         lastError = error;

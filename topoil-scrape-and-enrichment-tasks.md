@@ -176,10 +176,46 @@ per batch: counts, and every distinct `sourceCategoryText` seen with its frequen
 what decision D.2 in the notes deferred, and it is only actionable once it exists.
 ```
 
-### Task F.3 — oil-city car + fitment extractor
+### Task F.3 — oil-city car + fitment extractor — **BUILT**
 
 **DoD:** `pnpm tsx scripts/scrape/oil-city/cars.ts` writes `scrape/oil-city/50-cars-<n>.json` files that pass
 `parseScrapeBatchJson`, one car record per model page, with sections in page order.
+
+> **Built.** `cars-sitemap.xml` gives **884 car URLs — 81 brands, 803 models**, matching the survey.
+> `car-page.ts` is the pure parser, `cars.ts` the CLI. Sections come from `#headingN` / `#collapseN`
+> pairs with a numeric suffix; `#collapseOne` and `#collapseContent` are a promo panel and the SEO
+> article, and are skipped.
+>
+> **Two structural facts that change what the importer receives.**
+>
+> **"فیلترها" is ONE section holding every filter type** — cabin, oil and gearbox filters side by
+> side — not a section per filter. So a filter section carries no `categoryGuess`, and which filter
+> is which is settled downstream from each product's own page. `productSourceUrl` therefore matters
+> far more than the section guess, which makes the filename ordering (products before cars)
+> load-bearing rather than merely tidy.
+>
+> **The car has no breadcrumb and no name element.** The `<h1>` holds the brand in an `<a class="badge">`
+> plus prose that varies by model ("روغن موتور هایلوکس" on one, "هانک 150" on another), so it cannot
+> give the model name. Every section heading instead restates the car as `... برای <brand> > <model>`,
+> and that is where both names come from — cross-checked against the badge, with a disagreement
+> reported and neither side corrected.
+>
+> `modelDescriptorText` is always null: what a descriptor would hold ("توربو 1200", "2005-2013") is
+> already inside `modelNameFa`, and splitting one out would be deriving a field rather than reading one.
+>
+> **Only "روغن موتور خودرو" maps to a category.** "روغن موتور سیکلت" is MOTORCYCLE oil — a fuzzy match
+> on "روغن موتور" would put bike oil in front of car owners, so the match is exact and everything else
+> is null with its heading kept verbatim.
+>
+> **Worth knowing before the full run:** one car page carries far more than the five categories. The
+> Toyota CHR alone has 9 sections and 91 recommended products, including 27 additives and 16 air
+> fresheners. All of it is recorded, none of it is guessed at, and most of it will import into the
+> holding category — which is a lot of fitment rows for the review pass to look past.
+>
+> **Also before a real import:** `scrape/oil-city/batch-01.json`, the original hand-made fixture,
+> still sits in the output directory and sorts LAST in filename order. It would import 3 products and
+> 1 car after the real cars. Move or delete it before Task G.2.
+
 **Prompt:**
 
 ```
