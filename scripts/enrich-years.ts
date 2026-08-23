@@ -181,12 +181,15 @@ async function main() {
   // re-deriving it from the name would undo whatever narrowed it.
   report("Left alone — already has a real span", alreadySet);
   report("Left alone — not one imported type", oddShape);
-  console.log(`\n  No span stated in the name (${noYears.length}) — these wait for Task F.4.`);
+  console.log(
+    `\n  No year found by either provider (${noYears.length}) — the car keeps the` +
+      ` import's wide placeholder until somebody sets a span by hand.`,
+  );
 
   console.log(
     `\nSummary: ${updated.length} from names, ${fromHamrah.length} from hamrah-mechanic, ` +
       `${alreadySet.length} already set, ${ambiguous.length} ambiguous, ` +
-      +`${oddShape.length} odd shape, ${noYears.length} still without years.`,
+      `${oddShape.length} odd shape, ${noYears.length} still without years.`,
   );
   if (dryRun) console.log("DRY RUN — the transaction above was rolled back.");
 }

@@ -245,7 +245,23 @@ Print a summary per batch: models covered, total fitment rows, and any model pag
 not match (in "problems", not silently skipped).
 ```
 
-### Task F.4 — hamrah-mechanic year & type extractor
+### Task F.4 — hamrah-mechanic year & type extractor — **DONE**
+
+> **Built and run 2026-08-24.** `scripts/scrape/hamrah-mechanic/models.ts` reads **590 models across
+> 77 makers, 7 problems**, into the enrichment shape (`lib/validation/enrichment.ts`) — never D.1's
+> batch format, and never fed to the importer.
+>
+> **The span comes from the model index page's own title**, which every one carries: "قیمت سمند LX صفر
+> و کارکرده 1382-1401". That is one span per model, which is the granularity the imported cars can
+> actually use. The per-type pages below it (`/type-161`) carry narrower spans and would have invited
+> exactly the join problem this avoids — our imported cars have no types to match them against.
+>
+> **Two things about the names.** They include the maker ("پژو 405 SLX"), which is load-bearing: it
+> lets the match run against our `carBrand.nameFa + " " + carModel.nameFa` with no mapping between two
+> sets of brand slugs — a mapping that would have been wrong immediately, since hamrah files Peugeots
+> under `irankhodro` while oil-city calls the brand "پژو". And the title parser takes the name as
+> everything _before_ the span rather than stripping words off the end: an alternation on "و" for
+> "صفر و کارکرده" also matches the final letter of "پژو" and truncated every Peugeot to "پژ".
 
 **DoD:** `pnpm tsx scripts/scrape/hamrah-mechanic/cars.ts` writes `scrape/hamrah-mechanic/*.json` in a small
 purpose-built shape (NOT D.1's batch format), carrying brand, model, type label, year span and the
@@ -418,7 +434,20 @@ Do not activate anything. Do not "quickly fix" data by hand in the admin panel d
 > The constraints the prompt below asks for are all in place — year fields only, `oil-city:` rows only,
 > `--dry-run`, and never overwriting a span that is no longer the import's placeholder.
 >
-> **Still to do:** point the same update path at F.4's hamrah-mechanic data for the remaining 530.
+> **Second provider done 2026-08-24.** hamrah-mechanic now feeds the same update path, on an **exact
+> name match and nothing looser**: **51 more models** got real spans, 23 were reported as ambiguous,
+> and 479 keep the wide placeholder.
+>
+> The modest yield is the point, not a shortfall. The two sources slice the same cars differently —
+> hamrah stops at "پژو 206 صندوقدار" while oil-city says "206 صندقدار اتوماتیک", one letter and one
+> word apart — and matching those would have been guessing. A missing span is recoverable: the car
+> keeps its placeholder and somebody sets it by hand. A wrong span is not, because it looks right; the
+> customer picks their year, matches nothing, and is told their car is not supported, and nobody goes
+> looking. Ambiguity is reported for the same reason rather than resolved by taking the first hit.
+>
+> **State after both providers: 323 of 802 models (40%) carry a real span, 479 keep the placeholder,
+> 23 of the models are JALALI.** The unmatched and ambiguous lists print on every run, so they are a
+> worklist for the admin rather than a silent pile of wrong years.
 
 **Prompt (F.4's hamrah-mechanic provider — the remaining half):**
 
