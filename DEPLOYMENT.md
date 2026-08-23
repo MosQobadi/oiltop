@@ -369,6 +369,89 @@ Real catalog data is loaded separately with `scripts/import.ts` — see
 
 ---
 
+## 6a. Load the catalog
+
+A fresh production database has schema and an admin account and nothing else.
+The 3,469 products and 802 cars from the oil-city import live in whichever
+database the import was run against — on a developer's machine, not here.
+
+**The batch files do not travel with `git pull`.** `.gitignore` excludes
+`/scrape/` entirely, because a few thousand scraped pages are reproducible data
+rather than source. So a `git pull` on the VPS brings the importer and none of
+what it eats.
+
+Two ways across. Pick by which side you trust more.
+
+### Option A — copy the batches, import on the VPS
+
+Best when production should be built by the same code path that built local, and
+when you want the import's report from the production run itself.
+
+```bash
+# from the machine that ran the scrape
+rsync -avz --progress scrape/oil-city/ topoil@<VPS>:/srv/topoil/scrape/oil-city/
+
+# on the VPS, inside the app container
+docker compose --env-file .env.production -f docker-compose.prod.yml \
+  exec app pnpm tsx scripts/import.ts --source oil-city --dry-run
+```
+
+Read the report, then drop `--dry-run`. It is idempotent: running it twice
+reports every row unchanged, and it never writes to a row it did not create, so
+an admin's hand-entered cars are safe.
+
+Then apply the years, which is a separate pass for the same reason:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml \
+  exec app pnpm tsx scripts/enrich-years.ts --dry-run
+```
+
+Roughly 35 batch files, ~40 MB. The import takes a few minutes; the _scrape_
+does not need to be repeated on the VPS and should not be.
+
+### Option B — dump and restore
+
+Faster, and it carries the review work with it: anything already activated,
+priced or corrected locally arrives in that state.
+
+```bash
+# locally
+docker compose exec db pg_dump -U topoil -d topoil --data-only --disable-triggers > catalog.sql
+scp catalog.sql topoil@<VPS>:/tmp/
+
+# on the VPS
+docker compose --env-file .env.production -f docker-compose.prod.yml \
+  exec -T db psql -U topoil -d topoil < /tmp/catalog.sql
+```
+
+**`--data-only` overwrites nothing by itself but collides with rows that already
+exist.** Use this on a production database whose catalog is still empty. If
+production already has hand-entered data, use Option A — the importer is built
+to merge; a dump is not.
+
+Delete `/tmp/catalog.sql` afterwards. It contains the whole catalog and has no
+reason to persist.
+
+### After either
+
+Nothing is visible yet, by design: every imported row is INACTIVE, every
+imported product has zero stock, and a product priced at zero cannot be
+activated at all. Follow `docs/import-review-runbook.md` to decide what goes
+live.
+
+To light up one car brand and everything its cars need — models, types, the
+recommended products, and those products' categories and brands:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml \
+  exec app pnpm tsx scripts/activate-imported.ts --car-brand "پژو" --dry-run
+```
+
+That script flips rows; it does not review them. `--deactivate` reverses it.
+
+---
+
 ## 7. Redeploy
 
 ```bash
