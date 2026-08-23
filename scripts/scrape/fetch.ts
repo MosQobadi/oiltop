@@ -252,6 +252,25 @@ export function isCdnInterstitial(html: string): boolean {
 interface Fetched {
   status: number;
   body: string;
+  /** The rendered text, always — `body` may be markup, and markup is a poor emptiness test. */
+  text: string;
+  /** True when Chrome served its own error page instead of the site's. */
+  isBrowserError: boolean;
+}
+
+/**
+ * Chrome's "This site can't be reached" page, which it renders in place of the
+ * document when the connection fails.
+ *
+ * It has to be recognised explicitly because it does not look like a failure
+ * from the outside: `page.goto()` resolves, the document is a perfectly valid
+ * 188KB of HTML, and it caches like any other page — after which every later run
+ * returns the error page instantly and forever. Found in a real run, where three
+ * products had cached an ERR_CONNECTION_RESET page as their content.
+ */
+function isBrowserErrorPage(url: string, text: string): boolean {
+  if (url.startsWith("chrome-error://")) return true;
+  return /ERR_[A-Z_]+|This site can.t be reached/.test(text);
 }
 
 async function loadInBrowser(url: string, asText: boolean): Promise<Fetched> {
@@ -296,14 +315,16 @@ async function loadInBrowser(url: string, asText: boolean): Promise<Fetched> {
     }
     await page.waitForLoadState("domcontentloaded");
 
+    const text = await page.evaluate(() => document.body?.innerText ?? "");
+
     return {
       status: response?.status() ?? 0,
+      text,
+      isBrowserError: isBrowserErrorPage(page.url(), text),
       // robots.txt and XML sitemaps are served as text and wrapped by Chrome
       // for display; innerText gives back what was actually sent, where
       // page.content() would hand over Chrome's viewer markup around it.
-      body: asText
-        ? await page.evaluate(() => document.body?.innerText ?? "")
-        : await page.content(),
+      body: asText ? text : await page.content(),
     };
   } finally {
     await context.close();
@@ -453,17 +474,24 @@ export async function fetchPage(url: string, options: FetchPageOptions = {}): Pr
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
       try {
-        const { status, body } = await loadInBrowser(url, asText);
+        const { status, body, text, isBrowserError } = await loadInBrowser(url, asText);
 
         // A 4xx is an answer, not a hiccup. Retrying one is just noise.
         if (status >= 400 && status < 500) throw new HttpStatusError(status, url);
 
-        // An empty body is a failure, never a result — and above all never a
-        // cache entry. Caching one poisons every later run silently: the cached
-        // empty string is returned instantly, forever, and the scraper reports
-        // that the page held nothing rather than that it was never read.
-        if (status >= 200 && status < 400 && body.trim() === "") {
-          lastError = new Error(`${url} returned an empty body`);
+        // Three ways a fetch can succeed on paper and hold nothing usable. All
+        // three are failures that retry, and NONE of them may reach the cache:
+        // a cached non-answer is returned instantly and forever, and reports
+        // itself as "the page held nothing" rather than "it was never read".
+        //
+        // Emptiness is judged on the RENDERED TEXT, not the markup. A page that
+        // arrives as a shell — correct <title>, 13KB of scaffolding, empty body
+        // — is not an empty string, so a markup test passes it and the parser
+        // then finds none of the selectors it needs.
+        if (isBrowserError) {
+          lastError = new Error(`${url} returned Chrome's own error page`);
+        } else if (status >= 200 && status < 400 && text.trim() === "") {
+          lastError = new Error(`${url} rendered no text`);
         } else if (status >= 200 && status < 400) {
           await writeCache(cacheFile, {
             url,

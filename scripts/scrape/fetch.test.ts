@@ -184,6 +184,20 @@ describe("looksLikeRobotsTxt", () => {
   });
 });
 
+// Both regressions come from one real run: pages that "succeeded" and held
+// nothing usable, then cached that way. A cached non-answer is permanent.
+describe("what must never reach the cache", () => {
+  it("recognises Chrome's connection-error page", () => {
+    const errorPage = "This site can’t be reached The connection was reset. ERR_CONNECTION_RESET";
+    expect(/ERR_[A-Z_]+|This site can.t be reached/.test(errorPage)).toBe(true);
+  });
+
+  it("does not mistake ordinary product text for an error page", () => {
+    const real = "روغن موتور بوش مدل کوادرا SL حجم 3.5 لیتر — 2,999,000 تومان";
+    expect(/ERR_[A-Z_]+|This site can.t be reached/.test(real)).toBe(false);
+  });
+});
+
 describe("cachePathFor", () => {
   it("files an entry under its host", () => {
     const file = cachePathFor("https://www.oil-city.ir/product/x/", "cacheroot");
