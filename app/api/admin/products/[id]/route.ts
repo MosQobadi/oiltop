@@ -5,6 +5,7 @@ import {
   DuplicateProductSlugError,
   DuplicateSkuError,
   ProductDeleteBlockedError,
+  ProductPriceRequiredError,
   ProductNotFoundError,
   deleteProduct,
   getProductById,
@@ -64,6 +65,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     }
     if (error instanceof DuplicateSkuError || error instanceof DuplicateProductSlugError) {
       return NextResponse.json({ success: false, error: error.message }, { status: 409 });
+    }
+    if (error instanceof ProductPriceRequiredError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
     throw error;
   }

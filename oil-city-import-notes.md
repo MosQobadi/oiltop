@@ -346,6 +346,24 @@ know about; it currently reports all 63 as `unrecognised price text`, which is
 correct behaviour but the wrong classification now that we know what it is. It
 should become a recognised `stockRawText` value rather than a problem.
 
+> **Resolved 2026-08-23.** "تماس بگیرید" and "ناموجود" are now both recognised
+> no-price states, recorded verbatim in `stockRawText` and no longer reported as
+> problems — a known state is not a parse failure, and 63 false problems were
+> burying the real ones.
+>
+> The zero price stays, because `Product.price` is a non-nullable Decimal and
+> making it nullable would ripple through the generated `finalPrice` column, the
+> PLP's indexed price sort, the cart and orders — far more than this is worth.
+> What changed instead is that **a product priced at zero can no longer be
+> activated**: `updateProduct` refuses it with a message naming the product, so
+> D.4's bulk activate — which goes through that same function — cannot put a
+> free-looking row on the storefront. Activating and pricing in one request is
+> allowed, since the check runs against the price the row ends up with.
+>
+> Between that guard, `status: INACTIVE` and `stock: 0` on everything imported,
+> an unpriced product now has three separate things to get past before a customer
+> could see it.
+
 ### 6.4 Almost every slug is a hash
 
 199 of 200 source slugs are Persian, so `deriveSlug` falls through to

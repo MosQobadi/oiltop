@@ -143,6 +143,16 @@ describe("parseProductPage", () => {
     expect(product?.priceRawText).toContain("ناموجود");
   });
 
+  // G.1 found 63 of the first 200 products saying this. It is a price state, not
+  // a parse failure, and filing it as a problem buried the real ones.
+  it("reads call-for-price as a stock state, not a problem", () => {
+    const { product, problems } = parseProductPage(page({ current: "تماس بگیرید", old: "" }), URL);
+
+    expect(problems).toEqual([]);
+    expect(product?.priceToman).toBeNull();
+    expect(product?.stockRawText).toBe("تماس بگیرید");
+  });
+
   it("records no original price when nothing is struck through", () => {
     const { product } = parseProductPage(page({ old: "" }), URL);
     expect(product?.priceToman).toBe(2_999_000);
@@ -216,8 +226,9 @@ describe("parseProductPage", () => {
     expect(problems[0]).toContain("product_d_right");
   });
 
-  it("reports price text it cannot read", () => {
-    const { problems } = parseProductPage(page({ current: "تماس بگیرید", old: "" }), URL);
+  it("reports price text that is neither a price nor a known state", () => {
+    // Genuinely unknown wording, not one of the states the site is known to use.
+    const { problems } = parseProductPage(page({ current: "به زودی", old: "" }), URL);
     expect(problems.some((issue) => issue.includes("unrecognised price"))).toBe(true);
   });
 });

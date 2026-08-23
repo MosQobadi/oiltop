@@ -47,7 +47,13 @@ const OUR_CATEGORY_SLUGS = new Set<string>([
   "fuel-filter",
 ]);
 
-const OUT_OF_STOCK = "ناموجود";
+// The price slot holds a price or, failing that, one of these. Both mean "no
+// price stated", and they are different reasons: "ناموجود" is out of stock,
+// "تماس بگیرید" is call-for-price. Recorded verbatim in `stockRawText` so the
+// reviewer sees which — and NOT reported as problems, because a known state is
+// not a parse failure. Task G.1 found 63 of the first 200 products saying
+// "تماس بگیرید", every one of them filed as an unrecognised price.
+const NO_PRICE_STATES = ["ناموجود", "تماس بگیرید"];
 
 /** Persian (۰-۹) and Arabic-Indic (٠-٩) digits to ASCII, so one price parser handles every page. */
 export function normaliseDigits(text: string): string {
@@ -210,10 +216,11 @@ export function parseProductPage(html: string, url: string): ParsedProductPage {
   const priceToman = parseToman(currentText);
   const originalPriceToman = parseToman(oldText);
 
-  // The current-price slot doubles as the stock line: it holds either a price or
-  // "ناموجود". Anything else there is a layout the parser has not seen.
-  const outOfStock = currentText.includes(OUT_OF_STOCK);
-  if (priceToman === null && !outOfStock && currentText !== "") {
+  // The current-price slot doubles as the stock line. Anything there that is
+  // neither a price nor a known state is a layout the parser has not seen, and
+  // is reported rather than guessed at.
+  const noPriceState = NO_PRICE_STATES.find((state) => currentText.includes(state)) ?? null;
+  if (priceToman === null && noPriceState === null && currentText !== "") {
     problems.push(`unrecognised price text "${currentText}"`);
   }
 
@@ -242,7 +249,7 @@ export function parseProductPage(html: string, url: string): ParsedProductPage {
       shortDescriptionFa: null,
       longDescriptionFa,
       imageUrls: extractImageUrls($, url),
-      stockRawText: outOfStock ? currentText : null,
+      stockRawText: noPriceState === null ? null : currentText,
       sourceUrl: url,
     },
     problems,

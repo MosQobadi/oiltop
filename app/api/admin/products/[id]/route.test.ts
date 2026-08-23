@@ -134,6 +134,42 @@ describe("GET /api/admin/products/:id", () => {
 });
 
 describe("PATCH /api/admin/products/:id", () => {
+  // The importer writes 0 when a page states no price, and most of oil-city's
+  // catalog states none. Zero is how a non-nullable Decimal holds "unknown", but
+  // a storefront reads it as free — so the review queue, which activates in bulk
+  // through this route, must not be able to put one live.
+  it("refuses to activate a product that has no price", async () => {
+    const product = await createTestProduct({ price: 0, status: "INACTIVE" });
+    const res = await PATCH(requestWithBody("PATCH", { status: "ACTIVE" }), ctx(product.id));
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.success).toBe(false);
+    expect(json.error).toContain("no price");
+
+    const unchanged = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    expect(unchanged.status).toBe("INACTIVE");
+  });
+
+  it("allows activating and pricing in the same request", async () => {
+    // The check runs against the price the row ends up with, so a reviewer can
+    // fix and activate in one go.
+    const product = await createTestProduct({ price: 0, status: "INACTIVE" });
+    const res = await PATCH(
+      requestWithBody("PATCH", { status: "ACTIVE", price: 2500 }),
+      ctx(product.id),
+    );
+
+    expect(res.status).toBe(200);
+  });
+
+  it("still allows editing an unpriced product while it stays inactive", async () => {
+    const product = await createTestProduct({ price: 0, status: "INACTIVE" });
+    const res = await PATCH(requestWithBody("PATCH", { nameEn: "Renamed" }), ctx(product.id));
+
+    expect(res.status).toBe(200);
+  });
+
   it("updates fields and returns the updated product", async () => {
     const product = await createTestProduct();
     const res = await PATCH(requestWithBody("PATCH", { nameEn: "Updated Name" }), ctx(product.id));

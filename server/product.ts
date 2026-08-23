@@ -8,6 +8,7 @@ export class ProductNotFoundError extends Error {}
 export class DuplicateSkuError extends Error {}
 export class DuplicateProductSlugError extends Error {}
 export class ProductDeleteBlockedError extends Error {}
+export class ProductPriceRequiredError extends Error {}
 
 const productInclude = {
   category: { select: { id: true, nameEn: true } },
@@ -128,6 +129,27 @@ export async function updateProduct(id: string, input: ProductUpdateInput) {
   const existing = await prisma.product.findUnique({ where: { id } });
   if (!existing) {
     throw new ProductNotFoundError(`Product "${id}" was not found`);
+  }
+
+  // A product priced at zero must not go live, however it got that way.
+  //
+  // The importer writes 0 when a page states no price, and most of oil-city's
+  // catalog states none — 197 of the first 200 products say "ناموجود" or
+  // "تماس بگیرید" instead. Zero is the schema's way of holding "unknown"
+  // (Product.price is a non-nullable Decimal), but a storefront reads it as
+  // free. Everything imported lands INACTIVE with zero stock, so nothing is
+  // exposed by the import itself; the moment of danger is activation, and
+  // D.4's review queue activates in bulk through this very function.
+  //
+  // Checked against the price the row will END UP with, so activating and
+  // pricing in one PATCH is allowed and activating alone is not.
+  const willBeActive = (input.status ?? existing.status) === "ACTIVE";
+  const willBePriced = Number(input.price ?? existing.price) > 0;
+  if (willBeActive && !willBePriced) {
+    throw new ProductPriceRequiredError(
+      `Cannot activate "${existing.nameEn || existing.nameFa}" — it has no price. ` +
+        `Imported products are stored at 0 when the source stated no price; set a real one first.`,
+    );
   }
 
   if (input.sku && input.sku !== existing.sku) {
