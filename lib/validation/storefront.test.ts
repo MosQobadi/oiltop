@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { storefrontProfileUpdateSchema, storefrontRegisterSchema } from "./storefront";
+import {
+  carFinderEngineQuerySchema,
+  storefrontProfileUpdateSchema,
+  storefrontRegisterSchema,
+} from "./storefront";
 
 // The register route itself is Phase 10 work; the schema lands here with
 // Task 0.6 because it is the application-level rule that replaces the NOT NULL
@@ -138,5 +142,29 @@ describe("storefrontProfileUpdateSchema", () => {
     expect(result.data).not.toHaveProperty("password");
     expect(result.data).not.toHaveProperty("role");
     expect(result.data).not.toHaveProperty("status");
+  });
+});
+
+describe("carFinderEngineQuerySchema", () => {
+  // The year arriving here is whatever the previous step offered, and that step
+  // lists a car's years in its OWN calendar. Bounded at 1900-2100, the finder
+  // offered a Peugeot 206 the years 1386-1401 and then rejected every one of
+  // them with a 400 — the storefront could not serve a single Iranian car.
+  it("accepts a Jalali year", () => {
+    expect(carFinderEngineQuerySchema.safeParse({ year: "1395" }).success).toBe(true);
+    expect(carFinderEngineQuerySchema.safeParse({ year: "1401" }).success).toBe(true);
+  });
+
+  it("still accepts a Gregorian year", () => {
+    expect(carFinderEngineQuerySchema.safeParse({ year: "2018" }).success).toBe(true);
+  });
+
+  it("rejects a number that is no year in either calendar", () => {
+    expect(carFinderEngineQuerySchema.safeParse({ year: "42" }).success).toBe(false);
+    expect(carFinderEngineQuerySchema.safeParse({ year: "9999" }).success).toBe(false);
+  });
+
+  it("still requires a year", () => {
+    expect(carFinderEngineQuerySchema.safeParse({}).success).toBe(false);
   });
 });

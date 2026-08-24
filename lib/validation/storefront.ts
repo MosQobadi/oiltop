@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ANY_CALENDAR_YEAR_MAX, ANY_CALENDAR_YEAR_MIN } from "@/lib/year";
 import { MAX_CART_QUANTITY } from "@/lib/storefront/cart";
 import { DELIVERY_METHODS } from "@/lib/storefront/delivery";
 import { pageSchema, pageSizeSchema, slugSchema } from "./common";
@@ -20,12 +21,19 @@ export const carModelSlugParamSchema = slugSchema;
 
 // The car-finder's Engine step always arrives with the year the customer picked
 // in the previous step, so it's required rather than defaulted.
+//
+// Bounded by the widest window EITHER calendar can hold, because the year that
+// arrives here is whatever the previous step offered, and that step lists a
+// car's own years in its own calendar — 1401 for an Iranian-built car, 2018 for
+// an imported one. This was 1900-2100 until real Jalali data arrived, which
+// meant the finder offered a Peugeot 206 the years 1386-1401 and then rejected
+// every one of them with a 400. See lib/year.ts.
 export const carFinderEngineQuerySchema = z.object({
   year: z.coerce
     .number({ error: "year is required" })
     .int("year must be a whole number")
-    .min(1900, "year must be 1900 or later")
-    .max(2100, "year must be 2100 or earlier"),
+    .min(ANY_CALENDAR_YEAR_MIN, `year must be ${ANY_CALENDAR_YEAR_MIN} or later`)
+    .max(ANY_CALENDAR_YEAR_MAX, `year must be ${ANY_CALENDAR_YEAR_MAX} or earlier`),
 });
 
 export type CarFinderEngineQuery = z.infer<typeof carFinderEngineQuerySchema>;

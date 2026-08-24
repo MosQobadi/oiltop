@@ -32,7 +32,8 @@ import { prisma } from "../lib/db";
 const SOURCE_PREFIX = "oil-city:";
 
 interface Options {
-  carBrand: string;
+  carBrand: string | null;
+  all: boolean;
   dryRun: boolean;
   deactivate: boolean;
 }
@@ -41,10 +42,12 @@ function parseArgs(argv: string[]): Options {
   let carBrand: string | null = null;
   let dryRun = false;
   let deactivate = false;
+  let all = false;
 
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === "--dry-run") dryRun = true;
     else if (argv[i] === "--deactivate") deactivate = true;
+    else if (argv[i] === "--all") all = true;
     else if (argv[i] === "--car-brand") {
       carBrand = argv[i + 1] ?? null;
       i += 1;
@@ -56,23 +59,40 @@ function parseArgs(argv: string[]): Options {
     }
   }
 
-  if (carBrand === null || carBrand.trim() === "") {
-    throw new Error(`--car-brand is required, e.g. --car-brand "پژو"`);
+  if (!all && (carBrand === null || carBrand.trim() === "")) {
+    throw new Error(`--car-brand is required, e.g. --car-brand "پژو" (or --all)`);
   }
-  return { carBrand: carBrand.trim(), dryRun, deactivate };
+  return { carBrand: all ? null : carBrand!.trim(), all, dryRun, deactivate };
 }
 
 class DryRunRollback extends Error {}
 
 async function main() {
-  const { carBrand, dryRun, deactivate } = parseArgs(process.argv.slice(2));
+  const { carBrand, all, dryRun, deactivate } = parseArgs(process.argv.slice(2));
   const status = deactivate ? "INACTIVE" : "ACTIVE";
 
-  const brand = await prisma.carBrand.findFirst({
-    where: { nameFa: carBrand },
-    select: { id: true, nameFa: true, sourceRef: true },
-  });
-  if (brand === null) {
+  // --all is for looking at the whole catalog yourself — a private preview,
+  // where the point is to see what the import produced. It is NOT the reviewed
+  // state docs/import-review-runbook.md describes, and a storefront serving real
+  // customers should be built brand by brand after somebody has checked the
+  // recommendations.
+  // Selected by "has imported models", NOT by "carries an importer sourceRef".
+  // Where a brand already existed by name the importer ADOPTS it — links its
+  // imported models to the hand-entered row and leaves that row untouched — so
+  // the adopted brands have no sourceRef of their own. Filtering on sourceRef
+  // silently skipped exactly those: Peugeot and Hyundai, two of the most
+  // important brands in the catalog.
+  const brands = all
+    ? await prisma.carBrand.findMany({
+        where: { models: { some: { sourceRef: { startsWith: SOURCE_PREFIX } } } },
+        select: { id: true, nameFa: true },
+      })
+    : await prisma.carBrand.findMany({
+        where: { nameFa: carBrand as string },
+        select: { id: true, nameFa: true },
+      });
+
+  if (brands.length === 0) {
     const known = await prisma.carBrand.findMany({ select: { nameFa: true }, take: 30 });
     throw new Error(
       `No car brand named "${carBrand}". Known brands include:\n  ${known.map((b) => b.nameFa).join(", ")}`,
@@ -80,7 +100,10 @@ async function main() {
   }
 
   const models = await prisma.carModel.findMany({
-    where: { carBrandId: brand.id, sourceRef: { startsWith: SOURCE_PREFIX } },
+    where: {
+      carBrandId: { in: brands.map((b) => b.id) },
+      sourceRef: { startsWith: SOURCE_PREFIX },
+    },
     select: {
       id: true,
       engines: {
@@ -122,7 +145,7 @@ async function main() {
   ];
 
   console.log(
-    `${deactivate ? "Deactivating" : "Activating"} "${brand.nameFa}"` +
+    `${deactivate ? "Deactivating" : "Activating"} ${all ? `all ${brands.length} imported car brands` : `"${brands[0].nameFa}"`}` +
       `${dryRun ? " — DRY RUN, nothing will be written" : ""}\n`,
   );
   console.log(`  car models      ${models.length}`);
@@ -133,7 +156,10 @@ async function main() {
 
   try {
     await prisma.$transaction(async (tx) => {
-      await tx.carBrand.update({ where: { id: brand.id }, data: { status } });
+      await tx.carBrand.updateMany({
+        where: { id: { in: brands.map((b) => b.id) } },
+        data: { status },
+      });
       await tx.carModel.updateMany({
         where: { id: { in: models.map((m) => m.id) } },
         data: { status },
