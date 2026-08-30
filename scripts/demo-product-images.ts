@@ -1,15 +1,15 @@
 // Puts a stand-in image on products so the storefront can be looked at with
 // artwork in it rather than a grid of placeholders.
 //
-//   pnpm tsx scripts/demo-product-images.ts --file /uploads/demo-bottle.jpg
+//   pnpm tsx scripts/demo-product-images.ts --file uploads/demo-bottle.jpg
 //   pnpm tsx scripts/demo-product-images.ts --brand-logos
 //   pnpm tsx scripts/demo-product-images.ts --clear
 //
 // `--file` puts one image on every ACTIVE product. That is obviously not a
 // catalog — it is a way to see the card design against a real photograph at the
 // scale it actually runs at, which a grid of placeholders cannot show.
-// The path is a public URL, not a filesystem path: whatever `ImageUploadField`
-// would have stored, e.g. `/uploads/<name>.jpg` for a file in `public/uploads`.
+// The path is anything under `public/` — see `toPublicUrl` for the spellings it
+// accepts and why it accepts all of them.
 //
 // `--brand-logos` is the narrower version: each hand-entered product borrows its
 // own brand's logo. Useful when you want the seeded products to look distinct
@@ -44,42 +44,54 @@ function parseArgs(argv: string[]): Options {
     } else {
       throw new Error(
         `Unknown argument "${argv[i]}".\n\n` +
-          `Usage: --file /uploads/<name>.jpg | --brand-logos | --clear`,
+          `Usage: --file uploads/<name>.jpg | --brand-logos | --clear`,
       );
     }
   }
 
   const modes = [file !== null, brandLogos, clear].filter(Boolean).length;
   if (modes !== 1) {
-    throw new Error("Pass exactly one of --file <public path>, --brand-logos, --clear.");
+    throw new Error("Pass exactly one of --file <path under public/>, --brand-logos, --clear.");
   }
   return { file, brandLogos, clear };
 }
 
-// Checked here rather than discovered as a grid of broken images later: the path
-// is a URL under `public/`, so it has to start with a slash and exist on disk.
-function assertPublicFile(publicPath: string) {
-  if (!publicPath.startsWith("/")) {
+// Takes what anyone would reasonably type and returns the URL the database
+// stores. All four of these mean the same file:
+//
+//   /uploads/x.jpg   uploads/x.jpg   public/uploads/x.jpg   ./public/uploads/x.jpg
+//
+// The leniency is not politeness. Git Bash on Windows rewrites a leading slash
+// into a Windows path before the argument ever reaches node, so `/uploads/x.jpg`
+// arrives as `C:/Program Files/Git/uploads/x.jpg` and a strict check rejects the
+// one spelling the docs ask for.
+function toPublicUrl(input: string): string {
+  const trimmed = input.trim().replace(/\\/g, "/");
+  // Whatever the shell prefixed, the part we want starts at the last `public/`
+  // or at the first path segment that survives.
+  const afterPublic = trimmed.split(/(?:^|\/)public\//).pop() ?? trimmed;
+  const relative = afterPublic.replace(/^\/+/, "");
+
+  const onDisk = join("public", relative);
+  if (!existsSync(onDisk)) {
     throw new Error(
-      `--file takes a public URL, not a filesystem path: "/uploads/x.jpg", not "public/uploads/x.jpg".`,
+      `No such file: ${onDisk}\n` +
+        `Put the image somewhere under public/ and pass its path, e.g. uploads/demo-bottle.jpg`,
     );
   }
-  const onDisk = join("public", publicPath.slice(1));
-  if (!existsSync(onDisk)) {
-    throw new Error(`No such file: ${onDisk}\nPut the image under public/ and pass its URL.`);
-  }
+  return `/${relative}`;
 }
 
 async function main() {
   const { file, brandLogos, clear } = parseArgs(process.argv.slice(2));
 
   if (file !== null) {
-    assertPublicFile(file);
+    const url = toPublicUrl(file);
     const { count } = await prisma.product.updateMany({
       where: { status: "ACTIVE" },
-      data: { image: file },
+      data: { image: url },
     });
-    console.log(`Set ${file} on ${count} active product(s).`);
+    console.log(`Set ${url} on ${count} active product(s).`);
     return;
   }
 

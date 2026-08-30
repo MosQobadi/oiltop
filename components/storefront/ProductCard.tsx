@@ -8,11 +8,25 @@ import { OilBottleIcon } from "./icons";
 import { NotifyMeForm } from "./NotifyMeForm";
 import { navHref } from "./nav-items";
 import { PriceDisplay } from "./PriceDisplay";
-import { StockBadge, type StockBadgeStatus } from "./StockBadge";
+import { type StockBadgeStatus } from "./StockBadge";
 import { formatDigits, pickLocale, type Locale } from "@/lib/i18n";
 import { useCartStore, type NewCartItem } from "@/lib/store/cart";
 import { MAX_CART_QUANTITY } from "@/lib/storefront/cart";
 import { formatDiscountLabel, getDiscountPercent } from "@/lib/storefront/pricing";
+
+// One photograph, and everything else laid over it: brand, name, then price and
+// stock on a line, then the action.
+//
+// The picture is the whole card rather than a panel inside one. What makes that
+// legible over a white-background product shot — the house standard, see
+// CLAUDE.md — is the scrim: opaque enough at the bottom edge to carry white text
+// over pure white, and the image anchored to the top so the product sits above
+// it rather than behind it.
+//
+// The trade is real and was made deliberately: this costs the bottom third of
+// every photograph, and it asks more of the artwork than text on the card's own
+// ground did. If the catalog ever carries shots that fill the frame or run dark,
+// revisit the scrim rather than fighting it.
 
 // The card renders whatever the caller hands it — this is deliberately a plain
 // shape rather than the API's `StorefrontProductCard`, so a fitment result, a
@@ -48,97 +62,54 @@ export interface ProductCardProps {
   /** `sizes` for the product image; the default matches the PLP grid. */
   imageSizes?: string;
   /**
-   * The image panel's aspect ratio. `"tall"` (4:5) is for grids wider than the
-   * PLP's four-up, where a square panel on a 360px card is a lot of empty
-   * ground around one bottle.
+   * The card's shape. `"tall"` is for grids wider than the PLP's four-up — the
+   * fitment results run three across, where a card gets more width and wants
+   * the height to match it.
    */
   imageBox?: ImageBoxSize;
   /** Appended to the card's own classes — layout only. */
   className?: string;
 }
 
-const DEFAULT_IMAGE_SIZES = "(min-width: 1024px) 216px, (min-width: 640px) 33vw, 45vw";
-
-// The card has no frame of its own — it earns an edge on hover, as a lift rather
-// than a line. It keeps its padding, though: dropping the border and the padding
-// together left the name, the price and a full-width button running flush to the
-// card's edge, and the panels of adjacent cards nearly touching. The frame was
-// the thing that read as redundant, not the space inside it.
-//
-// `h-full` so a card always fills its grid cell (or rail slot): the name block
-// below is fixed, but an opened "Notify me" form can still make one card taller,
-// and the rest of the row should follow it rather than float.
-//
-// The lift is spelled out twice rather than shared through a variable: Tailwind
-// compiles the classes it can find in the source, so an interpolated
-// `hover:${LIFT}` names a class at runtime that was never generated.
-const CARD_CLASS =
-  "group flex h-full flex-col rounded-3xl bg-white p-3.5 transition-shadow duration-200 hover:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)] focus-within:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)]";
+const DEFAULT_IMAGE_SIZES = "(min-width: 1024px) 260px, (min-width: 640px) 33vw, 50vw";
 
 export type ImageBoxSize = "default" | "tall";
 
-// One step tighter than the card's radius, because it sits inside the card's
-// padding: nesting two equal radii makes the inner corner read sharper than the
-// outer one.
-const IMAGE_BOX_CLASS = "relative overflow-hidden rounded-2xl";
-
-// The panel's ground depends on what's in it, and the reason is the house rule
-// that product photography is shot on white.
+// A minimum height rather than a fixed ratio: the card's height is its content's,
+// so an opened "Notify me" form pushes one card taller and `h-full` brings the
+// rest of the row with it.
 //
-// A white-background photo in `object-contain` never fills a square panel — a
-// tall bottle leaves bands down the sides, a wide filter leaves them top and
-// bottom. On a tinted panel those bands frame the shot in grey and the product
-// reads as a white rectangle someone pasted in. White panel, and the same photo
-// simply sits on the card.
-//
-// The placeholder keeps a tinted ground for the opposite reason: there is no
-// image to blend with, and a hatch floating on white with no panel behind it
-// has no shape at all. It paints its own background, so this only has to get
-// out of its way.
-const IMAGE_GROUND: Record<"image" | "placeholder", string> = {
-  image: "bg-white ring-1 ring-neutral-100 ring-inset",
-  placeholder: "bg-neutral-50",
+// Taller than a card with its text underneath would need to be, and that is the
+// point. The words sit on the picture, so the picture has to be tall enough to
+// still show a product above them — at 380px the name landed across a bottle's
+// label. This is the overlay's standing cost, paid in height.
+const CARD_MIN_HEIGHT: Record<ImageBoxSize, string> = {
+  default: "min-h-[440px]",
+  tall: "min-h-[490px]",
 };
 
-// An aspect ratio, not a pixel height. The old fixed 140px was a letterbox at
-// every card width — a contained bottle sat in a wide, short slot with air down
-// both sides. A ratio keeps the product the same size relative to its card
-// whether the grid is four up or two, which is what makes a page of these look
-// deliberate rather than laid out for one breakpoint.
+const CARD_CLASS =
+  "group relative flex h-full flex-col overflow-hidden rounded-3xl bg-neutral-200 transition-shadow duration-200 hover:shadow-[0_18px_40px_-24px_rgb(15_23_42/0.65)] focus-within:shadow-[0_18px_40px_-24px_rgb(15_23_42/0.65)]";
 
-const IMAGE_BOX_RATIO: Record<ImageBoxSize, string> = {
-  default: "aspect-square",
-  tall: "aspect-[4/5]",
-};
+// Two stops, not one. A single fade to transparent is either too weak at the
+// bottom to carry white text over a white photograph, or so strong by mid-card
+// that it reads as a grey box laid on the picture. Opaque where the words are,
+// gone before the halfway mark.
+const SCRIM_CLASS =
+  "pointer-events-none absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-neutral-950/95 via-neutral-950/78 to-transparent";
 
-function imageBoxClass(size: ImageBoxSize, hasImage: boolean): string {
-  return `${IMAGE_BOX_CLASS} ${IMAGE_BOX_RATIO[size]} ${
-    IMAGE_GROUND[hasImage ? "image" : "placeholder"]
-  }`;
-}
+// Frosted, because a chip sits on the picture as often as on the scrim, and the
+// picture behind it is whatever the photographer sent.
+const CHIP_CLASS =
+  "inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-medium text-white ring-1 ring-white/25 backdrop-blur-sm";
 
-// The name block is a fixed two lines of title plus one of the secondary name —
-// 2×21px + 2px + 18px at the leadings set on them below. Product names here run
-// from "فیلتر هوا دنسو" to a full spec string, and letting that decide the card's
-// height left every row a different size and the price rows off any shared
-// baseline. Clamping (not scrolling, not stretching) keeps the grid regular; the
-// full name is one click away on the product page.
-const NAME_BLOCK_CLASS = "h-[62px]";
-
-// A missing image is the norm for a catalog mid-import, so the placeholder is a
-// designed state, not a broken-image icon: the prototype's hatched slot, lit by
-// a soft wash so a grid (or a rail) of imageless products still has depth. The
-// hatch is listed first because layers paint front-to-back — the opaque wash
-// underneath it would otherwise be the only thing visible.
-//
-// Loosened from 9px to 14px and lightened a shade when the panel went square:
-// the hatch was drawn for a 140px letterbox, and at four times the area the same
-// density stopped reading as a texture and started reading as the loudest thing
-// in the grid. Most of this catalog has no photograph yet, so this pattern is
-// what a customer mostly sees — it has to recede.
+// A missing image is still the norm for a catalog mid-import, so the placeholder
+// is a designed state rather than a broken-image icon. Darker than the version
+// that sat in a light panel: white text and the scrim are laid over this too, so
+// it has to be a ground they can be read against.
 const PLACEHOLDER_STYLE = {
   backgroundImage:
-    "repeating-linear-gradient(135deg, var(--color-neutral-200) 0 1px, transparent 1px 14px), linear-gradient(160deg, #fff 0%, var(--color-neutral-50) 100%)",
+    "repeating-linear-gradient(135deg, var(--color-neutral-600) 0 1px, transparent 1px 14px), linear-gradient(160deg, var(--color-neutral-700) 0%, var(--color-neutral-900) 100%)",
 };
 
 export function ProductCard({
@@ -166,11 +137,6 @@ export function ProductCard({
   const discountPercent = getDiscountPercent(price, finalPrice);
 
   const primaryName = pickLocale(locale, nameEn, nameFa);
-  // The other language's name, when there is a distinct one: shoppers here
-  // search for "Mobil 1" and "موبیل ۱" interchangeably, so the card carries both.
-  const secondaryName = locale === "fa" ? nameEn : nameFa;
-  const showSecondaryName = secondaryName.trim() !== "" && secondaryName !== primaryName;
-
   const productHref = href ?? navHref(locale, `/products/${product.slug}`);
 
   // With `onAddToCart` the caller owns what "added" means, and the store isn't
@@ -199,93 +165,103 @@ export function ProductCard({
   return (
     <article
       data-testid="product-card"
-      className={className ? `${CARD_CLASS} ${className}` : CARD_CLASS}
+      className={`${CARD_CLASS} ${CARD_MIN_HEIGHT[imageBox]} ${className ?? ""}`}
     >
-      <div className={imageBoxClass(imageBox, image !== null)}>
-        {/* Duplicate of the title link below, hidden from assistive tech and the
-            tab order so the card offers one link, not two identical ones. */}
-        <Link href={productHref} aria-hidden="true" tabIndex={-1} className="block h-full w-full">
-          {image ? (
-            <Image
-              src={image}
-              alt=""
-              fill
-              sizes={imageSizes}
-              // Out of stock is said three ways on this card — the badge, the
-              // CTA, and here. Fading the product itself is the one a customer
-              // reads before any words, scanning a grid.
-              className={`object-contain p-4 transition-transform duration-300 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100 ${
-                outOfStock ? "opacity-55" : ""
-              }`}
-            />
-          ) : (
-            <span
-              style={PLACEHOLDER_STYLE}
-              className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-neutral-400"
-            >
-              <OilBottleIcon className="h-7 w-7" />
-              <span className="font-mono text-[9.5px] tracking-[0.04em]">
-                {pickLocale(locale, "no image", "بدون تصویر")}
-              </span>
-            </span>
-          )}
-        </Link>
+      {image ? (
+        <Image
+          src={image}
+          alt=""
+          fill
+          sizes={imageSizes}
+          // `cover`, anchored to the top: the scrim owns the bottom third, so a
+          // bottle centred in its own frame would sit half behind it. Out of
+          // stock fades the product — the thing you read before any words.
+          className={`object-cover object-top transition-transform duration-300 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100 ${
+            outOfStock ? "opacity-45" : ""
+          }`}
+        />
+      ) : (
+        <span
+          aria-hidden="true"
+          style={PLACEHOLDER_STYLE}
+          className="absolute inset-0 flex items-start justify-center pt-16 text-neutral-500"
+        >
+          <OilBottleIcon className="h-10 w-10" />
+        </span>
+      )}
 
-        {discountPercent > 0 && (
-          <span className="bg-accent pointer-events-none absolute start-2.5 top-2.5 rounded-full px-2 py-[3px] text-[11px] font-semibold text-white shadow-sm">
+      <span aria-hidden="true" className={SCRIM_CLASS} />
+
+      {/* Corner slots. The discount leads because it is the one that changes a
+          decision; "fits your car" takes the trailing corner when a caller
+          passes it. The empty span keeps the discount at the start edge when
+          there is no discount to show. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2 p-3.5">
+        {discountPercent > 0 ? (
+          <span className="bg-accent rounded-full px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
             {formatDiscountLabel(discountPercent, locale)}
           </span>
+        ) : (
+          <span />
         )}
-
-        {fitsRibbon && <div className="absolute end-2.5 top-2.5">{fitsRibbon}</div>}
+        {fitsRibbon}
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-2">
+      {/* In flow with `mt-auto` rather than absolutely positioned: an opened
+          Notify form grows the card instead of overflowing it. */}
+      <div className="relative mt-auto flex flex-col gap-2 p-3.5">
+        {/* The reference card sets its name and price on one line, which works
+            for "Alphonso" and not for "Mann-Filter CU 2545 Cabin Filter". At
+            this column width the price took half the row and left the name a
+            truncated stub, so the name gets the full width and the price shares
+            its line with the stock chip instead. */}
         {brand && (
-          <span className="text-accent truncate text-[11.5px] font-semibold tracking-[0.06em] uppercase">
+          <span className={`${CHIP_CLASS} max-w-full self-start truncate`}>
             {pickLocale(locale, brand.nameEn, brand.nameFa)}
           </span>
         )}
-        <StockBadge locale={locale} status={stockStatus} className="ms-auto shrink-0" />
-      </div>
 
-      <div className={`mt-1.5 ${NAME_BLOCK_CLASS}`}>
         <Link
           href={productHref}
           title={primaryName}
-          className="focus-visible:ring-accent hover:text-accent line-clamp-2 rounded text-[15px] leading-[21px] font-semibold tracking-[-0.015em] text-neutral-900 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="focus-visible:ring-accent line-clamp-2 rounded text-[15.5px] leading-[21px] font-semibold tracking-[-0.015em] text-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
+          {/* Stretches the title's hit area over the whole card, so the picture
+              is the link too — one link, rather than the image-plus-title pair
+              a second anchor would announce. */}
+          <span aria-hidden="true" className="absolute inset-0" />
           {primaryName}
         </Link>
-        {showSecondaryName && (
-          <p dir="auto" className="mt-0.5 truncate text-[12.5px] leading-[18px] text-neutral-500">
-            {secondaryName}
-          </p>
-        )}
-      </div>
 
-      <div className="mt-auto pt-1.5">
-        <PriceDisplay locale={locale} price={price} finalPrice={finalPrice} size="md" />
+        <div className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-1.5">
+          <PriceDisplay
+            locale={locale}
+            price={price}
+            finalPrice={finalPrice}
+            size="md"
+            tone="inverse"
+          />
+          <StockChip locale={locale} status={stockStatus} />
+        </div>
 
         {outOfStock ? (
           <>
-            {/* Out of stock isn't a dead card: the CTA turns into the ghost
-                "Notify me" button from the prototype and discloses the one-field
-                capture (Design Decision 9) rather than navigating away. */}
             <button
               type="button"
               onClick={() => setNotifyOpen((open) => !open)}
               aria-expanded={notifyOpen}
-              className="focus-visible:ring-accent mt-3 min-h-12 w-full rounded-full border border-neutral-200 bg-white px-3 text-[13.5px] font-semibold text-neutral-600 transition-colors hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="focus-visible:ring-accent relative z-10 min-h-12 w-full rounded-full bg-white/20 px-3 text-[13.5px] font-semibold text-white ring-1 ring-white/30 backdrop-blur-sm transition-colors hover:bg-white/30 focus-visible:ring-2 focus-visible:outline-none"
             >
               {pickLocale(locale, "Notify me", "خبرم کن")}
             </button>
             {notifyOpen && (
+              // On its own opaque ground: the form's inputs and its validation
+              // messages are dark-on-light, and neither survives the scrim.
               <NotifyMeForm
                 locale={locale}
                 productRef={product.slug}
                 autoFocus
-                className="mt-2.5"
+                className="relative z-10 rounded-2xl bg-white p-2.5"
               />
             )}
           </>
@@ -300,12 +276,10 @@ export function ProductCard({
           <button
             type="button"
             onClick={handleAddToCart}
-            // A solid pill. I had this outlined for two commits, on the theory
-            // that twenty filled buttons to a page was a wall of orange — but
-            // every card the design was drawn from lands on a solid, fully
-            // rounded CTA, and against a bigger name and a bigger price it no
-            // longer outweighs what it sits under.
-            className="focus-visible:ring-accent bg-accent mt-3 min-h-12 w-full rounded-full px-3 text-[13.5px] font-semibold text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            // White, the way the reference card does it. The accent is spoken
+            // for by the discount chip above, and a solid white pill is the
+            // highest-contrast thing available over a scrim.
+            className="focus-visible:ring-accent relative z-10 min-h-12 w-full rounded-full bg-white px-3 text-[13.5px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:ring-2 focus-visible:outline-none"
           >
             {pickLocale(locale, "Add to cart", "افزودن به سبد")}
           </button>
@@ -315,16 +289,41 @@ export function ProductCard({
   );
 }
 
-// What the "Add to cart" button becomes once the product is in the cart: the
-// count, and the two buttons that change it. Deliberately not `QuantityStepper`
-// — that control's typed input doesn't fit a grid tile, and stepping below one
-// here means "take it out of the cart", where on the cart page removal is its
-// own button. The box matches the button it replaces exactly (h-11, same
-// radius), so a card never changes height when it goes in or out of the cart.
+// The stock line as a chip on the picture, rather than the page's `StockBadge`:
+// that component is built for a light ground and its three tints don't survive
+// being laid over a photograph. Same three states, same words — including the
+// `null` one, which is `StockBadgeStatus` for "we have plenty" and the only
+// state the badge on the page draws nothing at all for.
+function StockChip({ locale, status }: { locale: Locale; status: StockBadgeStatus }) {
+  const dot =
+    status === "OUT_OF_STOCK"
+      ? "bg-neutral-300"
+      : status === "LOW_STOCK"
+        ? "bg-amber-400"
+        : "bg-emerald-400";
+
+  const label =
+    status === "OUT_OF_STOCK"
+      ? pickLocale(locale, "Out of stock", "ناموجود")
+      : status === "LOW_STOCK"
+        ? pickLocale(locale, "Low stock", "موجودی کم")
+        : pickLocale(locale, "In stock", "موجود");
+
+  return (
+    <span className={CHIP_CLASS}>
+      <span aria-hidden="true" className={`size-1.5 rounded-full ${dot}`} />
+      {label}
+    </span>
+  );
+}
+
+// What "Add to cart" becomes once the product is in the cart: the count, and the
+// two buttons that change it. The box matches the pill it replaces exactly, so a
+// card never changes height when it goes in or out of the cart.
 //
-// The stock ceiling is the store's per-line one, same as the PDP: a card knows
-// a product is in stock, not by how much — the cart is where a line meets the
-// live figure.
+// The stock ceiling is the store's per-line one, same as the PDP: a card knows a
+// product is in stock, not by how much — the cart is where a line meets the live
+// figure.
 function CartQuantityControl({
   locale,
   productName,
@@ -339,7 +338,7 @@ function CartQuantityControl({
   const removes = quantity <= 1;
 
   return (
-    <div className="border-accent/40 bg-accent/[0.07] mt-3 flex h-12 w-full items-center justify-between rounded-full border">
+    <div className="relative z-10 flex h-12 w-full items-center justify-between rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
       <button
         type="button"
         onClick={() => onChange(quantity - 1)}
@@ -353,7 +352,7 @@ function CartQuantityControl({
         <span aria-hidden="true">−</span>
       </button>
 
-      <span role="status" className="text-[13px] font-medium text-neutral-900 tabular-nums">
+      <span role="status" className="text-[13.5px] font-semibold text-white tabular-nums">
         <span className="sr-only">{pickLocale(locale, "In cart:", "در سبد:")} </span>
         {formatDigits(quantity, locale)}
       </span>
@@ -372,27 +371,28 @@ function CartQuantityControl({
 }
 
 const STEP_BUTTON_CLASS =
-  "focus-visible:ring-accent text-accent hover:bg-accent/10 flex size-12 shrink-0 items-center justify-center rounded-full text-[18px] leading-none transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:text-neutral-300 disabled:hover:bg-transparent";
+  "focus-visible:ring-accent flex size-12 shrink-0 items-center justify-center rounded-full text-[18px] leading-none text-white transition-colors hover:bg-white/15 focus-visible:ring-2 focus-visible:outline-none disabled:text-white/40 disabled:hover:bg-transparent";
 
-// Same card, same box sizes, neutral blocks, and deliberately no pulse — the
+// Same card, same proportions, neutral blocks, and deliberately no pulse — the
 // prototype's handoff notes call for a still skeleton so a grid of them doesn't
 // strobe while a PLP page loads.
 export function ProductCardSkeleton() {
   return (
-    <div data-testid="product-card-skeleton" aria-hidden="true" className={CARD_CLASS}>
-      <div className={imageBoxClass("default", false)} />
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="h-3 w-16 rounded bg-neutral-100" />
-        <span className="h-3 w-14 rounded bg-neutral-100" />
-      </div>
-      <div className={`mt-1.5 ${NAME_BLOCK_CLASS}`}>
-        <span className="block h-3.5 w-full rounded bg-neutral-100" />
-        <span className="mt-1.5 block h-3.5 w-4/5 rounded bg-neutral-100" />
-        <span className="mt-2 block h-3 w-2/3 rounded bg-neutral-100" />
-      </div>
-      <div className="mt-auto pt-1.5">
-        <span className="block h-4 w-24 rounded bg-neutral-100" />
-        <span className="mt-3 block h-12 w-full rounded-full bg-neutral-100" />
+    <div
+      data-testid="product-card-skeleton"
+      aria-hidden="true"
+      className={`${CARD_CLASS} ${CARD_MIN_HEIGHT.default} !bg-neutral-100`}
+    >
+      <div className="mt-auto flex flex-col gap-2.5 p-3.5">
+        <div className="flex items-end justify-between gap-2.5">
+          <span className="block h-4 w-2/3 rounded bg-neutral-200" />
+          <span className="block h-4 w-16 rounded bg-neutral-200" />
+        </div>
+        <div className="flex gap-1.5">
+          <span className="block h-6 w-20 rounded-full bg-neutral-200" />
+          <span className="block h-6 w-24 rounded-full bg-neutral-200" />
+        </div>
+        <span className="block h-12 w-full rounded-full bg-neutral-200" />
       </div>
     </div>
   );
