@@ -60,6 +60,49 @@ test("auto-skips the Engine step and shows a real product beside a spec-only fal
   await expect(page.getByTestId("product-card").first()).toBeVisible();
 });
 
+// The brand step is the only one with a search box: the import brought the car
+// catalog up to 85 brands, and it is the one list a customer meets before they
+// have narrowed anything down. The seed carries three brands, which is enough to
+// prove a query removes the ones it doesn't match.
+test("narrows the car brand list from its search box, in either language", async ({ page }) => {
+  await page.goto("/en/fitment");
+
+  const trigger = page.getByTestId("fitment-select-brand");
+  const option = (name: string) => page.getByRole("option", { name, exact: true });
+
+  // Retried for the same reason `chooseFromMenu` retries: a click that lands
+  // before hydration does nothing, and nothing distinguishes that from a step
+  // whose options haven't been fetched.
+  await expect(async () => {
+    await trigger.click();
+    await expect(option("Peugeot")).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+
+  await expect(option("Toyota")).toBeVisible();
+  await expect(option("Hyundai")).toBeVisible();
+
+  const search = page.getByRole("searchbox", { name: /Search/ });
+  await search.fill("peu");
+  await expect(option("Peugeot")).toBeVisible();
+  await expect(option("Toyota")).toHaveCount(0);
+  await expect(option("Hyundai")).toHaveCount(0);
+
+  // The Persian name finds the brand on the English tree — a customer typing
+  // "پژو" is not made to translate first. `searchText` carries both names
+  // without either appearing in the list.
+  await search.fill("پژو");
+  await expect(option("Peugeot")).toBeVisible();
+
+  await option("Peugeot").click();
+  await expect(option("Peugeot")).toBeHidden();
+  await expect(page.getByTestId("fitment-select-model")).toBeEnabled();
+
+  // Reopening starts from an empty box. Leaving the last query in place would
+  // hide most of the list with nothing on the closed trigger to explain why.
+  await trigger.click();
+  await expect(option("Toyota")).toBeVisible();
+});
+
 test("keeps the Engine step when a year matches more than one engine", async ({ page }) => {
   await page.goto("/en/fitment");
 

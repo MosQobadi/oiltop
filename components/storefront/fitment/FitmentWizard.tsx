@@ -4,7 +4,7 @@ import { useCallback, useId, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useFitmentWizard, type FitmentStepKey, type FitmentWizardScope } from "./useFitmentWizard";
 import { FITMENT_PATH, navHref } from "../nav-items";
-import { SelectMenu } from "../SelectMenu";
+import { SelectMenu, type SelectMenuOption } from "../SelectMenu";
 import { formatDigits, pickLocale, type Locale } from "@/lib/i18n";
 import { formatEngineOptionLabel, withFitContext } from "@/lib/storefront/fitment";
 
@@ -47,9 +47,11 @@ interface StepView {
   label: string;
   placeholder: string;
   value: string;
-  options: { value: string; label: string }[];
+  options: SelectMenuOption[];
   /** Its own input isn't answered yet, so there is nothing to choose from. */
   disabled: boolean;
+  /** Puts a search box in the menu — see the brand step on why only it has one. */
+  searchable?: boolean;
   /** Nothing came back — shown only once the step is usable and settled. */
   emptyMessage: string;
   onChange: (value: string) => void;
@@ -88,8 +90,17 @@ export function FitmentWizard({
       options: brands.map((brand) => ({
         value: brand.slug,
         label: pickLocale(locale, brand.nameEn, brand.nameFa),
+        // Searchable in both languages regardless of which tree the customer is
+        // on: plenty of people reading the Persian storefront reach for a Latin
+        // keyboard to type "peugeot", and the reverse happens on /en too.
+        searchText: `${brand.nameFa} ${brand.nameEn}`,
       })),
       disabled: false,
+      // The only step long enough to need one — the import brought in 85 car
+      // brands, and scrolling past all of them to find yours is the slowest
+      // part of the wizard. Model, Year and Type are each scoped to the answer
+      // above them and stay short.
+      searchable: true,
       emptyMessage: pickLocale(locale, "No car brands listed yet.", "هنوز برندی ثبت نشده است."),
       onChange: wizard.selectBrand,
     },
@@ -171,6 +182,7 @@ export function FitmentWizard({
           // as it was as an empty <option>: picking it again is how a customer
           // backs a step out.
           options={[{ value: "", label: step.placeholder }, ...step.options]}
+          isSearchable={step.searchable}
           isDisabled={step.disabled || stepFlags.loading}
           describedBy={note ? noteId : undefined}
           onChange={step.onChange}
