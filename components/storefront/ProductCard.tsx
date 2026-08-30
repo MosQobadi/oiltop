@@ -48,9 +48,9 @@ export interface ProductCardProps {
   /** `sizes` for the product image; the default matches the PLP grid. */
   imageSizes?: string;
   /**
-   * How tall the image box is. `"tall"` is for grids wider than the PLP's
-   * four-up — a contained bottle in a 360px-wide card is lost in a 140px
-   * letterbox, and the space around it reads as a mistake.
+   * The image panel's aspect ratio. `"tall"` (4:5) is for grids wider than the
+   * PLP's four-up, where a square panel on a 360px card is a lot of empty
+   * ground around one bottle.
    */
   imageBox?: ImageBoxSize;
   /** Appended to the card's own classes — layout only. */
@@ -59,41 +59,60 @@ export interface ProductCardProps {
 
 const DEFAULT_IMAGE_SIZES = "(min-width: 1024px) 216px, (min-width: 640px) 33vw, 45vw";
 
+// The card has no frame of its own. It used to: a bordered card wrapping a
+// bordered image box, which read as two rectangles around one product. The image
+// panel is the shape now — everything below it sits flush on the page — and the
+// card earns an edge only on hover, as a lift rather than a line.
+//
 // `h-full` so a card always fills its grid cell (or rail slot): the name block
 // below is fixed, but an opened "Notify me" form can still make one card taller,
 // and the rest of the row should follow it rather than float.
+//
+// The lift is spelled out twice rather than shared through a variable: Tailwind
+// compiles the classes it can find in the source, so an interpolated
+// `hover:${LIFT}` names a class at runtime that was never generated.
 const CARD_CLASS =
-  "focus-within:border-accent/50 hover:border-accent/50 flex h-full flex-col gap-2.5 rounded-2xl border border-neutral-200 bg-white p-3.5 transition-colors";
+  "group flex h-full flex-col rounded-2xl bg-white transition-shadow duration-200 hover:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)] focus-within:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)]";
 
 export type ImageBoxSize = "default" | "tall";
 
-const IMAGE_BOX_CLASS = "relative overflow-hidden rounded-lg bg-neutral-100";
+// An aspect ratio, not a pixel height. The old fixed 140px was a letterbox at
+// every card width — a contained bottle sat in a wide, short slot with air down
+// both sides. A ratio keeps the product the same size relative to its card
+// whether the grid is four up or two, which is what makes a page of these look
+// deliberate rather than laid out for one breakpoint.
+const IMAGE_BOX_CLASS = "relative overflow-hidden rounded-2xl bg-neutral-50";
 
-const IMAGE_BOX_HEIGHT: Record<ImageBoxSize, string> = {
-  default: "h-[140px]",
-  tall: "h-[172px]",
+const IMAGE_BOX_RATIO: Record<ImageBoxSize, string> = {
+  default: "aspect-square",
+  tall: "aspect-[4/5]",
 };
 
 function imageBoxClass(size: ImageBoxSize): string {
-  return `${IMAGE_BOX_CLASS} ${IMAGE_BOX_HEIGHT[size]}`;
+  return `${IMAGE_BOX_CLASS} ${IMAGE_BOX_RATIO[size]}`;
 }
 
 // The name block is a fixed two lines of title plus one of the secondary name —
-// 2×19px + 2px + 18px at the leadings set on them below. Product names here run
+// 2×20px + 2px + 18px at the leadings set on them below. Product names here run
 // from "فیلتر هوا دنسو" to a full spec string, and letting that decide the card's
 // height left every row a different size and the price rows off any shared
 // baseline. Clamping (not scrolling, not stretching) keeps the grid regular; the
 // full name is one click away on the product page.
-const NAME_BLOCK_CLASS = "h-[58px]";
+const NAME_BLOCK_CLASS = "h-[60px]";
 
 // A missing image is the norm for a catalog mid-import, so the placeholder is a
 // designed state, not a broken-image icon: the prototype's hatched slot, lit by
 // a soft wash so a grid (or a rail) of imageless products still has depth. The
 // hatch is listed first because layers paint front-to-back — the opaque wash
 // underneath it would otherwise be the only thing visible.
+// Loosened from 9px to 14px and lightened a shade when the panel went square:
+// the hatch was drawn for a 140px letterbox, and at four times the area the same
+// density stopped reading as a texture and started reading as the loudest thing
+// in the grid. Most of this catalog has no photograph yet, so this pattern is
+// what a customer mostly sees — it has to recede.
 const PLACEHOLDER_STYLE = {
   backgroundImage:
-    "repeating-linear-gradient(135deg, var(--color-neutral-200) 0 1px, transparent 1px 9px), linear-gradient(160deg, #fff 0%, var(--color-neutral-100) 100%)",
+    "repeating-linear-gradient(135deg, var(--color-neutral-200) 0 1px, transparent 1px 14px), linear-gradient(160deg, #fff 0%, var(--color-neutral-50) 100%)",
 };
 
 export function ProductCard({
@@ -161,7 +180,18 @@ export function ProductCard({
             tab order so the card offers one link, not two identical ones. */}
         <Link href={productHref} aria-hidden="true" tabIndex={-1} className="block h-full w-full">
           {image ? (
-            <Image src={image} alt="" fill sizes={imageSizes} className="object-contain p-2" />
+            <Image
+              src={image}
+              alt=""
+              fill
+              sizes={imageSizes}
+              // Out of stock is said three ways on this card — the badge, the
+              // CTA, and here. Fading the product itself is the one a customer
+              // reads before any words, scanning a grid.
+              className={`object-contain p-5 transition-transform duration-300 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100 ${
+                outOfStock ? "opacity-55" : ""
+              }`}
+            />
           ) : (
             <span
               style={PLACEHOLDER_STYLE}
@@ -176,28 +206,28 @@ export function ProductCard({
         </Link>
 
         {discountPercent > 0 && (
-          <span className="bg-accent pointer-events-none absolute start-2 top-2 rounded-md px-1.5 py-0.5 text-[11px] font-semibold text-white">
+          <span className="bg-accent pointer-events-none absolute start-2.5 top-2.5 rounded-full px-2 py-[3px] text-[11px] font-semibold text-white shadow-sm">
             {formatDiscountLabel(discountPercent, locale)}
           </span>
         )}
 
-        {fitsRibbon && <div className="absolute end-2 top-2">{fitsRibbon}</div>}
+        {fitsRibbon && <div className="absolute end-2.5 top-2.5">{fitsRibbon}</div>}
       </div>
 
-      <div className="flex items-center justify-between gap-2">
+      <div className="mt-3 flex items-center justify-between gap-2">
         {brand && (
-          <span className="truncate font-mono text-[11.5px] tracking-[0.04em] text-neutral-500">
+          <span className="truncate font-mono text-[11px] tracking-[0.06em] text-neutral-400 uppercase">
             {pickLocale(locale, brand.nameEn, brand.nameFa)}
           </span>
         )}
         <StockBadge locale={locale} status={stockStatus} className="ms-auto shrink-0" />
       </div>
 
-      <div className={NAME_BLOCK_CLASS}>
+      <div className={`mt-1.5 ${NAME_BLOCK_CLASS}`}>
         <Link
           href={productHref}
           title={primaryName}
-          className="focus-visible:ring-accent hover:text-accent line-clamp-2 rounded text-[13.5px] leading-[19px] font-medium text-neutral-900 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="focus-visible:ring-accent hover:text-accent line-clamp-2 rounded text-[14px] leading-[20px] font-medium tracking-[-0.01em] text-neutral-900 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           {primaryName}
         </Link>
@@ -208,7 +238,7 @@ export function ProductCard({
         )}
       </div>
 
-      <div className="mt-auto pt-1">
+      <div className="mt-auto pt-1.5">
         <PriceDisplay locale={locale} price={price} finalPrice={finalPrice} />
 
         {outOfStock ? (
@@ -220,7 +250,7 @@ export function ProductCard({
               type="button"
               onClick={() => setNotifyOpen((open) => !open)}
               aria-expanded={notifyOpen}
-              className="focus-visible:ring-accent mt-2.5 min-h-11 w-full rounded-[9px] border border-neutral-200 bg-white px-3 text-[13px] font-medium text-neutral-600 transition-colors hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="focus-visible:ring-accent mt-2.5 min-h-11 w-full rounded-xl border border-neutral-200 bg-white px-3 text-[13px] font-medium text-neutral-600 transition-colors hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               {pickLocale(locale, "Notify me", "خبرم کن")}
             </button>
@@ -244,7 +274,12 @@ export function ProductCard({
           <button
             type="button"
             onClick={handleAddToCart}
-            className="focus-visible:ring-accent bg-accent mt-2.5 min-h-11 w-full rounded-[9px] px-3 text-[13px] font-medium text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            // Outlined at rest, accent on hover. Solid-filled it was the loudest
+            // thing on the card and, twenty to a page, the loudest thing on the
+            // grid — a wall of orange under the products it was meant to serve.
+            // The accent still arrives on contact, and the PDP's buy box keeps
+            // the solid primary where the decision actually gets made.
+            className="focus-visible:ring-accent hover:border-accent hover:bg-accent mt-2.5 min-h-11 w-full rounded-xl border border-neutral-200 bg-white px-3 text-[13px] font-medium text-neutral-900 transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             {pickLocale(locale, "Add to cart", "افزودن به سبد")}
           </button>
@@ -278,7 +313,7 @@ function CartQuantityControl({
   const removes = quantity <= 1;
 
   return (
-    <div className="border-accent/40 bg-accent/[0.07] mt-2.5 flex h-11 w-full items-center justify-between rounded-[9px] border">
+    <div className="border-accent/40 bg-accent/[0.07] mt-2.5 flex h-11 w-full items-center justify-between rounded-xl border">
       <button
         type="button"
         onClick={() => onChange(quantity - 1)}
@@ -311,7 +346,7 @@ function CartQuantityControl({
 }
 
 const STEP_BUTTON_CLASS =
-  "focus-visible:ring-accent text-accent hover:bg-accent/10 flex size-11 shrink-0 items-center justify-center rounded-[9px] text-[18px] leading-none transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:text-neutral-300 disabled:hover:bg-transparent";
+  "focus-visible:ring-accent text-accent hover:bg-accent/10 flex size-11 shrink-0 items-center justify-center rounded-xl text-[18px] leading-none transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:text-neutral-300 disabled:hover:bg-transparent";
 
 // Same card, same box sizes, neutral blocks, and deliberately no pulse — the
 // prototype's handoff notes call for a still skeleton so a grid of them doesn't
@@ -320,18 +355,18 @@ export function ProductCardSkeleton() {
   return (
     <div data-testid="product-card-skeleton" aria-hidden="true" className={CARD_CLASS}>
       <div className={imageBoxClass("default")} />
-      <div className="flex items-center justify-between gap-2">
+      <div className="mt-3 flex items-center justify-between gap-2">
         <span className="h-3 w-16 rounded bg-neutral-100" />
         <span className="h-3 w-14 rounded bg-neutral-100" />
       </div>
-      <div className={NAME_BLOCK_CLASS}>
+      <div className={`mt-1.5 ${NAME_BLOCK_CLASS}`}>
         <span className="block h-3.5 w-full rounded bg-neutral-100" />
         <span className="mt-1.5 block h-3.5 w-4/5 rounded bg-neutral-100" />
         <span className="mt-2 block h-3 w-2/3 rounded bg-neutral-100" />
       </div>
-      <div className="mt-auto pt-1">
+      <div className="mt-auto pt-1.5">
         <span className="block h-4 w-24 rounded bg-neutral-100" />
-        <span className="mt-2.5 block h-11 w-full rounded-[9px] bg-neutral-100" />
+        <span className="mt-2.5 block h-11 w-full rounded-xl bg-neutral-100" />
       </div>
     </div>
   );
