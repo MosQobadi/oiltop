@@ -7,7 +7,7 @@ import { TrustStrip } from "@/components/storefront/home/TrustStrip";
 import { type Locale } from "@/lib/i18n";
 import {
   listActiveCategories,
-  listActiveProductBrands,
+  listFeaturedProductBrands,
   listStorefrontDeals,
 } from "@/lib/services/catalog";
 import { localeAlternates } from "@/lib/storefront/seo";
@@ -42,7 +42,7 @@ export default async function StorefrontHome({ params }: { params: Promise<{ loc
   const { locale } = await params;
   const [categories, brands, deals, settings] = await Promise.all([
     listActiveCategories(),
-    listActiveProductBrands(),
+    listFeaturedProductBrands(),
     listStorefrontDeals(),
     getPublicSettings(),
   ]);

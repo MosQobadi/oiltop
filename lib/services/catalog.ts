@@ -157,8 +157,9 @@ export async function getStorefrontCategoryBySlug(
   });
 }
 
-// Every place the storefront presents brands *as a list to choose from*: the
-// homepage wall, the PLP sidebar, the category page's filter rail.
+// The PLP sidebar and the category page's filter rail — every brand a customer
+// could usefully filter by. The homepage wall is a different question; see
+// `listFeaturedProductBrands` below.
 //
 // `showInBrandLists` is the second half of the filter and it is not the same
 // question as `status`. ACTIVE means the brand's products can be bought;
@@ -176,6 +177,37 @@ export async function listActiveProductBrands(): Promise<StorefrontBrand[]> {
     // `sortOrder` itself stays out of the payload: it orders the list, it isn't
     // something a brand card or a filter option renders.
     orderBy: [{ sortOrder: { sort: "asc", nulls: "last" } }, { nameEn: "asc" }],
+  });
+}
+
+// Two rows of the homepage wall's four-column grid. A shelf, not an index: the
+// filter rails are where a customer goes to find *a* brand, and the homepage is
+// where the shop says which ones it stands behind.
+const FEATURED_BRAND_LIMIT = 8;
+
+// The homepage brand wall — the hand-entered brands only.
+//
+// `sourceRef: null` is the whole selection rule, and it reads as "somebody chose
+// to stock this". Every other row in the table was minted by the importer from a
+// label on a scraped page (see `Brand.sourceRef`), which is how the wall ended up
+// showing 59 names nobody picked. A brand the importer *adopted* — matched to an
+// existing row by Persian name and left alone — keeps its null ref and stays
+// eligible, which is right: it was hand-entered before the import found it.
+//
+// The order is the admin's: `sortOrder` first, so pinning a brand to 1 is how you
+// choose which eight these are once there are more than eight. Alphabetical among
+// the unpinned, which is the current state for all but Behran and Shell.
+export async function listFeaturedProductBrands(
+  limit = FEATURED_BRAND_LIMIT,
+): Promise<StorefrontBrand[]> {
+  return prisma.brand.findMany({
+    // `showInBrandLists` is not redundant next to `sourceRef: null`: the
+    // importer's "Unknown brand" holding bucket carries no ref either, and it is
+    // a bucket rather than a brand.
+    where: { status: "ACTIVE", showInBrandLists: true, sourceRef: null },
+    select: brandSelect,
+    orderBy: [{ sortOrder: { sort: "asc", nulls: "last" } }, { nameEn: "asc" }],
+    take: limit,
   });
 }
 
