@@ -7,18 +7,20 @@ export interface PriceDisplayProps {
   price: number;
   /** What the customer actually pays — `price * (1 - discountPercent / 100)`. */
   finalPrice: number;
-  /** `sm` on a product card, `lg` on the PDP's buy box. */
-  size?: "sm" | "lg";
+  /** `sm` in a cart line, `md` on a product card, `lg` on the PDP's buy box. */
+  size?: "sm" | "md" | "lg";
   className?: string;
 }
 
 const FINAL_PRICE_CLASS: Record<NonNullable<PriceDisplayProps["size"]>, string> = {
   sm: "text-[15px] font-semibold tracking-tight",
+  md: "text-[17px] font-semibold tracking-tight",
   lg: "text-3xl font-semibold tracking-tight",
 };
 
 const ORIGINAL_PRICE_CLASS: Record<NonNullable<PriceDisplayProps["size"]>, string> = {
   sm: "text-[12.5px]",
+  md: "text-[13px]",
   lg: "text-[17px]",
 };
 

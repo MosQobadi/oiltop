@@ -73,14 +73,14 @@ const DEFAULT_IMAGE_SIZES = "(min-width: 1024px) 216px, (min-width: 640px) 33vw,
 // compiles the classes it can find in the source, so an interpolated
 // `hover:${LIFT}` names a class at runtime that was never generated.
 const CARD_CLASS =
-  "group flex h-full flex-col rounded-2xl bg-white p-3 transition-shadow duration-200 hover:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)] focus-within:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)]";
+  "group flex h-full flex-col rounded-3xl bg-white p-3.5 transition-shadow duration-200 hover:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)] focus-within:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)]";
 
 export type ImageBoxSize = "default" | "tall";
 
 // One step tighter than the card's radius, because it sits inside the card's
 // padding: nesting two equal radii makes the inner corner read sharper than the
 // outer one.
-const IMAGE_BOX_CLASS = "relative overflow-hidden rounded-xl";
+const IMAGE_BOX_CLASS = "relative overflow-hidden rounded-2xl";
 
 // The panel's ground depends on what's in it, and the reason is the house rule
 // that product photography is shot on white.
@@ -118,12 +118,12 @@ function imageBoxClass(size: ImageBoxSize, hasImage: boolean): string {
 }
 
 // The name block is a fixed two lines of title plus one of the secondary name —
-// 2×20px + 2px + 18px at the leadings set on them below. Product names here run
+// 2×21px + 2px + 18px at the leadings set on them below. Product names here run
 // from "فیلتر هوا دنسو" to a full spec string, and letting that decide the card's
 // height left every row a different size and the price rows off any shared
 // baseline. Clamping (not scrolling, not stretching) keeps the grid regular; the
 // full name is one click away on the product page.
-const NAME_BLOCK_CLASS = "h-[60px]";
+const NAME_BLOCK_CLASS = "h-[62px]";
 
 // A missing image is the norm for a catalog mid-import, so the placeholder is a
 // designed state, not a broken-image icon: the prototype's hatched slot, lit by
@@ -242,7 +242,7 @@ export function ProductCard({
 
       <div className="mt-3 flex items-center justify-between gap-2">
         {brand && (
-          <span className="truncate font-mono text-[11px] tracking-[0.06em] text-neutral-400 uppercase">
+          <span className="text-accent truncate text-[11.5px] font-semibold tracking-[0.06em] uppercase">
             {pickLocale(locale, brand.nameEn, brand.nameFa)}
           </span>
         )}
@@ -253,7 +253,7 @@ export function ProductCard({
         <Link
           href={productHref}
           title={primaryName}
-          className="focus-visible:ring-accent hover:text-accent line-clamp-2 rounded text-[14px] leading-[20px] font-medium tracking-[-0.01em] text-neutral-900 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="focus-visible:ring-accent hover:text-accent line-clamp-2 rounded text-[15px] leading-[21px] font-semibold tracking-[-0.015em] text-neutral-900 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           {primaryName}
         </Link>
@@ -265,7 +265,7 @@ export function ProductCard({
       </div>
 
       <div className="mt-auto pt-1.5">
-        <PriceDisplay locale={locale} price={price} finalPrice={finalPrice} />
+        <PriceDisplay locale={locale} price={price} finalPrice={finalPrice} size="md" />
 
         {outOfStock ? (
           <>
@@ -276,7 +276,7 @@ export function ProductCard({
               type="button"
               onClick={() => setNotifyOpen((open) => !open)}
               aria-expanded={notifyOpen}
-              className="focus-visible:ring-accent mt-2.5 min-h-11 w-full rounded-xl border border-neutral-200 bg-white px-3 text-[13px] font-medium text-neutral-600 transition-colors hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="focus-visible:ring-accent mt-3 min-h-12 w-full rounded-full border border-neutral-200 bg-white px-3 text-[13.5px] font-semibold text-neutral-600 transition-colors hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               {pickLocale(locale, "Notify me", "خبرم کن")}
             </button>
@@ -300,12 +300,12 @@ export function ProductCard({
           <button
             type="button"
             onClick={handleAddToCart}
-            // Outlined at rest, accent on hover. Solid-filled it was the loudest
-            // thing on the card and, twenty to a page, the loudest thing on the
-            // grid — a wall of orange under the products it was meant to serve.
-            // The accent still arrives on contact, and the PDP's buy box keeps
-            // the solid primary where the decision actually gets made.
-            className="focus-visible:ring-accent hover:border-accent hover:bg-accent mt-2.5 min-h-11 w-full rounded-xl border border-neutral-200 bg-white px-3 text-[13px] font-medium text-neutral-900 transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            // A solid pill. I had this outlined for two commits, on the theory
+            // that twenty filled buttons to a page was a wall of orange — but
+            // every card the design was drawn from lands on a solid, fully
+            // rounded CTA, and against a bigger name and a bigger price it no
+            // longer outweighs what it sits under.
+            className="focus-visible:ring-accent bg-accent mt-3 min-h-12 w-full rounded-full px-3 text-[13.5px] font-semibold text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             {pickLocale(locale, "Add to cart", "افزودن به سبد")}
           </button>
@@ -339,7 +339,7 @@ function CartQuantityControl({
   const removes = quantity <= 1;
 
   return (
-    <div className="border-accent/40 bg-accent/[0.07] mt-2.5 flex h-11 w-full items-center justify-between rounded-xl border">
+    <div className="border-accent/40 bg-accent/[0.07] mt-3 flex h-12 w-full items-center justify-between rounded-full border">
       <button
         type="button"
         onClick={() => onChange(quantity - 1)}
@@ -372,7 +372,7 @@ function CartQuantityControl({
 }
 
 const STEP_BUTTON_CLASS =
-  "focus-visible:ring-accent text-accent hover:bg-accent/10 flex size-11 shrink-0 items-center justify-center rounded-xl text-[18px] leading-none transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:text-neutral-300 disabled:hover:bg-transparent";
+  "focus-visible:ring-accent text-accent hover:bg-accent/10 flex size-12 shrink-0 items-center justify-center rounded-full text-[18px] leading-none transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:text-neutral-300 disabled:hover:bg-transparent";
 
 // Same card, same box sizes, neutral blocks, and deliberately no pulse — the
 // prototype's handoff notes call for a still skeleton so a grid of them doesn't
@@ -392,7 +392,7 @@ export function ProductCardSkeleton() {
       </div>
       <div className="mt-auto pt-1.5">
         <span className="block h-4 w-24 rounded bg-neutral-100" />
-        <span className="mt-2.5 block h-11 w-full rounded-xl bg-neutral-100" />
+        <span className="mt-3 block h-12 w-full rounded-full bg-neutral-100" />
       </div>
     </div>
   );
