@@ -204,6 +204,20 @@ model Brand {
   // Admin-facing lists ignore it — they stay newest-first for the review queue.
   sortOrder Int?
 
+  // Whether this brand is merchandised to customers *as a brand* — the homepage
+  // brand wall and the PLP / category filter rails. Deliberately separate from
+  // `status`, which decides whether the brand's PRODUCTS can be seen and bought
+  // at all (server/order.ts requires an ACTIVE brand to purchase).
+  //
+  // The import creates one Brand per "برند :" label the source printed, and for
+  // an OEM part that label is the car the part fits, not who made it — so the
+  // table holds rows named هیوندای, پژو, پراید. Their products are real and must
+  // stay purchasable, which means those rows must stay ACTIVE. They just have no
+  // business on a wall next to Castrol. Set by scripts/classify-brand-lists.ts.
+  //
+  // Default true: a brand somebody entered by hand is a brand they chose to stock.
+  showInBrandLists Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -157,9 +157,19 @@ export async function getStorefrontCategoryBySlug(
   });
 }
 
+// Every place the storefront presents brands *as a list to choose from*: the
+// homepage wall, the PLP sidebar, the category page's filter rail.
+//
+// `showInBrandLists` is the second half of the filter and it is not the same
+// question as `status`. ACTIVE means the brand's products can be bought;
+// showInBrandLists means the brand itself is worth putting in front of a
+// customer. They come apart because the import mints a Brand from whatever the
+// source printed after "برند :", which for an OEM part is the car it fits — so
+// this table holds ACTIVE rows named هیوندای and پراید whose products are real
+// and must keep selling. See the field's comment in prisma/schema.prisma.
 export async function listActiveProductBrands(): Promise<StorefrontBrand[]> {
   return prisma.brand.findMany({
-    where: { status: "ACTIVE" },
+    where: { status: "ACTIVE", showInBrandLists: true },
     select: brandSelect,
     // Pinned brands first in the admin's order, everything unordered after them
     // alphabetically — name also breaks a tie between equal numbers.

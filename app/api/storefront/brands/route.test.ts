@@ -96,4 +96,24 @@ describe("GET /api/storefront/brands", () => {
 
     expect(json.data.brands.some((b: { id: string }) => b.id === inactive.id)).toBe(false);
   });
+
+  // The import mints a Brand from whatever the source printed after "برند :",
+  // which for an OEM part is the car it fits. Those rows stay ACTIVE so their
+  // products keep selling; they just don't belong in a list of brands to shop.
+  it("omits ACTIVE brands that aren't shown in brand lists", async () => {
+    const hidden = await prisma.brand.create({
+      data: {
+        slug: `${SLUG_PREFIX}-hidden`,
+        nameEn: "Hyundai",
+        nameFa: "هیوندای",
+        status: "ACTIVE",
+        showInBrandLists: false,
+      },
+    });
+
+    const res = await GET();
+    const json = await res.json();
+
+    expect(json.data.brands.some((b: { id: string }) => b.id === hidden.id)).toBe(false);
+  });
 });
