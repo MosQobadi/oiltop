@@ -92,8 +92,10 @@ async function main() {
     return;
   }
 
-  // --brand-logos: scoped to hand-entered rows (`sourceRef: null`), so a
-  // re-import can't be confused by it and the imported catalog is left alone.
+  if (!brandLogos) return;
+
+  // Scoped to hand-entered rows (`sourceRef: null`), so a re-import can't be
+  // confused by it and the imported catalog is left alone.
   const products = await prisma.product.findMany({
     where: { sourceRef: null },
     select: { id: true, nameEn: true, image: true, brand: { select: { logo: true } } },
