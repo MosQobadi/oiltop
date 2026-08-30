@@ -221,6 +221,12 @@ Do not create unnecessary layers. If a task doesn't need a new top-level folder,
 - Mobile-first, consistent spacing scale.
 - Keep layouts clean and minimal — favor whitespace over dense data-packed screens.
 - Accent color: `#c2410c` (rust/amber), not Technotopia's indigo.
+- **Product images are shot on a white background** — one standard, no exceptions.
+  It is what lets a grid of cards read as one shelf instead of a patchwork, and
+  the storefront is built on it: `ProductCard` gives an image a white panel and
+  contains it rather than cropping. Category images are the opposite case and
+  stay that way — those are full-bleed photographs under a scrim, which is why
+  the category card's treatment is not available to product cards.
 
 Avoid:
 

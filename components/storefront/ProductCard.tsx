@@ -80,7 +80,25 @@ export type ImageBoxSize = "default" | "tall";
 // One step tighter than the card's radius, because it sits inside the card's
 // padding: nesting two equal radii makes the inner corner read sharper than the
 // outer one.
-const IMAGE_BOX_CLASS = "relative overflow-hidden rounded-xl bg-neutral-50";
+const IMAGE_BOX_CLASS = "relative overflow-hidden rounded-xl";
+
+// The panel's ground depends on what's in it, and the reason is the house rule
+// that product photography is shot on white.
+//
+// A white-background photo in `object-contain` never fills a square panel — a
+// tall bottle leaves bands down the sides, a wide filter leaves them top and
+// bottom. On a tinted panel those bands frame the shot in grey and the product
+// reads as a white rectangle someone pasted in. White panel, and the same photo
+// simply sits on the card.
+//
+// The placeholder keeps a tinted ground for the opposite reason: there is no
+// image to blend with, and a hatch floating on white with no panel behind it
+// has no shape at all. It paints its own background, so this only has to get
+// out of its way.
+const IMAGE_GROUND: Record<"image" | "placeholder", string> = {
+  image: "bg-white ring-1 ring-neutral-100 ring-inset",
+  placeholder: "bg-neutral-50",
+};
 
 // An aspect ratio, not a pixel height. The old fixed 140px was a letterbox at
 // every card width — a contained bottle sat in a wide, short slot with air down
@@ -93,8 +111,10 @@ const IMAGE_BOX_RATIO: Record<ImageBoxSize, string> = {
   tall: "aspect-[4/5]",
 };
 
-function imageBoxClass(size: ImageBoxSize): string {
-  return `${IMAGE_BOX_CLASS} ${IMAGE_BOX_RATIO[size]}`;
+function imageBoxClass(size: ImageBoxSize, hasImage: boolean): string {
+  return `${IMAGE_BOX_CLASS} ${IMAGE_BOX_RATIO[size]} ${
+    IMAGE_GROUND[hasImage ? "image" : "placeholder"]
+  }`;
 }
 
 // The name block is a fixed two lines of title plus one of the secondary name —
@@ -181,7 +201,7 @@ export function ProductCard({
       data-testid="product-card"
       className={className ? `${CARD_CLASS} ${className}` : CARD_CLASS}
     >
-      <div className={imageBoxClass(imageBox)}>
+      <div className={imageBoxClass(imageBox, image !== null)}>
         {/* Duplicate of the title link below, hidden from assistive tech and the
             tab order so the card offers one link, not two identical ones. */}
         <Link href={productHref} aria-hidden="true" tabIndex={-1} className="block h-full w-full">
@@ -360,7 +380,7 @@ const STEP_BUTTON_CLASS =
 export function ProductCardSkeleton() {
   return (
     <div data-testid="product-card-skeleton" aria-hidden="true" className={CARD_CLASS}>
-      <div className={imageBoxClass("default")} />
+      <div className={imageBoxClass("default", false)} />
       <div className="mt-3 flex items-center justify-between gap-2">
         <span className="h-3 w-16 rounded bg-neutral-100" />
         <span className="h-3 w-14 rounded bg-neutral-100" />
