@@ -59,10 +59,11 @@ export interface ProductCardProps {
 
 const DEFAULT_IMAGE_SIZES = "(min-width: 1024px) 216px, (min-width: 640px) 33vw, 45vw";
 
-// The card has no frame of its own. It used to: a bordered card wrapping a
-// bordered image box, which read as two rectangles around one product. The image
-// panel is the shape now — everything below it sits flush on the page — and the
-// card earns an edge only on hover, as a lift rather than a line.
+// The card has no frame of its own — it earns an edge on hover, as a lift rather
+// than a line. It keeps its padding, though: dropping the border and the padding
+// together left the name, the price and a full-width button running flush to the
+// card's edge, and the panels of adjacent cards nearly touching. The frame was
+// the thing that read as redundant, not the space inside it.
 //
 // `h-full` so a card always fills its grid cell (or rail slot): the name block
 // below is fixed, but an opened "Notify me" form can still make one card taller,
@@ -72,16 +73,20 @@ const DEFAULT_IMAGE_SIZES = "(min-width: 1024px) 216px, (min-width: 640px) 33vw,
 // compiles the classes it can find in the source, so an interpolated
 // `hover:${LIFT}` names a class at runtime that was never generated.
 const CARD_CLASS =
-  "group flex h-full flex-col rounded-2xl bg-white transition-shadow duration-200 hover:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)] focus-within:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)]";
+  "group flex h-full flex-col rounded-2xl bg-white p-3 transition-shadow duration-200 hover:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)] focus-within:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)]";
 
 export type ImageBoxSize = "default" | "tall";
+
+// One step tighter than the card's radius, because it sits inside the card's
+// padding: nesting two equal radii makes the inner corner read sharper than the
+// outer one.
+const IMAGE_BOX_CLASS = "relative overflow-hidden rounded-xl bg-neutral-50";
 
 // An aspect ratio, not a pixel height. The old fixed 140px was a letterbox at
 // every card width — a contained bottle sat in a wide, short slot with air down
 // both sides. A ratio keeps the product the same size relative to its card
 // whether the grid is four up or two, which is what makes a page of these look
 // deliberate rather than laid out for one breakpoint.
-const IMAGE_BOX_CLASS = "relative overflow-hidden rounded-2xl bg-neutral-50";
 
 const IMAGE_BOX_RATIO: Record<ImageBoxSize, string> = {
   default: "aspect-square",
@@ -105,6 +110,7 @@ const NAME_BLOCK_CLASS = "h-[60px]";
 // a soft wash so a grid (or a rail) of imageless products still has depth. The
 // hatch is listed first because layers paint front-to-back — the opaque wash
 // underneath it would otherwise be the only thing visible.
+//
 // Loosened from 9px to 14px and lightened a shade when the panel went square:
 // the hatch was drawn for a 140px letterbox, and at four times the area the same
 // density stopped reading as a texture and started reading as the loudest thing
@@ -188,7 +194,7 @@ export function ProductCard({
               // Out of stock is said three ways on this card — the badge, the
               // CTA, and here. Fading the product itself is the one a customer
               // reads before any words, scanning a grid.
-              className={`object-contain p-5 transition-transform duration-300 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100 ${
+              className={`object-contain p-4 transition-transform duration-300 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100 ${
                 outOfStock ? "opacity-55" : ""
               }`}
             />
