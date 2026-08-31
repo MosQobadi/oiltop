@@ -45,6 +45,7 @@ const oilCategory: FitmentCategorySummary = {
   nameEn: "Engine Oil",
   nameFa: "روغن موتور",
   partType: "ENGINE_OIL",
+  sortOrder: 1,
 };
 
 const filterCategory: FitmentCategorySummary = {
@@ -53,6 +54,7 @@ const filterCategory: FitmentCategorySummary = {
   nameEn: "Oil Filter",
   nameFa: "فیلتر روغن",
   partType: "FILTER",
+  sortOrder: 3,
 };
 
 type FitmentItemProduct = NonNullable<FitmentItemWithRelations["product"]>;
@@ -68,6 +70,7 @@ function makeProduct(overrides: Partial<FitmentItemProduct> = {}): FitmentItemPr
     price: new Prisma.Decimal(1_000_000),
     discountPercent: 20,
     image: null,
+    viscosity: null,
     inventory: { stock: 40 },
     status: "ACTIVE",
     category: { status: "ACTIVE" },
@@ -108,6 +111,7 @@ function matches(itemId: string, productIds: string[]): SpecMatches {
     price: 500_000,
     finalPrice: 500_000,
     image: null,
+    viscosity: null,
     stockStatus: null,
   }));
   return new Map([[itemId, products]]);
@@ -153,8 +157,9 @@ describe("groupFitmentItemsByCategory", () => {
       makeItem({ productId: "product_1", product: makeProduct() }),
     ]);
 
-    // The card the storefront renders: a PDP link, a charged price, and the
-    // three-state stock signal — never the raw count.
+    // The card the storefront renders: a PDP link, a charged price, the
+    // three-state stock signal — never the raw count — and the viscosity the
+    // results page sorts a hot/cold split by.
     expect(groups[0].items[0].products).toEqual([
       {
         id: "product_1",
@@ -165,6 +170,7 @@ describe("groupFitmentItemsByCategory", () => {
         finalPrice: 800_000,
         image: null,
         stockStatus: null,
+        viscosity: null,
       },
     ]);
   });

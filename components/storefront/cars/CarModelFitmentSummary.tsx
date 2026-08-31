@@ -1,14 +1,15 @@
 import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { navHref, PRODUCTS_PATH } from "../nav-items";
-import { pickLocale, type Locale } from "@/lib/i18n";
+import { formatDigits, pickLocale, type Locale } from "@/lib/i18n";
 import type { FitmentCategoryGroup, SharedFitmentProfile } from "@/lib/services/fitment";
 import {
   climateColumnLabel,
+  FITMENT_CARDS_PER_SECTION,
   formatEngineOptionLabel,
   formatSpecSummary,
   formatYearSpan,
-  sortFitmentGroups,
+  partitionFitmentGroups,
   splitItemsByClimate,
 } from "@/lib/storefront/fitment";
 
@@ -36,7 +37,11 @@ export function CarModelFitmentSummary({
   profile,
   className = "",
 }: CarModelFitmentSummaryProps) {
-  const groups = sortFitmentGroups(profile.groups);
+  // The six primary categories only. An imported profile also carries the car's
+  // brake pads, coolant and air fresheners, and a paragraph headed "Recommended
+  // oil and filters" is not where a customer goes looking for those — the
+  // results screen's "Show more" is.
+  const groups = partitionFitmentGroups(profile.groups).primary;
   const span = formatYearSpan(locale, profile.span);
 
   // A profile that recommends nothing but oil says "oil"; one that also carries
@@ -103,12 +108,24 @@ function CategoryRow({ locale, group }: { locale: Locale; group: FitmentCategory
         {lines.map((line) => (
           <p key={line.key} dir="auto">
             {line.label && <span className="text-neutral-500">{line.label}: </span>}
-            {line.entries.map((entry, index) => (
+            {line.entries.slice(0, FITMENT_CARDS_PER_SECTION).map((entry, index) => (
               <Fragment key={entry.id}>
                 {index > 0 && <span aria-hidden="true"> · </span>}
                 {entry.node}
               </Fragment>
             ))}
+            {/* oil-city's own page for a 206 names 44 acceptable oils. Four is
+                the answer; the count is what says the rest exist. */}
+            {line.entries.length > FITMENT_CARDS_PER_SECTION && (
+              <span className="text-neutral-500">
+                {" "}
+                {pickLocale(
+                  locale,
+                  `and ${formatDigits(line.entries.length - FITMENT_CARDS_PER_SECTION, locale)} more`,
+                  `و ${formatDigits(line.entries.length - FITMENT_CARDS_PER_SECTION, locale)} مورد دیگر`,
+                )}
+              </span>
+            )}
           </p>
         ))}
       </dd>

@@ -410,16 +410,28 @@ copy.
 `lib/services/fitment`. It has no `"use client"` — a Server Component renders
 the whole tree and only the interactive leaves ship to the browser.
 
-- **Categories are ordered here, not by the query.** `sortFitmentGroups` ranks
-  on `partType` first (oil ahead of filters ahead of the rest), then on the
-  category's `slug` for the design brief's order within a part type — engine
-  oil, then oil/air/cabin/fuel filters. The service returns whatever order the
-  admin entered items in. A slug the rank doesn't know sorts last inside its
-  part type; never rank on a category name.
+- **Six categories are the page.** `PRIMARY_CATEGORY_SLUGS` — engine oil,
+  gearbox oil, then the oil/cabin/air/fuel filters, in that order — is what
+  renders above the fold. `partitionFitmentGroups` puts everything else the car
+  resolved to (brake pads, coolant, additives, air fresheners) behind a
+  "Show more" `<details>`, ranked by `partType` band with accessories last and
+  by the admin's own `Category.sortOrder` within a band. The importer's holding
+  shelf (`imported-uncategorised`) is dropped from both zones — it's a review
+  queue, not a heading a customer reads. Never rank on a category name.
+- **Four cards a section.** `clipFitmentItems` caps each column and reports the
+  true total, which becomes a "See all 44 →" link back to this same page with
+  `?category=<slug>` — the third state of `app/[locale]/fitment/page.tsx`, one
+  section uncapped. Without the cap an imported car renders 126 cards: oil-city
+  lists 44 acceptable oils for a Peugeot 206 and every one of them is real.
 - **HOT/COLD is a pair, not a fallback chain.** `splitItemsByClimate` puts them
   in two labelled columns visible at once ("For hot climates" / "For cold
-  climates"); a category's STANDARD items render below in their own grid, all
-  of them, because two acceptable filter brands are co-equal options.
+  climates"), each capped on its own so a split section is four and four; a
+  category's STANDARD items render below in their own grid. Imported profiles
+  carry no climate at all, so `deriveClimateByViscosity` reads the split back
+  out of the recommended oils' winter grades (0W/5W cold, 10W+ hot) — only when
+  every item is STANDARD, every item has a grade, and both sides are non-empty.
+  Authored climate always wins, and a derived split says so in its copy rather
+  than claiming the manufacturer approved the grouping.
 - **`SpecOnlyCard`** is the other half of a result: the item has no product, so
   it renders the `specNote`/`specAttributes` we do know plus the "Request it"
   disclosure. Informational styling, never error styling. `categoryName: null`

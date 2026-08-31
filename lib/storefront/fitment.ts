@@ -15,6 +15,17 @@ export function withFitContext(href: string, carEngineId: string): string {
   return `${href}${separator}${FIT_PARAM}=${encodeURIComponent(carEngineId)}`;
 }
 
+// The results page's third state: one category, uncapped. It rides on `?fit=`
+// rather than being its own route for the same reason `?fit=` itself does —
+// there is no page here that a search engine should rank separately, and
+// "See all 44" has to be a plain link a Server Component can render.
+export const FIT_CATEGORY_PARAM = "category";
+
+export function withFitCategory(href: string, categorySlug: string): string {
+  const separator = href.includes("?") ? "&" : "?";
+  return `${href}${separator}${FIT_CATEGORY_PARAM}=${encodeURIComponent(categorySlug)}`;
+}
+
 /** The subset of a car engine needed to write its option label. */
 export interface CarEngineLabelParts {
   labelEn: string;
@@ -150,34 +161,53 @@ export type FitmentClimateValue = "STANDARD" | "HOT" | "COLD";
 // the design brief's, keyed on the category's *slug* — its stable identity, not
 // the name that gets reworded, and not a second enum that would have to be kept
 // in step with the categories it describes. Never rank on a category name.
+// The six a car's results page shows above the fold, in this order. They are a
+// product decision rather than an admin one: this is the maintenance a customer
+// came for, and a shop that adds a shelf does not get to push "Oil Filter"
+// below it. Everything else the car resolves to is real and is still shown —
+// behind "Show more", in the admin's own order.
+export const PRIMARY_CATEGORY_SLUGS = [
+  "engine-oil",
+  "gearbox-oil",
+  "oil-filter",
+  "cabin-filter",
+  "air-filter",
+  "fuel-filter",
+] as const;
+
+const PRIMARY_RANK = new Map<string, number>(
+  PRIMARY_CATEGORY_SLUGS.map((slug, index) => [slug, index]),
+);
+
+// The secondary band's coarse order. `partType` is how a category *behaves*, so
+// oils come before filters before parts — and the two kinds a customer buys as
+// an extra rather than as maintenance sort last, which is what "the accessories
+// at the end" means.
 const PART_TYPE_RANK: Record<string, number> = {
   ENGINE_OIL: 0,
   FILTER: 1,
-  ACCESSORY: 2,
-  OTHER: 3,
+  OTHER: 2,
+  ACCESSORY: 3,
 };
 
-const CATEGORY_SLUG_RANK: Record<string, number> = {
-  "oil-filter": 0,
-  "air-filter": 1,
-  "cabin-filter": 2,
-  "fuel-filter": 3,
-};
-
-// A category this doesn't recognise sorts after the ones it does, within its
-// part type — a new filter category is listed, just not ahead of the four the
-// brief names.
-const UNRANKED = 9;
+// Within a band, the admin's stated running order — the same `Category.sortOrder`
+// the nav, the home browse section and the PLP filter rail read, so a shelf sits
+// in the same place on every surface. Null means "unordered" there and means it
+// here too: after everything numbered, in the order the service resolved it.
+const UNORDERED = 9999;
 
 export interface FitmentCategoryParts {
   slug: string;
   partType: string;
+  sortOrder: number | null;
 }
 
 export function fitmentCategoryRank(category: FitmentCategoryParts): number {
-  const part = PART_TYPE_RANK[category.partType] ?? UNRANKED;
-  const within = CATEGORY_SLUG_RANK[category.slug] ?? UNRANKED;
-  return part * 10 + within;
+  const primary = PRIMARY_RANK.get(category.slug);
+  if (primary !== undefined) return primary;
+
+  const band = PART_TYPE_RANK[category.partType] ?? PART_TYPE_RANK.OTHER;
+  return PRIMARY_CATEGORY_SLUGS.length + band * 100_000 + (category.sortOrder ?? UNORDERED);
 }
 
 // Sort is stable, so two categories of the same kind keep the order the service
@@ -186,6 +216,72 @@ export function sortFitmentGroups<T extends { category: FitmentCategoryParts }>(
   return [...groups].sort(
     (a, b) => fitmentCategoryRank(a.category) - fitmentCategoryRank(b.category),
   );
+}
+
+export function isPrimaryFitmentCategory(category: FitmentCategoryParts): boolean {
+  return PRIMARY_RANK.has(category.slug);
+}
+
+// The oil-city importer's holding shelf (lib/import.ts's UNCATEGORISED_CATEGORY
+// — the slug is repeated here rather than imported, because that module pulls in
+// node:crypto and this one is reachable from a Client Component). It is a review
+// queue with a name to match, and "Uncategorised (imported)" is not a heading to
+// put in front of a customer. Its products stay in the catalog and in the admin;
+// they just don't get to be a section on a car's results until somebody has said
+// what they are. Emptying it is `scripts/refile-imported-products.ts`.
+const HOLDING_CATEGORY_SLUG = "imported-uncategorised";
+
+/** The results page's two zones: what a customer sees, and what "Show more" opens. */
+export function partitionFitmentGroups<T extends { category: FitmentCategoryParts }>(groups: T[]) {
+  const sorted = sortFitmentGroups(groups).filter(
+    (group) => group.category.slug !== HOLDING_CATEGORY_SLUG,
+  );
+  return {
+    primary: sorted.filter((group) => isPrimaryFitmentCategory(group.category)),
+    secondary: sorted.filter((group) => !isPrimaryFitmentCategory(group.category)),
+  };
+}
+
+// --- Clipping a section ----------------------------------------------------
+//
+// A recommendation is an answer, not a listing. oil-city's own page for a
+// Peugeot 206 names 44 acceptable engine oils, and rendering all 44 asks the
+// customer to shop the exact question they came here to have answered. Four,
+// and a link to the rest.
+
+export const FITMENT_CARDS_PER_SECTION = 4;
+
+/** One item is one card, except a spec-based item, which is one card per match. */
+export function countFitmentCards(items: { products: unknown[] }[]): number {
+  return items.reduce((count, item) => count + Math.max(1, item.products.length), 0);
+}
+
+export interface ClippedFitmentItems<T> {
+  items: T[];
+  /** Cards the section would hold uncapped — the N in "See all N". */
+  total: number;
+}
+
+// Clipped by card rather than by item, because one spec-based item can resolve
+// to four products on its own. The first item is always kept: a section that
+// rendered nothing would read as "we have nothing for your car", which is the
+// opposite of what a section with too much in it means.
+export function clipFitmentItems<T extends { products: unknown[] }>(
+  items: T[],
+  limit: number = FITMENT_CARDS_PER_SECTION,
+): ClippedFitmentItems<T> {
+  const kept: T[] = [];
+  let cards = 0;
+
+  for (const item of items) {
+    const size = Math.max(1, item.products.length);
+    if (cards > 0 && cards + size > limit) break;
+    kept.push(item);
+    cards += size;
+    if (cards >= limit) break;
+  }
+
+  return { items: kept, total: countFitmentCards(items) };
 }
 
 // HOT and COLD are co-equal options shown side by side, not a fallback chain,
@@ -203,6 +299,67 @@ export function climateColumnLabel(locale: Locale, climate: "HOT" | "COLD"): str
   return climate === "HOT"
     ? pickLocale(locale, "For hot climates", "برای اقلیم گرم")
     : pickLocale(locale, "For cold climates", "برای اقلیم سرد");
+}
+
+// The winter grade in "5W-40" — the 5. Null for a monograde ("40"), for prose,
+// and for a product with no viscosity recorded at all. It is the only half of a
+// multigrade that says anything about cold weather; the second number is the
+// hot-side one and is the same on both sides of the split below.
+export function winterGrade(viscosity: string | null | undefined): number | null {
+  if (!viscosity) return null;
+  const match = /^(\d{1,3})W/.exec(viscosity.trim().toUpperCase());
+  return match === null ? null : Number(match[1]);
+}
+
+/** 0W and 5W are the cold-climate grades; 10W and above are the hot-climate ones. */
+export const COLD_WINTER_GRADE_MAX = 5;
+
+// The imported fitment data carries no climate at all — oil-city states one list
+// per car "for all four seasons" (mismatch 3.5 of the import notes) — so 667 car
+// profiles would show one flat run of oils where the useful answer is two
+// columns. Rather than hand-authoring HOT/COLD onto 16,000 items, this reads the
+// split back out of the grades the recommended oils already carry: a 206's list
+// holds a 10W-40 and a 5W-40 precisely because both are approved and the choice
+// between them is where the car lives.
+//
+// Deliberately narrow, because a wrong oil damages an engine:
+//
+//   * Only when EVERY item is STANDARD. An admin who has said which grade is
+//     which is never second-guessed — authored climate always wins.
+//   * Only when both sides are non-empty. One grade is one answer, and calling
+//     it "for hot climates" would imply a cold option that doesn't exist.
+//   * Only when every item can be placed. An oil with no grade recorded belongs
+//     in neither column and dropping it would shorten the recommendation, so a
+//     section holding one falls back to being rendered flat.
+//
+// An item is placed by its first product: an imported item has exactly one, and
+// a spec-based item's matches all share the viscosity the spec asked for.
+// Returns null when no split is derivable — read by the caller as "render this
+// section the way it was stored".
+export function deriveClimateByViscosity<
+  T extends { climate: FitmentClimateValue; products: { viscosity: string | null }[] },
+>(items: T[]): T[] | null {
+  if (items.length === 0) return null;
+  if (items.some((item) => item.climate !== "STANDARD")) return null;
+
+  const placed: T[] = [];
+  let hot = 0;
+  let cold = 0;
+
+  for (const item of items) {
+    const grade = winterGrade(item.products[0]?.viscosity);
+    if (grade === null) return null;
+
+    if (grade <= COLD_WINTER_GRADE_MAX) {
+      cold += 1;
+      placed.push({ ...item, climate: "COLD" });
+    } else {
+      hot += 1;
+      placed.push({ ...item, climate: "HOT" });
+    }
+  }
+
+  return hot > 0 && cold > 0 ? placed : null;
 }
 
 // --- Spec-only items -------------------------------------------------------

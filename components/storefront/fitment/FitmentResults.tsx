@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { SpecOnlyCard } from "./SpecOnlyCard";
 import { CATEGORY_ICONS, GridIcon } from "../icons";
+import { FITMENT_PATH, navHref } from "../nav-items";
 import { ProductCard } from "../ProductCard";
-import { pickLocale, type Locale } from "@/lib/i18n";
+import { formatDigits, pickLocale, type Locale } from "@/lib/i18n";
 import type {
   CarEngineContext,
   FitmentCategoryGroup,
@@ -10,37 +11,60 @@ import type {
 } from "@/lib/services/fitment";
 import {
   climateColumnLabel,
+  clipFitmentItems,
+  countFitmentCards,
+  deriveClimateByViscosity,
+  FITMENT_CARDS_PER_SECTION,
   formatCarLabel,
-  sortFitmentGroups,
+  partitionFitmentGroups,
   splitItemsByClimate,
+  withFitCategory,
+  withFitContext,
 } from "@/lib/storefront/fitment";
 
-// What the car finder resolved, rendered. One section per category, in the
-// order the design brief lists them (Engine Oil, then the filters) rather than
-// the order the admin happened to enter the profile's items.
+// What the car finder resolved, rendered — and, just as much, what it does NOT
+// render. An imported car resolves to a lot: oil-city's page for a Peugeot 206
+// names 44 acceptable engine oils on its own, and every one of them is a real
+// recommendation. Three rules turn that into an answer:
+//
+//   1. **Six categories are the page.** Engine oil, gearbox oil, and the four
+//      filters — the maintenance the customer came for. Everything else the car
+//      resolves to (brake pads, coolant, additives, air fresheners) is real and
+//      is kept, one "Show more" away.
+//   2. **Four cards a section.** Past four near-identical oils the customer is
+//      being asked to shop rather than being told what fits, and a "See all 44"
+//      link into this same page's single-category view is where shopping goes.
+//   3. **Two columns where the grades say so.** A car whose approved oils span
+//      a 5W and a 10W is a car with a hot answer and a cold answer, and those
+//      are shown side by side rather than interleaved in one run of cards.
 //
 // Three shapes live inside a section and all three are answers, not fallbacks:
 // a single product, several co-equal products (two acceptable filter brands are
-// options, not a ranking), and a HOT/COLD pair shown side by side. A spec-only
-// item — the catalog has no match yet — renders as SpecOnlyCard in the same
-// grid, so a category is never silently empty.
+// options, not a ranking), and a HOT/COLD pair. A spec-only item — the catalog
+// has no match yet — renders as SpecOnlyCard in the same grid, so a category is
+// never silently empty.
 //
-// The sections themselves are laid out on one shared three-column grid rather
-// than stacked full-width, and this is the whole reason for the span
-// arithmetic below. The common result is five categories holding one product
-// each: stacked, that is five lonely cards down the left edge of a desktop
-// screen and three metres of scroll. On the shared grid the same five pack into
-// two rows, while a category that genuinely has more to say (a HOT/COLD pair, a
-// set of co-equal filters) claims the width it needs.
+// The sections are laid out on one shared three-column grid rather than
+// stacked full-width, which is the reason for the span arithmetic below. The
+// common result is five categories holding one product each: stacked, that is
+// five lonely cards down the left edge of a desktop screen and three metres of
+// scroll. On the shared grid the same five pack into two rows, while a category
+// that genuinely has more to say claims the width it needs.
 //
-// No "use client": this is presentational and every card below it takes its own
-// props, so a Server Component renders the whole tree and only the interactive
-// leaves (add-to-cart, the request disclosure) ship as client components.
+// No "use client": this is presentational, the "Show more" zone is a native
+// <details>, and every card takes its own props — so a Server Component renders
+// the whole tree and only the interactive leaves (add-to-cart, the request
+// disclosure) ship as client components.
 
 export interface FitmentResultsProps {
   locale: Locale;
   car: CarEngineContext;
   groups: FitmentCategoryGroup[];
+  /**
+   * Set by the single-category view (`?category=<slug>`): render only this
+   * category, uncapped. Undefined is the normal results page.
+   */
+  onlyCategorySlug?: string;
   className?: string;
 }
 
@@ -69,26 +93,31 @@ const CARD_COLUMNS: Record<number, string> = {
   3: "sm:grid-cols-2 lg:grid-cols-3",
 };
 
-// One item is one card, except a spec-based item, which resolves to every
-// product that currently matches — see `renderItem`.
-function countCards(items: FitmentResolvedItem[]): number {
-  return items.reduce((count, item) => count + Math.max(1, item.products.length), 0);
-}
-
 function clampColumns(count: number): number {
   return Math.min(GRID_COLUMNS, Math.max(1, count));
 }
 
-export function FitmentResults({ locale, car, groups, className = "" }: FitmentResultsProps) {
-  const carLabel = formatCarLabel(locale, car);
+const RESULTS_GRID = "grid items-start gap-x-5 gap-y-9 lg:grid-cols-3";
 
+export function FitmentResults({
+  locale,
+  car,
+  groups,
+  onlyCategorySlug,
+  className = "",
+}: FitmentResultsProps) {
+  const carLabel = formatCarLabel(locale, car);
+  const carEngineId = car.carEngine.id;
+
+  // The whole-car empty state: no profile is attached to this type at all, so
+  // there is not even a category to be empty. One request card, not six.
   if (groups.length === 0) {
     return (
       <div data-testid="fitment-results" className={className}>
         <SpecOnlyCard
           locale={locale}
           carLabel={carLabel}
-          carEngineId={car.carEngine.id}
+          carEngineId={carEngineId}
           categoryId={null}
           categoryName={null}
           specNote={null}
@@ -99,21 +128,114 @@ export function FitmentResults({ locale, car, groups, className = "" }: FitmentR
     );
   }
 
+  const { primary, secondary } = partitionFitmentGroups(groups);
+
+  if (onlyCategorySlug !== undefined) {
+    // Searched in the partition, not in `groups` — a hand-edited `?category=`
+    // must not reach a category the results page itself declines to show.
+    const group = [...primary, ...secondary].find(
+      (entry) => entry.category.slug === onlyCategorySlug,
+    );
+    return (
+      <div data-testid="fitment-results" className={className}>
+        {group ? (
+          <div className={RESULTS_GRID}>
+            <CategorySection
+              locale={locale}
+              carLabel={carLabel}
+              carEngineId={carEngineId}
+              group={group}
+              limit={null}
+            />
+          </div>
+        ) : (
+          <p className="text-[14px] text-neutral-500">
+            {pickLocale(
+              locale,
+              "We have nothing in that category for this car.",
+              "در این دسته‌بندی چیزی برای این خودرو نداریم.",
+            )}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div
-      data-testid="fitment-results"
-      className={`grid items-start gap-x-5 gap-y-9 lg:grid-cols-3 ${className}`}
-    >
-      {sortFitmentGroups(groups).map((group) => (
-        <CategorySection
-          key={group.category.id}
+    <div data-testid="fitment-results" className={className}>
+      <div className={RESULTS_GRID}>
+        {primary.map((group) => (
+          <CategorySection
+            key={group.category.id}
+            locale={locale}
+            carLabel={carLabel}
+            carEngineId={carEngineId}
+            group={group}
+            limit={FITMENT_CARDS_PER_SECTION}
+          />
+        ))}
+      </div>
+
+      {secondary.length > 0 && (
+        <SecondaryZone
           locale={locale}
           carLabel={carLabel}
-          carEngineId={car.carEngine.id}
-          group={group}
+          carEngineId={carEngineId}
+          groups={secondary}
         />
-      ))}
+      )}
     </div>
+  );
+}
+
+// Everything the car resolves to that isn't one of the six. A native <details>
+// rather than a toggle: it needs no client component, it is open to a keyboard
+// and a screen reader without help, and a browser's in-page find can open it.
+function SecondaryZone({
+  locale,
+  carLabel,
+  carEngineId,
+  groups,
+}: {
+  locale: Locale;
+  carLabel: string;
+  carEngineId: string;
+  groups: FitmentCategoryGroup[];
+}) {
+  return (
+    <details data-testid="fitment-secondary" className="group mt-12">
+      <summary className="focus-visible:ring-accent/40 flex w-full cursor-pointer list-none items-center justify-between gap-4 rounded-xl border border-neutral-200 px-4 py-3.5 text-[14px] font-medium text-neutral-700 transition-colors hover:border-neutral-300 hover:bg-neutral-50 focus-visible:ring-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+        <span>
+          {pickLocale(
+            locale,
+            "Other parts and accessories for this car",
+            "سایر قطعات و لوازم جانبی این خودرو",
+          )}
+          {/* The space is literal, not just the margin: a screen reader reads
+              the text nodes, and "for this car6" is what it would otherwise say. */}{" "}
+          <span className="ms-1 text-neutral-400">{formatDigits(groups.length, locale)}</span>
+        </span>
+        <span
+          aria-hidden="true"
+          className="text-neutral-400 transition-transform group-open:rotate-180"
+        >
+          ▾
+        </span>
+      </summary>
+
+      <div className={`mt-8 ${RESULTS_GRID}`}>
+        {groups.map((group) => (
+          <CategorySection
+            key={group.category.id}
+            locale={locale}
+            carLabel={carLabel}
+            carEngineId={carEngineId}
+            group={group}
+            limit={FITMENT_CARDS_PER_SECTION}
+          />
+        ))}
+      </div>
+    </details>
   );
 }
 
@@ -122,26 +244,48 @@ function CategorySection({
   carLabel,
   carEngineId,
   group,
+  limit,
 }: {
   locale: Locale;
   carLabel: string;
   carEngineId: string;
   group: FitmentCategoryGroup;
+  /** Cards per column, or null on the single-category view, which shows them all. */
+  limit: number | null;
 }) {
   const categoryName = pickLocale(locale, group.category.nameEn, group.category.nameFa);
   const Icon = CATEGORY_ICONS[group.category.slug] ?? GridIcon;
-  const { standard, hot, cold } = splitItemsByClimate(group.items);
+
+  // Authored climate wins; a derived split only ever happens on an all-STANDARD
+  // section, and `derived` is what stops the page attributing our reading of the
+  // grades to the car's manufacturer.
+  const placed = deriveClimateByViscosity(group.items);
+  const derived = placed !== null;
+  const { standard, hot, cold } = splitItemsByClimate(placed ?? group.items);
   const hasClimatePair = hot.length > 0 && cold.length > 0;
-  const climateItems = [...hot, ...cold];
+
+  // Each column is capped on its own, so a hot/cold pair is four and four —
+  // "four engine oils for each" is the whole point of splitting it.
+  const clip = <T extends FitmentResolvedItem>(items: T[]) =>
+    limit === null ? { items, total: countFitmentCards(items) } : clipFitmentItems(items, limit);
+
+  const shownStandard = clip(standard);
+  const shownHot = clip(hot);
+  const shownCold = clip(cold);
+
+  const shownCards =
+    countFitmentCards(shownStandard.items) +
+    countFitmentCards(shownHot.items) +
+    countFitmentCards(shownCold.items);
+  const totalCards = shownStandard.total + shownHot.total + shownCold.total;
 
   // A climate pair is two columns whatever it holds — that side-by-side reading
   // is the point of it, so it sets a floor the card count can only raise.
-  const span = clampColumns(Math.max(countCards(group.items), hasClimatePair ? 2 : 1));
+  const span = clampColumns(Math.max(shownCards, hasClimatePair ? 2 : 1));
 
   // One item can be several cards: a spec-based item resolves to every product
-  // that currently matches, and those are co-equal options in the same grid —
-  // exactly what the multi-product case above already looked like. An item with
-  // nothing to show is still one card, the spec-only one.
+  // that currently matches, and those are co-equal options in the same grid.
+  // An item with nothing to show is still one card, the spec-only one.
   const renderItem = (item: FitmentResolvedItem): ReactNode[] =>
     item.products.length > 0
       ? item.products.map((product) => (
@@ -170,6 +314,7 @@ function CategorySection({
     <section
       data-testid="fitment-category"
       data-category={group.category.partType}
+      data-category-slug={group.category.slug}
       className={SECTION_SPAN[span]}
     >
       <div className="border-t border-neutral-200 pt-4">
@@ -179,14 +324,23 @@ function CategorySection({
         </h2>
 
         {/* Only said when both grades are actually offered — with one climate
-            variant there is no choice to explain. */}
+            variant there is no choice to explain. Which sentence depends on who
+            made the split: a manufacturer approval is a claim about the engine,
+            and we are not entitled to make it on their behalf when all we did
+            was read the grades off the oils. */}
         {hasClimatePair && (
           <p className="mt-2 max-w-[60ch] text-[13.5px] leading-relaxed text-neutral-500">
-            {pickLocale(
-              locale,
-              "Two valid options for this engine. The manufacturer approves either grade — pick the one that matches where the car actually lives.",
-              "دو گزینه‌ی مجاز برای این موتور. سازنده هر دو گرید را تأیید کرده است — بر اساس اقلیمی که خودرو در آن کار می‌کند انتخاب کنید.",
-            )}
+            {derived
+              ? pickLocale(
+                  locale,
+                  "Every oil here fits this engine. They're grouped by their cold-start grade — pick the one that matches where the car actually lives.",
+                  "همه‌ی این روغن‌ها برای این موتور مناسب‌اند و بر اساس گرید سرماخیزی دسته‌بندی شده‌اند — بر اساس اقلیمی که خودرو در آن کار می‌کند انتخاب کنید.",
+                )
+              : pickLocale(
+                  locale,
+                  "Two valid options for this engine. The manufacturer approves either grade — pick the one that matches where the car actually lives.",
+                  "دو گزینه‌ی مجاز برای این موتور. سازنده هر دو گرید را تأیید کرده است — بر اساس اقلیمی که خودرو در آن کار می‌کند انتخاب کنید.",
+                )}
           </p>
         )}
       </div>
@@ -194,23 +348,52 @@ function CategorySection({
       {/* The pair takes the section's own columns rather than a hard two-up, so
           in a three-wide section the HOT and COLD cards line up with the
           standard ones underneath instead of being a size larger than them. */}
-      {climateItems.length > 0 && (
+      {(shownHot.items.length > 0 || shownCold.items.length > 0) && (
         <div className={`mt-4 grid gap-5 ${CARD_COLUMNS[span]}`}>
-          {hot.length > 0 && (
-            <ClimateColumn locale={locale} climate="HOT" items={hot} renderItem={renderItem} />
+          {shownHot.items.length > 0 && (
+            <ClimateColumn
+              locale={locale}
+              climate="HOT"
+              items={shownHot.items}
+              renderItem={renderItem}
+            />
           )}
-          {cold.length > 0 && (
-            <ClimateColumn locale={locale} climate="COLD" items={cold} renderItem={renderItem} />
+          {shownCold.items.length > 0 && (
+            <ClimateColumn
+              locale={locale}
+              climate="COLD"
+              items={shownCold.items}
+              renderItem={renderItem}
+            />
           )}
         </div>
       )}
 
-      {standard.length > 0 && (
+      {shownStandard.items.length > 0 && (
         <div
-          className={`mt-4 grid gap-5 ${CARD_COLUMNS[clampColumns(Math.min(countCards(standard), span))]}`}
+          className={`mt-4 grid gap-5 ${CARD_COLUMNS[clampColumns(Math.min(countFitmentCards(shownStandard.items), span))]}`}
         >
-          {standard.flatMap(renderItem)}
+          {shownStandard.items.flatMap(renderItem)}
         </div>
+      )}
+
+      {totalCards > shownCards && (
+        <p className="mt-4 text-end">
+          <a
+            data-testid="fitment-see-all"
+            href={withFitCategory(
+              withFitContext(navHref(locale, FITMENT_PATH), carEngineId),
+              group.category.slug,
+            )}
+            className="text-accent text-[13.5px] font-medium hover:underline"
+          >
+            {pickLocale(
+              locale,
+              `See all ${formatDigits(totalCards, locale)} →`,
+              `مشاهده هر ${formatDigits(totalCards, locale)} مورد ←`,
+            )}
+          </a>
+        </p>
       )}
     </section>
   );

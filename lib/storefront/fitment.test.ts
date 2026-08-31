@@ -12,8 +12,12 @@ import {
   formatSpecSummary,
   formatTypeCount,
   formatYearSpan,
+  clipFitmentItems,
+  deriveClimateByViscosity,
+  partitionFitmentGroups,
   sortFitmentGroups,
   splitItemsByClimate,
+  winterGrade,
   variantImage,
   withFitContext,
 } from "./fitment";
@@ -155,53 +159,224 @@ describe("formatCarName / formatCarLabel", () => {
 });
 
 describe("sortFitmentGroups", () => {
-  const group = (partType: string, slug: string) => ({ category: { partType, slug } });
+  const group = (partType: string, slug: string, sortOrder: number | null = null) => ({
+    category: { partType, slug, sortOrder },
+  });
 
-  it("puts engine oil first and the filters in the design brief's order", () => {
+  it("puts the six primary categories first, in the order the results page states them", () => {
     const sorted = sortFitmentGroups([
-      group("FILTER", "cabin-filter"),
-      group("FILTER", "fuel-filter"),
-      group("ENGINE_OIL", "engine-oil"),
-      group("FILTER", "air-filter"),
-      group("FILTER", "oil-filter"),
+      group("FILTER", "cabin-filter", 4),
+      group("FILTER", "fuel-filter", 6),
+      group("ENGINE_OIL", "engine-oil", 1),
+      group("FILTER", "air-filter", 5),
+      group("ENGINE_OIL", "gearbox-oil", 2),
+      group("FILTER", "oil-filter", 3),
     ]);
 
     expect(sorted.map((entry) => entry.category.slug)).toEqual([
       "engine-oil",
+      "gearbox-oil",
       "oil-filter",
-      "air-filter",
       "cabin-filter",
+      "air-filter",
       "fuel-filter",
     ]);
   });
 
-  it("keeps a category it doesn't recognise inside its own part type", () => {
+  it("puts every other category after all six, whatever its sortOrder says", () => {
+    // brake-pads is numbered ahead of fuel-filter here and still sorts behind it:
+    // the six are a product decision the admin's running order doesn't outrank.
     const sorted = sortFitmentGroups([
-      group("ACCESSORY", "funnels"),
-      group("FILTER", "particulate-filter"),
-      group("FILTER", "oil-filter"),
-      group("ENGINE_OIL", "gearbox-oil"),
+      group("OTHER", "brake-pads", 2),
+      group("FILTER", "fuel-filter", 90),
+    ]);
+
+    expect(sorted.map((entry) => entry.category.slug)).toEqual(["fuel-filter", "brake-pads"]);
+  });
+
+  it("orders the secondary band by part type, accessories last", () => {
+    const sorted = sortFitmentGroups([
+      group("ACCESSORY", "air-freshener", 22),
+      group("OTHER", "brake-pads", 11),
+      group("FILTER", "gearbox-filter", 10),
+      group("ENGINE_OIL", "two-stroke-oil", 30),
     ]);
 
     expect(sorted.map((entry) => entry.category.slug)).toEqual([
-      "gearbox-oil",
-      "oil-filter",
-      "particulate-filter",
-      "funnels",
+      "two-stroke-oil",
+      "gearbox-filter",
+      "brake-pads",
+      "air-freshener",
     ]);
   });
 
-  it("sorts on partType/slug, never on a category name", () => {
-    // Two categories the fitment engine can't rank keep the order they came in.
-    const first = group("OTHER", "coolant");
-    const second = group("OTHER", "brake-fluid");
+  it("orders a part type's own categories by the admin's sortOrder, unnumbered last", () => {
+    const sorted = sortFitmentGroups([
+      group("OTHER", "grease", null),
+      group("OTHER", "coolant", 13),
+      group("OTHER", "brake-pads", 11),
+    ]);
+
+    expect(sorted.map((entry) => entry.category.slug)).toEqual(["brake-pads", "coolant", "grease"]);
+  });
+
+  it("sorts on partType/slug/sortOrder, never on a category name", () => {
+    // Two secondary categories tied on everything rankable keep the order they
+    // came in — the service's, not an alphabetical one.
+    const first = group("OTHER", "coolant", 13);
+    const second = group("OTHER", "brake-fluid", 13);
     expect(sortFitmentGroups([first, second])).toEqual([first, second]);
   });
 
   it("leaves the caller's array untouched", () => {
-    const groups = [group("FILTER", "oil-filter"), group("ENGINE_OIL", "engine-oil")];
+    const groups = [group("FILTER", "oil-filter", 3), group("ENGINE_OIL", "engine-oil", 1)];
     sortFitmentGroups(groups);
     expect(groups[0].category.partType).toBe("FILTER");
+  });
+});
+
+describe("partitionFitmentGroups", () => {
+  const group = (partType: string, slug: string, sortOrder: number | null = null) => ({
+    category: { partType, slug, sortOrder },
+  });
+
+  it("splits the six from everything else, each side sorted", () => {
+    const { primary, secondary } = partitionFitmentGroups([
+      group("ACCESSORY", "air-freshener", 22),
+      group("FILTER", "oil-filter", 3),
+      group("OTHER", "coolant", 13),
+      group("ENGINE_OIL", "engine-oil", 1),
+    ]);
+
+    expect(primary.map((entry) => entry.category.slug)).toEqual(["engine-oil", "oil-filter"]);
+    expect(secondary.map((entry) => entry.category.slug)).toEqual(["coolant", "air-freshener"]);
+  });
+
+  it("has no primary zone for a car that only resolved to accessories", () => {
+    const { primary, secondary } = partitionFitmentGroups([
+      group("ACCESSORY", "air-freshener", 22),
+    ]);
+    expect(primary).toEqual([]);
+    expect(secondary).toHaveLength(1);
+  });
+
+  it("drops the importer's holding shelf from both zones", () => {
+    // "Uncategorised (imported)" is a review queue, not a heading a customer
+    // reads. Its products stay in the catalog; they just aren't a section here.
+    const { primary, secondary } = partitionFitmentGroups([
+      group("ENGINE_OIL", "engine-oil", 1),
+      group("OTHER", "imported-uncategorised", null),
+    ]);
+
+    expect(primary.map((entry) => entry.category.slug)).toEqual(["engine-oil"]);
+    expect(secondary).toEqual([]);
+  });
+});
+
+describe("clipFitmentItems", () => {
+  const item = (id: string, productCount = 1) => ({
+    id,
+    products: Array.from({ length: productCount }, (_, index) => ({ id: `${id}:${index}` })),
+  });
+
+  it("keeps four cards and reports how many there really were", () => {
+    const clipped = clipFitmentItems([item("a"), item("b"), item("c"), item("d"), item("e")], 4);
+
+    expect(clipped.items.map((entry) => entry.id)).toEqual(["a", "b", "c", "d"]);
+    expect(clipped.total).toBe(5);
+  });
+
+  it("counts a spec-based item's matches as the cards they are", () => {
+    // One item resolving to three products is three cards, so only one more fits.
+    const clipped = clipFitmentItems([item("spec", 3), item("b"), item("c")], 4);
+
+    expect(clipped.items.map((entry) => entry.id)).toEqual(["spec", "b"]);
+    expect(clipped.total).toBe(5);
+  });
+
+  it("keeps the first item even when it alone exceeds the limit", () => {
+    // Rendering nothing would read as "we have nothing for your car".
+    const clipped = clipFitmentItems([item("spec", 9)], 4);
+    expect(clipped.items).toHaveLength(1);
+    expect(clipped.total).toBe(9);
+  });
+
+  it("counts a spec-only item with no products as one card", () => {
+    const clipped = clipFitmentItems([{ id: "spec-only", products: [] }], 4);
+    expect(clipped.total).toBe(1);
+  });
+
+  it("reports nothing clipped when the section already fits", () => {
+    const items = [item("a"), item("b")];
+    const clipped = clipFitmentItems(items, 4);
+    expect(clipped.items).toEqual(items);
+    expect(clipped.total).toBe(2);
+  });
+});
+
+describe("winterGrade", () => {
+  it("reads the cold-start half of a multigrade", () => {
+    expect(winterGrade("5W-40")).toBe(5);
+    expect(winterGrade("10W40")).toBe(10);
+    expect(winterGrade("0W-20")).toBe(0);
+  });
+
+  it("is null for a monograde, for prose and for no viscosity at all", () => {
+    expect(winterGrade("40")).toBeNull();
+    expect(winterGrade("synthetic")).toBeNull();
+    expect(winterGrade(null)).toBeNull();
+    expect(winterGrade(undefined)).toBeNull();
+  });
+});
+
+describe("deriveClimateByViscosity", () => {
+  const oil = (id: string, viscosity: string | null) => ({
+    id,
+    climate: "STANDARD" as const,
+    products: [{ viscosity }],
+  });
+
+  it("splits an all-standard section on the winter grade", () => {
+    const placed = deriveClimateByViscosity([
+      oil("a", "10W-40"),
+      oil("b", "5W-40"),
+      oil("c", "0W-20"),
+    ]);
+
+    expect(placed?.map((item) => [item.id, item.climate])).toEqual([
+      ["a", "HOT"],
+      ["b", "COLD"],
+      ["c", "COLD"],
+    ]);
+  });
+
+  it("never second-guesses a climate an admin authored", () => {
+    const authored = [
+      { id: "a", climate: "HOT" as const, products: [{ viscosity: "10W-40" }] },
+      { id: "b", climate: "STANDARD" as const, products: [{ viscosity: "5W-40" }] },
+    ];
+    expect(deriveClimateByViscosity(authored)).toBeNull();
+  });
+
+  it("leaves one grade alone — a single answer is not a choice of climate", () => {
+    expect(deriveClimateByViscosity([oil("a", "10W-40"), oil("b", "10W-30")])).toBeNull();
+  });
+
+  it("leaves the section flat when any oil has no grade to place it by", () => {
+    // Dropping the unplaceable one would silently shorten the recommendation.
+    expect(deriveClimateByViscosity([oil("a", "10W-40"), oil("b", "5W-40"), oil("c", null)])).toBe(
+      null,
+    );
+  });
+
+  it("has nothing to split in an empty section", () => {
+    expect(deriveClimateByViscosity([])).toBeNull();
+  });
+
+  it("leaves the caller's items untouched", () => {
+    const items = [oil("a", "10W-40"), oil("b", "5W-40")];
+    deriveClimateByViscosity(items);
+    expect(items[0].climate).toBe("STANDARD");
   });
 });
 

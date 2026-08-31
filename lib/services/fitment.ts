@@ -36,6 +36,11 @@ export interface FitmentProductSummary {
   finalPrice: number;
   image: string | null;
   stockStatus: StorefrontStockStatus | null;
+  // Read by the storefront to sort an all-STANDARD oil recommendation into hot-
+  // and cold-climate columns — see `deriveClimateByViscosity`. Null for
+  // everything that isn't an oil, and for oils the source never stated a grade
+  // for; both mean "this one can't be placed in a climate column".
+  viscosity: string | null;
 }
 
 export interface FitmentResolvedItem {
@@ -69,6 +74,7 @@ const fitmentProductSelect = {
   price: true,
   discountPercent: true,
   image: true,
+  viscosity: true,
   inventory: { select: { stock: true } },
   // Read to decide whether a customer may see this item's product at all
   // (see `isPubliclyVisible`), never published — `toProductSummary` builds
@@ -86,6 +92,10 @@ const fitmentItemInclude = {
       // `fitmentCategoryRank` in lib/storefront/fitment.ts.
       slug: true,
       partType: true,
+      // The admin's running order, which the fitment results page reads for the
+      // categories that aren't one of its six primary ones — so a shelf sits in
+      // the same place there as it does in the nav and the PLP filter rail.
+      sortOrder: true,
       nameEn: true,
       nameFa: true,
     },
@@ -284,6 +294,7 @@ function toProductSummary(product: FitmentProductRow): FitmentProductSummary {
     // (see schema.prisma).
     finalPrice: price * (1 - product.discountPercent / 100),
     image: product.image,
+    viscosity: product.viscosity,
     // Same three-state derivation the PLP uses; the raw count stays in
     // the admin panel.
     stockStatus: deriveStorefrontStockStatus(product.inventory?.stock ?? 0),

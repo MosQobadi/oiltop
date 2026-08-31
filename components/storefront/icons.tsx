@@ -194,7 +194,9 @@ export type StorefrontIcon = typeof OilBottleIcon;
 // the lint rule enforcing them want the lookup to be a plain property access.
 export const CATEGORY_ICONS: Record<string, StorefrontIcon> = {
   "engine-oil": OilBottleIcon,
+  "gearbox-oil": OilBottleIcon,
   "oil-filter": FilterCanisterIcon,
+  "gearbox-filter": FilterCanisterIcon,
   "fuel-filter": FilterCanisterIcon,
   "air-filter": FilterPanelIcon,
   "cabin-filter": FilterPanelIcon,

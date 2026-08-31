@@ -6,7 +6,12 @@ import { FitmentWizard } from "@/components/storefront/fitment/FitmentWizard";
 import { FITMENT_PATH, navHref } from "@/components/storefront/nav-items";
 import { pickLocale, type Locale } from "@/lib/i18n";
 import { getActiveCarEngineContext, resolveFitmentForEngine } from "@/lib/services/fitment";
-import { FIT_PARAM, formatCarName } from "@/lib/storefront/fitment";
+import {
+  FIT_CATEGORY_PARAM,
+  FIT_PARAM,
+  formatCarName,
+  withFitContext,
+} from "@/lib/storefront/fitment";
 import { localeAlternates } from "@/lib/storefront/seo";
 import { storefrontIdParamSchema } from "@/lib/validation";
 
@@ -89,6 +94,16 @@ export default async function FitmentPage({
   const groups = await resolveFitmentForEngine(car.carEngine.id);
   const carName = formatCarName(locale, car);
 
+  // The third state: "See all 44" on a section links back here with the car it
+  // already resolved plus a category, and gets that one section uncapped. No
+  // second route and no second query — the same resolution, rendered narrower.
+  const rawCategory = (await searchParams)[FIT_CATEGORY_PARAM];
+  const onlyCategory =
+    typeof rawCategory === "string" && rawCategory !== "" ? rawCategory : undefined;
+  const onlyCategoryName = onlyCategory
+    ? groups.find((group) => group.category.slug === onlyCategory)?.category
+    : undefined;
+
   return (
     <div className="mx-auto w-full max-w-[1180px] px-4 py-10 sm:px-6">
       <Breadcrumbs
@@ -96,7 +111,15 @@ export default async function FitmentPage({
         items={[
           homeCrumb,
           { label: fitmentLabel, href: navHref(locale, FITMENT_PATH) },
-          { label: carName },
+          onlyCategory
+            ? {
+                label: carName,
+                href: withFitContext(navHref(locale, FITMENT_PATH), car.carEngine.id),
+              }
+            : { label: carName },
+          ...(onlyCategoryName
+            ? [{ label: pickLocale(locale, onlyCategoryName.nameEn, onlyCategoryName.nameFa) }]
+            : []),
         ]}
       />
 
@@ -107,7 +130,28 @@ export default async function FitmentPage({
         className="mt-5"
       />
 
-      <FitmentResults locale={locale} car={car} groups={groups} className="mt-8" />
+      {onlyCategory && (
+        <p className="mt-6">
+          <a
+            href={withFitContext(navHref(locale, FITMENT_PATH), car.carEngine.id)}
+            className="text-accent text-[13.5px] font-medium hover:underline"
+          >
+            {pickLocale(
+              locale,
+              "← Back to everything that fits this car",
+              "→ بازگشت به همه‌ی موارد مناسب این خودرو",
+            )}
+          </a>
+        </p>
+      )}
+
+      <FitmentResults
+        locale={locale}
+        car={car}
+        groups={groups}
+        onlyCategorySlug={onlyCategory}
+        className="mt-8"
+      />
 
       <p className="mt-10 max-w-[70ch] text-[12.5px] leading-relaxed text-neutral-500">
         {pickLocale(
