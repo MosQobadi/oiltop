@@ -446,6 +446,13 @@ model CarEngine {
   carModelId String
   carModel   CarModel @relation(fields: [carModelId], references: [id])
 
+  // Importer bookkeeping — see the sourceRef comment on Product. This sits on
+  // the type, not the model, because oil-city's "model" IS our type: their page
+  // describes one version of a car, and `lib/cars/regroup.ts` splits its name
+  // into the model a customer picks and the type underneath. One source URL
+  // therefore maps to one CarEngine, and that is what a re-import matches on.
+  sourceRef String? @unique
+
   labelEn String
   labelFa String
 

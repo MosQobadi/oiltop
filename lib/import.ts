@@ -86,7 +86,7 @@ export function refHash(sourceRef: string): string {
 // Below this a Latin remnant isn't a name any more. "فیلتر-روغن-x" slugifies to
 // "x", which is neither readable nor unlikely to collide; three characters is
 // the line between "the source had a Latin slug" and "one letter survived".
-const MIN_LATIN_SLUG_LENGTH = 3;
+export const MIN_LATIN_SLUG_LENGTH = 3;
 
 export function fallbackSlug(prefix: string, sourceRef: string): string {
   return `${prefix}-${refHash(sourceRef)}`;

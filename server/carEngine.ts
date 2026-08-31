@@ -7,7 +7,7 @@ import type {
   CarEngineSearchableQuery,
   CarEngineUpdateInput,
 } from "@/lib/validation";
-import { isYearInCalendar, yearRangeMessage } from "@/lib/year";
+import { calendarForYear, isYearInCalendar, yearRangeMessage, type YearCalendar } from "@/lib/year";
 
 export class CarEngineNotFoundError extends Error {}
 export class CarEngineHasFitmentProfileLinksError extends Error {}
@@ -24,15 +24,29 @@ async function assertYearsMatchModelCalendar(
 ) {
   const model = await prisma.carModel.findUnique({
     where: { id: carModelId },
-    select: { yearCalendar: true },
+    select: { yearCalendar: true, engines: { select: { yearStart: true } } },
   });
   if (!model) {
     throw new CarEngineNotFoundError(`Car model "${carModelId}" was not found`);
   }
 
+  // A handful of models genuinely carry both calendars: Accent is sold here as
+  // a locally assembled 1396-1397 beside an imported 2015-2016, and the two are
+  // types of one car, not two cars. `yearCalendar` records the majority so the
+  // form can label its fields, but rejecting the minority would make those
+  // types uneditable. So a second calendar is accepted once the model already
+  // has a type using it — an established fact about this car, not a claim the
+  // request gets to make. Everywhere else the check is unchanged, and that is
+  // what still catches a Gregorian year typed into a Jalali-only car.
+  const established = new Set<YearCalendar>([model.yearCalendar]);
+  for (const engine of model.engines) {
+    const calendar = calendarForYear(engine.yearStart);
+    if (calendar !== null) established.add(calendar);
+  }
+
   for (const year of [years.yearStart, years.yearEnd]) {
     if (year === undefined || year === null) continue;
-    if (!isYearInCalendar(year, model.yearCalendar)) {
+    if (![...established].some((calendar) => isYearInCalendar(year, calendar))) {
       throw new CarEngineYearCalendarError(yearRangeMessage(model.yearCalendar));
     }
   }

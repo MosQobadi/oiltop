@@ -31,7 +31,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "../lib/db";
 import { findExactModel, matchKey, parseYearSpanFromName } from "../lib/enrich";
-import { IMPORTED_YEAR_CALENDAR, IMPORTED_YEAR_START, toLatinDigits } from "../lib/import";
+import { IMPORTED_YEAR_START, toLatinDigits } from "../lib/import";
 import { parseEnrichmentFile, type EnrichmentModel } from "../lib/validation/enrichment";
 
 const SOURCE_PREFIX = "oil-city:";
@@ -77,19 +77,33 @@ class DryRunRollback extends Error {}
 async function main() {
   const { dryRun } = parseArgs(process.argv.slice(2));
 
-  const models = await prisma.carModel.findMany({
+  // Keyed on the TYPE, not the model. `scripts/regroup-cars.ts` moved each
+  // source page's ref onto the CarEngine it describes and cleared it from the
+  // model, because one model now holds many source pages — so a model-scoped
+  // query here would match nothing at all. The year text moved with it: what
+  // used to be the model name "توسان 2011 تا 2015" is now the model "توسان"
+  // and the type "2011 تا 2015".
+  const types = await prisma.carEngine.findMany({
     where: { sourceRef: { startsWith: SOURCE_PREFIX } },
     select: {
       id: true,
-      nameFa: true,
-      yearCalendar: true,
-      carBrand: { select: { nameFa: true } },
-      engines: { select: { id: true, yearStart: true, yearEnd: true } },
+      labelFa: true,
+      yearStart: true,
+      yearEnd: true,
+      carModel: {
+        select: {
+          id: true,
+          nameFa: true,
+          carBrand: { select: { nameFa: true } },
+          engines: { select: { yearStart: true, yearEnd: true } },
+        },
+      },
     },
   });
 
   console.log(
-    `${models.length} imported car models${dryRun ? " — DRY RUN, nothing will be written" : ""}\n`,
+    `${types.length} imported car types${dryRun ? " — DRY RUN, nothing will be written" : ""}
+`,
   );
 
   const hamrah = await loadHamrahModels();
@@ -99,20 +113,26 @@ async function main() {
   const ambiguous: string[] = [];
   const noYears: string[] = [];
   const alreadySet: string[] = [];
-  const oddShape: string[] = [];
 
   try {
     await prisma.$transaction(async (tx) => {
-      for (const model of models) {
-        const label = `${model.carBrand.nameFa} ${model.nameFa}`;
-        // The car's own name first — free, and already proven on 272 models.
-        // hamrah-mechanic is the fallback for the rest, and only ever on an
-        // exact name match.
-        let span = parseYearSpanFromName(model.nameFa, toLatinDigits);
+      for (const type of types) {
+        const model = type.carModel;
+        const label = `${model.carBrand.nameFa} ${model.nameFa} ${type.labelFa}`.trim();
+
+        // The type's own name first — free, and already proven on 272 rows.
+        // hamrah-mechanic is the fallback, and only on an exact name match.
+        let span = parseYearSpanFromName(type.labelFa, toLatinDigits);
         let viaHamrah = false;
 
         if (span === null && hamrah.length > 0) {
-          const outcome = findExactModel(matchKey(model.carBrand.nameFa, model.nameFa), hamrah);
+          // Joined back together for matching, because hamrah titles carry the
+          // maker and the whole car in one string — "پژو 405 SLX" is our brand
+          // plus model plus type.
+          const outcome = findExactModel(
+            matchKey(model.carBrand.nameFa, model.nameFa, type.labelFa),
+            hamrah,
+          );
           if (outcome.kind === "matched") {
             span = {
               yearStart: outcome.model.yearStart,
@@ -130,31 +150,30 @@ async function main() {
           continue;
         }
 
-        // The importer synthesises exactly one engine per model. More than one,
-        // or none, means a human has been here — the same reasoning the importer
-        // itself uses before it stops touching a model's engines.
-        if (model.engines.length !== 1) {
-          oddShape.push(`${label} — ${model.engines.length} types`);
-          continue;
-        }
-
-        const engine = model.engines[0];
-        const isUntouched =
-          engine.yearStart === IMPORTED_YEAR_START &&
-          engine.yearEnd === null &&
-          model.yearCalendar === IMPORTED_YEAR_CALENDAR;
-
+        // Never overwrite a span somebody narrowed by hand. The import leaves a
+        // known placeholder; anything else has been worked on.
+        const isUntouched = type.yearStart === IMPORTED_YEAR_START && type.yearEnd === null;
         if (!isUntouched) {
-          alreadySet.push(`${label} — ${engine.yearStart}–${engine.yearEnd ?? "present"}`);
+          alreadySet.push(`${label} — ${type.yearStart}–${type.yearEnd ?? "present"}`);
           continue;
         }
 
-        await tx.carModel.update({
-          where: { id: model.id },
-          data: { yearCalendar: span.yearCalendar },
-        });
+        // The model states a calendar so the admin form can label its year
+        // fields. It is only set from here when the model has nothing else to
+        // go on — every one of its types is still on the placeholder. Once one
+        // real span exists, that is the model's answer and this must not
+        // silently flip it; `regroup-cars.ts` chose it by majority.
+        const modelHasRealSpan = model.engines.some(
+          (engine) => !(engine.yearStart === IMPORTED_YEAR_START && engine.yearEnd === null),
+        );
+        if (!modelHasRealSpan) {
+          await tx.carModel.update({
+            where: { id: model.id },
+            data: { yearCalendar: span.yearCalendar },
+          });
+        }
         await tx.carEngine.update({
-          where: { id: engine.id },
+          where: { id: type.id },
           data: { yearStart: span.yearStart, yearEnd: span.yearEnd },
         });
         const line = `${label} → ${span.yearStart}–${span.yearEnd} ${span.yearCalendar}`;
@@ -180,7 +199,6 @@ async function main() {
   // same trace. Either way the span is no longer the import's placeholder, and
   // re-deriving it from the name would undo whatever narrowed it.
   report("Left alone — already has a real span", alreadySet);
-  report("Left alone — not one imported type", oddShape);
   console.log(
     `\n  No year found by either provider (${noYears.length}) — the car keeps the` +
       ` import's wide placeholder until somebody sets a span by hand.`,
@@ -189,7 +207,7 @@ async function main() {
   console.log(
     `\nSummary: ${updated.length} from names, ${fromHamrah.length} from hamrah-mechanic, ` +
       `${alreadySet.length} already set, ${ambiguous.length} ambiguous, ` +
-      `${oddShape.length} odd shape, ${noYears.length} still without years.`,
+      `${noYears.length} still without years.`,
   );
   if (dryRun) console.log("DRY RUN — the transaction above was rolled back.");
 }

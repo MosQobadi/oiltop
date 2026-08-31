@@ -75,6 +75,7 @@ import {
   UNCATEGORISED_CATEGORY_KEY,
   UNKNOWN_BRAND,
 } from "../lib/import";
+import { groupKey, resolveTypeLabel, splitCarName } from "../lib/cars/regroup";
 
 // A batch of a few hundred records is one transaction, and the default 5s is
 // not enough for that over a network. maxWait covers a busy connection pool.
@@ -909,44 +910,44 @@ async function findProductIdBySourceRef(ctx: Ctx, sourceRef: string): Promise<st
 // Cars
 // ---------------------------------------------------------------------------
 
+// One source page is one TYPE, not one model.
+//
+// oil-city bakes the whole car identity into a single name — trim, gearbox,
+// engine and years all in "i20 مدل 2016-2017 و کرمان موتور" — so their "model"
+// is our CarEngine and the model a customer picks is the nameplate inside it.
+// `lib/cars/regroup.ts` does the splitting; this function writes the two rows.
+//
+// **This is why `sourceRef` moved to CarEngine.** The key below is unchanged
+// from when it identified a CarModel, which is what lets `regroup-cars.ts` hand
+// its rows over: it moved each model's ref onto that model's engine, so the
+// first run after a regrouping matches every type it already created instead of
+// re-creating 806 flat models and undoing the work.
 async function importCar(ctx: Ctx, car: ScrapeCar) {
   const carBrandId = await resolveCarBrandId(ctx, car);
   if (carBrandId === null) return;
 
-  // The engine has no sourceRef of its own, so the model's stands in for it
-  // wherever one is needed — reporting included.
-  const modelRef = sourceRefFor(ctx.source, "car-model", car.brandNameFa, car.modelNameFa);
-  const model = await upsertCarModel(ctx, car, carBrandId, modelRef);
-  if (model === null) return;
+  const typeRef = sourceRefFor(ctx.source, "car-model", car.brandNameFa, car.modelNameFa);
+  const { base, type } = splitCarName(car.brandNameFa, car.modelNameFa);
 
-  // An adopted model is a hand-entered car: it has its own engines, entered by
-  // someone who knew the years and the fuel type, and a synthesised 2000-onward
-  // engine next to them would be noise at best. Its fitment is left alone for
-  // the same reason — attaching an imported profile to an engine somebody
-  // curated is exactly the overwrite this importer refuses to do.
-  if (!model.owned) {
-    ctx.report.record(ctx.counts, "carEngines", "skipped", `${modelRef}#engine`);
-    ctx.report.note(`car "${car.modelNameFa}": existing model adopted, its engines left alone`);
-    skipFitment(ctx, car, modelRef);
-    return;
-  }
+  const carModelId = await upsertCarModel(ctx, car, carBrandId, base, typeRef);
+  if (carModelId === null) return;
 
-  const carEngineId = await upsertCarEngine(ctx, car, model.id, modelRef);
-  // No engine means nothing to hang a recommendation on. Why is already in the
+  const carEngineId = await upsertCarEngine(ctx, car, carModelId, type, typeRef);
+  // No type means nothing to hang a recommendation on. Why is already in the
   // report — `upsertCarEngine` said so on its way out.
   if (carEngineId === null) {
-    skipFitment(ctx, car, modelRef);
+    skipFitment(ctx, car, typeRef);
     return;
   }
 
-  await importCarFitment(ctx, car, carEngineId, modelRef);
+  await importCarFitment(ctx, car, carEngineId, typeRef);
 }
 
 // Counted, not just noted, so a file's own numbers add up: 40 cars in, 38
 // profiles and 2 skipped.
-function skipFitment(ctx: Ctx, car: ScrapeCar, modelRef: string) {
+function skipFitment(ctx: Ctx, car: ScrapeCar, typeRef: string) {
   if (car.sections.length === 0) return;
-  ctx.report.record(ctx.counts, "fitmentProfiles", "skipped", `${modelRef}#fitment`);
+  ctx.report.record(ctx.counts, "fitmentProfiles", "skipped", `${typeRef}#fitment`);
 }
 
 async function resolveCarBrandId(ctx: Ctx, car: ScrapeCar): Promise<string | null> {
@@ -1011,42 +1012,42 @@ async function upsertCarBrand(ctx: Ctx, car: ScrapeCar, name: string): Promise<s
   return created.id;
 }
 
+// The model a customer picks, found by NAME rather than by `sourceRef`.
+//
+// Many source pages resolve to one model — the six Fonix rows that all say
+// "تیگو 8" are one car with three types — so the model cannot be keyed on any
+// single page. The name is the identity, and the row is never renamed once it
+// exists: after a regrouping it holds the folded name, and a curated model may
+// have been renamed by hand. The importer only ever creates a missing one.
 async function upsertCarModel(
   ctx: Ctx,
   car: ScrapeCar,
   carBrandId: string,
-  sourceRef: string,
-): Promise<{ id: string; owned: boolean } | null> {
-  const name = truncate(car.modelNameFa.replace(/\s+/g, " ").trim(), NAME_MAX);
-
-  const owned = await ctx.tx.carModel.findUnique({
-    where: { sourceRef },
-    select: { id: true, nameEn: true, nameFa: true },
-  });
-  if (owned) {
-    const changes = changedFields(owned, { nameEn: name, nameFa: name });
-    if (Object.keys(changes).length === 0) {
-      ctx.report.record(ctx.counts, "carModels", "unchanged", sourceRef);
-    } else {
-      await ctx.tx.carModel.update({ where: { id: owned.id }, data: changes });
-      ctx.report.record(ctx.counts, "carModels", "updated", sourceRef);
-    }
-    return { id: owned.id, owned: true };
+  base: string,
+  typeRef: string,
+): Promise<string | null> {
+  const name = truncate(base.replace(/\s+/g, " ").trim(), NAME_MAX);
+  if (name === "") {
+    ctx.report.record(ctx.counts, "carModels", "skipped", typeRef);
+    ctx.report.note(`car "${car.modelNameFa}": no model name could be read from it, skipped`);
+    return null;
   }
 
-  const adopted = await ctx.tx.carModel.findFirst({
-    where: { carBrandId, nameFa: name },
-    select: { id: true },
+  // Matched on the normalised name, so a ZWNJ or an Arabic yeh does not split
+  // one car into two models the way it would with a raw string compare.
+  const siblings = await ctx.tx.carModel.findMany({
+    where: { carBrandId },
+    select: { id: true, nameFa: true },
   });
-  if (adopted) {
-    ctx.report.record(ctx.counts, "carModels", "unchanged", sourceRef);
-    ctx.report.note(`car "${name}": linked to an existing model, left untouched`);
-    return { id: adopted.id, owned: false };
+  const existing = siblings.find((model) => groupKey(model.nameFa) === groupKey(name));
+  if (existing) {
+    ctx.report.record(ctx.counts, "carModels", "unchanged", typeRef);
+    return existing.id;
   }
 
   const slug = await resolveSlug({
     sourceSlug: car.modelSourceSlug,
-    sourceRef,
+    sourceRef: typeRef,
     prefix: "car-model",
     // Model slugs are unique per brand, not globally — two brands may both have
     // a "1500".
@@ -1057,43 +1058,50 @@ async function upsertCarModel(
       })) !== null,
   });
   if (slug === null) {
-    ctx.report.record(ctx.counts, "carModels", "skipped", sourceRef);
+    ctx.report.record(ctx.counts, "carModels", "skipped", typeRef);
     ctx.report.note(`car "${name}": no free slug, skipped`);
     return null;
   }
 
   const created = await ctx.tx.carModel.create({
     data: {
-      sourceRef,
+      // No sourceRef: the model is a grouping of source pages, not one of them.
+      // The key lives on the type — see the sourceRef comment on CarEngine.
       carBrandId,
       slug,
       nameEn: name,
       nameFa: name,
       status: "INACTIVE",
-      // Pairs with the synthesised engine's IMPORTED_YEAR_START below — the
+      // Pairs with the synthesised type's IMPORTED_YEAR_START below — the
       // placeholder span is Gregorian, so the model that holds it says so.
       yearCalendar: IMPORTED_YEAR_CALENDAR,
     },
     select: { id: true },
   });
-  ctx.report.record(ctx.counts, "carModels", "created", sourceRef);
-  return { id: created.id, owned: true };
+  ctx.report.record(ctx.counts, "carModels", "created", typeRef);
+  return created.id;
 }
 
-// One synthesised engine per imported model (mismatch 3.1: the source has no
-// engines and no years). It has no sourceRef of its own — CarEngine never got
-// one — so it is identified as "the only engine of a model we own". A model
-// that has grown a second engine has been worked on by hand, and the importer
-// stops touching its engines rather than guessing which one is its own.
+// One TYPE per source page, keyed on that page's `sourceRef`.
 //
-// Returns the engine the car's fitment profile should attach to, or null where
-// there is none to attach to — both of the cases below that decline to write an
-// engine also decline to guess which existing engine the page is about.
+// This used to identify its row as "the only engine of a model we own", because
+// CarEngine had no `sourceRef` and the import produced exactly one engine per
+// model. Both halves of that are gone: a model now holds every type of the car
+// — تیگو 8 holds پرو, پرو مکس and کلاسیک — so "the only engine" identifies
+// nothing, and the type carries the key instead.
+//
+// A row without a `sourceRef` is one somebody entered by hand and is never
+// written to, which is the same rule as everywhere else in this file: the
+// seeded Pars keeps its "۱.۸ لیتر بنزینی XU7" no matter how often this runs.
+//
+// Returns the type the car's fitment profile should attach to, or null when
+// there is none to attach to.
 async function upsertCarEngine(
   ctx: Ctx,
   car: ScrapeCar,
   carModelId: string,
-  modelRef: string,
+  type: string | null,
+  typeRef: string,
 ): Promise<string | null> {
   // An unstated fuel type means petrol. Iran's car market runs on petrol; diesel
   // is a later concern and dual-fuel conversions are not what a model name is
@@ -1114,34 +1122,46 @@ async function upsertCarEngine(
     ctx.report.countUnmappedFuelWording(car.modelDescriptorText ?? car.modelNameFa);
   }
 
-  const labelFa = truncate(car.modelDescriptorText ?? car.modelNameFa, ENGINE_LABEL_MAX);
-  const engines = await ctx.tx.carEngine.findMany({
-    where: { carModelId },
-    select: { id: true, labelEn: true, labelFa: true, fuelType: true },
+  const existing = await ctx.tx.carEngine.findUnique({
+    where: { sourceRef: typeRef },
+    select: { id: true, carModelId: true, labelEn: true, labelFa: true, fuelType: true },
   });
 
-  if (engines.length > 1) {
-    ctx.report.record(ctx.counts, "carEngines", "skipped", `${modelRef}#engine`);
-    ctx.report.note(`car "${car.modelNameFa}": ${engines.length} engines already, left alone`);
-    return null;
-  }
+  // The name the source gives this version, with the model name taken off the
+  // front — "پرو مکس", not "فونیکس تیگو 8 پرو مکس". A page that names no version
+  // is the only one of its car, so its type carries the model's own name and the
+  // finder never asks the customer to choose (see `resolveTypeLabel`).
+  const siblings = await ctx.tx.carEngine.count({
+    where: { carModelId, ...(existing ? { id: { not: existing.id } } : {}) },
+  });
+  const model = await ctx.tx.carModel.findUnique({
+    where: { id: carModelId },
+    select: { nameFa: true },
+  });
+  const label = truncate(
+    resolveTypeLabel(type, model?.nameFa ?? car.modelNameFa, siblings + 1),
+    ENGINE_LABEL_MAX,
+  );
 
-  const desired = { labelEn: labelFa, labelFa, fuelType };
+  const desired = { labelEn: label, labelFa: label, fuelType };
 
-  if (engines.length === 1) {
-    const changes = changedFields(engines[0], desired);
+  if (existing) {
+    // A regrouping may have moved this type under a different model; the type
+    // stays where it was put. Only what the source actually says is refreshed.
+    const changes = changedFields(existing, desired);
     if (Object.keys(changes).length === 0) {
-      ctx.report.record(ctx.counts, "carEngines", "unchanged", `${modelRef}#engine`);
+      ctx.report.record(ctx.counts, "carEngines", "unchanged", typeRef);
     } else {
-      await ctx.tx.carEngine.update({ where: { id: engines[0].id }, data: changes });
-      ctx.report.record(ctx.counts, "carEngines", "updated", `${modelRef}#engine`);
+      await ctx.tx.carEngine.update({ where: { id: existing.id }, data: changes });
+      ctx.report.record(ctx.counts, "carEngines", "updated", typeRef);
     }
-    return engines[0].id;
+    return existing.id;
   }
 
   const created = await ctx.tx.carEngine.create({
     data: {
       ...desired,
+      sourceRef: typeRef,
       carModelId,
       // Written once, never updated: narrowing this by hand is the point of
       // DECISION 1, and a re-run that widened it again would undo that work.
@@ -1151,7 +1171,7 @@ async function upsertCarEngine(
     },
     select: { id: true },
   });
-  ctx.report.record(ctx.counts, "carEngines", "created", `${modelRef}#engine`);
+  ctx.report.record(ctx.counts, "carEngines", "created", typeRef);
   return created.id;
 }
 
@@ -1178,10 +1198,10 @@ type ResolvedFitmentRow = {
   canonical: CanonicalFitmentRow;
 };
 
-async function importCarFitment(ctx: Ctx, car: ScrapeCar, carEngineId: string, modelRef: string) {
+async function importCarFitment(ctx: Ctx, car: ScrapeCar, carEngineId: string, typeRef: string) {
   const rows = await resolveFitmentRows(ctx, car);
   if (rows.length === 0) {
-    skipFitment(ctx, car, modelRef);
+    skipFitment(ctx, car, typeRef);
     return;
   }
 
@@ -1192,8 +1212,8 @@ async function importCarFitment(ctx: Ctx, car: ScrapeCar, carEngineId: string, m
   // Counted against the profile's *stored* label, not the one this car would
   // have given it — a profile minted by another car keeps that car's name, and
   // the summary has to match what an admin will find in the profile list.
-  ctx.report.coverProfile(hash, profile.label, modelRef);
-  await linkEngineToProfile(ctx, car, carEngineId, profile.id, modelRef);
+  ctx.report.coverProfile(hash, profile.label, typeRef);
+  await linkEngineToProfile(ctx, car, carEngineId, profile.id, typeRef);
 }
 
 async function resolveFitmentRows(ctx: Ctx, car: ScrapeCar): Promise<ResolvedFitmentRow[]> {
@@ -1331,7 +1351,7 @@ async function linkEngineToProfile(
   car: ScrapeCar,
   carEngineId: string,
   profileId: string,
-  modelRef: string,
+  typeRef: string,
 ) {
   const links = await ctx.tx.carEngineFitmentProfile.findMany({
     where: { carEngineId },
@@ -1354,12 +1374,12 @@ async function linkEngineToProfile(
   }
 
   if (links.some((link) => link.profileId === profileId)) {
-    ctx.report.record(ctx.counts, "fitmentLinks", "unchanged", `${modelRef}#fitment-link`);
+    ctx.report.record(ctx.counts, "fitmentLinks", "unchanged", `${typeRef}#fitment-link`);
     return;
   }
 
   await ctx.tx.carEngineFitmentProfile.create({ data: { carEngineId, profileId } });
-  ctx.report.record(ctx.counts, "fitmentLinks", "created", `${modelRef}#fitment-link`);
+  ctx.report.record(ctx.counts, "fitmentLinks", "created", `${typeRef}#fitment-link`);
 }
 
 // ---------------------------------------------------------------------------

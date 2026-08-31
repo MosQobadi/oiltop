@@ -26,10 +26,17 @@ export interface ParsedYearSpan {
   yearCalendar: YearCalendar;
 }
 
-// Two 3-or-4 digit runs joined by a dash — ASCII hyphen, en dash, or the Persian
-// forms that turn up in copy-pasted names. Digits are normalised to ASCII by the
-// caller before this runs.
-const SPAN_PATTERN = /(\d{4})\s*[-–—]\s*(\d{4})/;
+// Two 4-digit runs joined by a dash — ASCII hyphen, en dash, or the Persian
+// forms that turn up in copy-pasted names — or by the Persian word "تا"
+// ("from X to Y"), which the source writes just as often: "توسان 2011 تا 2015"
+// and "سوناتا ۲۰۰۶ تا ۲۰۱۱" sit beside "هایلوکس 2005-2013" in the same catalog.
+// Digits are normalised to ASCII by the caller before this runs, so the Persian
+// numerals in the second example arrive here as 2006 and 2011.
+//
+// "تا" is as much a span marker as a dash and carries the same guarantee: it
+// joins two numbers, which is what makes a year safe to read where a lone
+// number is not. A displacement is never written "1600 تا 2000".
+const SPAN_PATTERN = /(\d{4})\s*(?:[-–—]|تا)\s*(\d{4})/;
 
 /**
  * The year span a model name states, or null when it states none this can trust.
