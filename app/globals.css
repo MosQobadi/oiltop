@@ -29,3 +29,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/* Tailwind v4's preflight sets `cursor: default` on buttons, which reads as
+   "not clickable" on the storefront's Add to cart / ± / Notify me controls.
+   Every button in this app is a click target, so put the pointer back once
+   here rather than sprinkling `cursor-pointer` on each one. Disabled buttons
+   keep the arrow — that's the one case where the default is telling the
+   truth. */
+button:not(:disabled):not([aria-disabled="true"]) {
+  cursor: pointer;
+}

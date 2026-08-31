@@ -82,10 +82,12 @@ export type ImageBoxSize = "default" | "tall";
 // Taller than a card with its text underneath would need to be, and that is the
 // point. The words sit on the picture, so the picture has to be tall enough to
 // still show a product above them — at 380px the name landed across a bottle's
-// label. This is the overlay's standing cost, paid in height.
+// label. This is the overlay's standing cost, paid in height; 400px is the
+// tightest setting that still clears a bottle, so don't shave it further
+// without re-checking the artwork.
 const CARD_MIN_HEIGHT: Record<ImageBoxSize, string> = {
-  default: "min-h-[440px]",
-  tall: "min-h-[490px]",
+  default: "min-h-[400px]",
+  tall: "min-h-[444px]",
 };
 
 const CARD_CLASS =
@@ -250,7 +252,7 @@ export function ProductCard({
               type="button"
               onClick={() => setNotifyOpen((open) => !open)}
               aria-expanded={notifyOpen}
-              className="focus-visible:ring-accent relative z-10 min-h-12 w-full rounded-full bg-white/20 px-3 text-[13.5px] font-semibold text-white ring-1 ring-white/30 backdrop-blur-sm transition-colors hover:bg-white/30 focus-visible:ring-2 focus-visible:outline-none"
+              className="focus-visible:ring-accent relative z-10 min-h-11 w-full rounded-full bg-white/20 px-3 text-[13.5px] font-semibold text-white ring-1 ring-white/30 backdrop-blur-sm transition-colors hover:bg-white/30 focus-visible:ring-2 focus-visible:outline-none"
             >
               {pickLocale(locale, "Notify me", "خبرم کن")}
             </button>
@@ -279,7 +281,7 @@ export function ProductCard({
             // White, the way the reference card does it. The accent is spoken
             // for by the discount chip above, and a solid white pill is the
             // highest-contrast thing available over a scrim.
-            className="focus-visible:ring-accent relative z-10 min-h-12 w-full rounded-full bg-white px-3 text-[13.5px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:ring-2 focus-visible:outline-none"
+            className="focus-visible:ring-accent relative z-10 min-h-11 w-full rounded-full bg-white px-3 text-[13.5px] font-semibold text-neutral-900 transition-colors hover:bg-neutral-100 focus-visible:ring-2 focus-visible:outline-none"
           >
             {pickLocale(locale, "Add to cart", "افزودن به سبد")}
           </button>
@@ -338,7 +340,7 @@ function CartQuantityControl({
   const removes = quantity <= 1;
 
   return (
-    <div className="relative z-10 flex h-12 w-full items-center justify-between rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
+    <div className="relative z-10 flex h-11 w-full items-center justify-between rounded-full bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
       <button
         type="button"
         onClick={() => onChange(quantity - 1)}
@@ -371,7 +373,7 @@ function CartQuantityControl({
 }
 
 const STEP_BUTTON_CLASS =
-  "focus-visible:ring-accent flex size-12 shrink-0 items-center justify-center rounded-full text-[18px] leading-none text-white transition-colors hover:bg-white/15 focus-visible:ring-2 focus-visible:outline-none disabled:text-white/40 disabled:hover:bg-transparent";
+  "focus-visible:ring-accent flex size-11 shrink-0 items-center justify-center rounded-full text-[18px] leading-none text-white transition-colors hover:bg-white/15 focus-visible:ring-2 focus-visible:outline-none disabled:text-white/40 disabled:hover:bg-transparent";
 
 // Same card, same proportions, neutral blocks, and deliberately no pulse — the
 // prototype's handoff notes call for a still skeleton so a grid of them doesn't
@@ -392,7 +394,7 @@ export function ProductCardSkeleton() {
           <span className="block h-6 w-20 rounded-full bg-neutral-200" />
           <span className="block h-6 w-24 rounded-full bg-neutral-200" />
         </div>
-        <span className="block h-12 w-full rounded-full bg-neutral-200" />
+        <span className="block h-11 w-full rounded-full bg-neutral-200" />
       </div>
     </div>
   );
