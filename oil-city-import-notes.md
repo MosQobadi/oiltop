@@ -81,8 +81,9 @@ model. `labelFa` can come from the model's own descriptive text where it exists
 
 Their car pages recommend: engine oil, filters, **spare parts, automatic
 transmission oil, shock oil, coolant/antifreeze, brake oil, additives, air
-freshener**. We have exactly five categories: `engine-oil`, `oil-filter`,
-`air-filter`, `cabin-filter`, `fuel-filter`.
+freshener**. We had exactly five categories at the time of the import:
+`engine-oil`, `oil-filter`, `air-filter`, `cabin-filter`, `fuel-filter` — see
+the second answer to DECISION 2 below for the thirteen added since.
 
 > **DECISION 2 — drop the rows we have no category for, or add categories?**
 > `Category.partType` already has `ACCESSORY` and `OTHER`, so adding coolant /
@@ -98,6 +99,31 @@ freshener**. We have exactly five categories: `engine-oil`, `oil-filter`,
 > category rather than one per source wording because `Category` has no
 > `sourceRef` (A.2 gave it to Product/Brand/CarBrand/CarModel only), so
 > auto-created categories would have no idempotency key.
+>
+> **Answered again, 2026-08-31, with the counts in hand.** The holding shelf was
+> the wrong answer to leave standing: 1,749 of 3,469 products and 55,163 of
+> 71,345 fitment items ended up on it, so a customer picking a Peugeot 206 got
+> 126 product cards, 82 of them under the heading "Uncategorised (imported)".
+> Thirteen real categories now exist — `gearbox-oil` (a sixth primary category,
+> alongside engine oil and the four filters), plus `gearbox-filter`,
+> `brake-pads`, `brake-fluid`, `coolant`, `spark-plugs`, `suspension`,
+> `wiper-blades`, `battery`, `differential-oil`, `hydraulic-oil`, `grease`,
+> `additives` and `air-freshener`. `lib/import.ts`'s `SOURCE_CATEGORY_REFILE`
+> maps oil-city's own taxonomy label onto ours and
+> `scripts/refile-imported-products.ts` applies it, moving 1,573 products and
+> 52,499 items off the shelf.
+>
+> **The shelf still exists and still has 176 products on it**, deliberately:
+> motorcycle oil (92), heavy-truck filters (44), radiators (21) and a tail of
+> one-offs. None of those is a car part this shop recommends, and each needs a
+> human decision rather than a mapping entry. The storefront's fitment results
+> no longer render the shelf as a section at all (`partitionFitmentGroups`), so
+> nothing customer-facing depends on emptying it further.
+>
+> **Not wired into the importer.** A fitment item's category slug is an input to
+> `fitmentHash`, the idempotency key for all 802 imported profiles, so
+> recategorising during import would mint a duplicate profile for every car on
+> the next run. Refile is a separate, idempotent pass to run _after_ an import.
 
 ### 3.3 No OEM part numbers, anywhere
 

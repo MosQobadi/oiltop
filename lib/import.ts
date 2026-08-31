@@ -352,6 +352,273 @@ export const UNCATEGORISED_CATEGORY = {
   status: "INACTIVE",
 } as const;
 
+// ---------------------------------------------------------------------------
+// Refiling the holding shelf
+// ---------------------------------------------------------------------------
+
+// DECISION 2, answered properly now that the counts are in. The holding shelf
+// above was always meant to be temporary: 1,749 of 3,469 imported products
+// landed on it, and a car page that recommends all of them at once is what a
+// customer actually saw. The tables below are what empties it — a category per
+// wording after all, but only for the wordings that earned one, written by hand
+// with bilingual names rather than minted from a Persian slug.
+//
+// The map is keyed on `sourceCategoryText` — oil-city's OWN taxonomy label,
+// exactly as `parseProductPage` recorded it from the breadcrumb — not on a
+// reading of the product's name. That is the same discipline
+// `product-page.ts`'s slug match already uses; it is a lookup table, not a
+// guess, and a wording it doesn't know stays on the shelf rather than being
+// approximated.
+//
+// **Not wired into `scripts/import.ts`.** A fitment item's category is part of
+// `fitmentHash` (see `CanonicalFitmentRow`), so recategorising during import
+// would change every hash and mint a duplicate profile for all 802 cars on the
+// next run. Refiling is therefore a separate pass —
+// `scripts/refile-imported-products.ts` — that runs after an import and is
+// idempotent, which is also what lets these categories be corrected by hand
+// without the next import undoing the correction.
+
+export interface RefileCategory {
+  slug: string;
+  nameEn: string;
+  nameFa: string;
+  shortDescriptionEn: string;
+  shortDescriptionFa: string;
+  partType: "ENGINE_OIL" | "FILTER" | "ACCESSORY" | "OTHER";
+  sortOrder: number;
+}
+
+// Every category the refile can file into, primary and secondary alike, with
+// the `sortOrder` the storefront's nav, browse and filter rail read. The five
+// that already exist are listed too: this is the one place that states the
+// running order, so leaving them out would mean maintaining it twice.
+//
+// `partType` stays what the enum is for — how a category *behaves*, not what it
+// contains. `gearbox-oil` is ENGINE_OIL because it is an oil that may have a
+// climate variant and sorts with the oils; `gearbox-filter` is a FILTER for the
+// same reason. Everything else behaves like neither and is OTHER, except the
+// two that are genuinely bought as extras rather than as maintenance.
+export const REFILE_CATEGORIES: RefileCategory[] = [
+  {
+    slug: "engine-oil",
+    nameEn: "Engine Oil",
+    nameFa: "روغن موتور",
+    shortDescriptionEn: "Engine oil for passenger cars.",
+    shortDescriptionFa: "روغن موتور خودروهای سواری.",
+    partType: "ENGINE_OIL",
+    sortOrder: 1,
+  },
+  {
+    slug: "gearbox-oil",
+    nameEn: "Gearbox Oil",
+    nameFa: "روغن گیربکس",
+    shortDescriptionEn: "Automatic and manual transmission oil.",
+    shortDescriptionFa: "روغن گیربکس اتوماتیک و دستی.",
+    partType: "ENGINE_OIL",
+    sortOrder: 2,
+  },
+  {
+    slug: "oil-filter",
+    nameEn: "Oil Filter",
+    nameFa: "فیلتر روغن",
+    shortDescriptionEn: "Engine oil filters.",
+    shortDescriptionFa: "فیلتر روغن موتور.",
+    partType: "FILTER",
+    sortOrder: 3,
+  },
+  {
+    slug: "cabin-filter",
+    nameEn: "Cabin Filter",
+    nameFa: "فیلتر کابین",
+    shortDescriptionEn: "Cabin air filters.",
+    shortDescriptionFa: "فیلتر هوای کابین.",
+    partType: "FILTER",
+    sortOrder: 4,
+  },
+  {
+    slug: "air-filter",
+    nameEn: "Air Filter",
+    nameFa: "فیلتر هوا",
+    shortDescriptionEn: "Engine air filters.",
+    shortDescriptionFa: "فیلتر هوای موتور.",
+    partType: "FILTER",
+    sortOrder: 5,
+  },
+  {
+    slug: "fuel-filter",
+    nameEn: "Fuel Filter",
+    nameFa: "فیلتر سوخت",
+    shortDescriptionEn: "Petrol and diesel fuel filters.",
+    shortDescriptionFa: "فیلتر بنزین و گازوییل.",
+    partType: "FILTER",
+    sortOrder: 6,
+  },
+
+  // --- Secondary: real categories, shown after "Show more" on a car's results.
+  {
+    slug: "gearbox-filter",
+    nameEn: "Gearbox Filter",
+    nameFa: "فیلتر گیربکس",
+    shortDescriptionEn: "Automatic transmission filters.",
+    shortDescriptionFa: "فیلتر گیربکس اتوماتیک.",
+    partType: "FILTER",
+    sortOrder: 10,
+  },
+  {
+    slug: "brake-pads",
+    nameEn: "Brake Pads",
+    nameFa: "لنت ترمز",
+    shortDescriptionEn: "Front and rear brake pads.",
+    shortDescriptionFa: "لنت ترمز جلو و عقب.",
+    partType: "OTHER",
+    sortOrder: 11,
+  },
+  {
+    slug: "brake-fluid",
+    nameEn: "Brake Fluid",
+    nameFa: "روغن ترمز",
+    shortDescriptionEn: "Brake and clutch hydraulic fluid.",
+    shortDescriptionFa: "روغن ترمز و کلاچ.",
+    partType: "OTHER",
+    sortOrder: 12,
+  },
+  {
+    slug: "coolant",
+    nameEn: "Coolant & Antifreeze",
+    nameFa: "کولانت و ضدیخ",
+    shortDescriptionEn: "Antifreeze, coolant and summer coolant.",
+    shortDescriptionFa: "ضدیخ، کولانت و ضدجوش.",
+    partType: "OTHER",
+    sortOrder: 13,
+  },
+  {
+    slug: "spark-plugs",
+    nameEn: "Spark Plugs & Coils",
+    nameFa: "شمع و کویل",
+    shortDescriptionEn: "Spark plugs and ignition coils.",
+    shortDescriptionFa: "شمع و کویل جرقه.",
+    partType: "OTHER",
+    sortOrder: 14,
+  },
+  {
+    slug: "suspension",
+    nameEn: "Suspension & Steering",
+    nameFa: "جلوبندی",
+    shortDescriptionEn: "Engine mounts, ball joints and front-end parts.",
+    shortDescriptionFa: "دسته موتور، سیبک و قطعات جلوبندی.",
+    partType: "OTHER",
+    sortOrder: 15,
+  },
+  {
+    slug: "wiper-blades",
+    nameEn: "Wiper Blades",
+    nameFa: "تیغه برف‌پاک‌کن",
+    shortDescriptionEn: "Front and rear wiper blades.",
+    shortDescriptionFa: "تیغه برف‌پاک‌کن جلو و عقب.",
+    partType: "OTHER",
+    sortOrder: 16,
+  },
+  {
+    slug: "battery",
+    nameEn: "Battery",
+    nameFa: "باتری",
+    shortDescriptionEn: "Car batteries.",
+    shortDescriptionFa: "باتری خودرو.",
+    partType: "OTHER",
+    sortOrder: 17,
+  },
+  {
+    slug: "differential-oil",
+    nameEn: "Differential & Transfer Oil",
+    nameFa: "روغن دیفرانسیل و ترانسفر",
+    shortDescriptionEn: "Axle, differential and transfer case oil.",
+    shortDescriptionFa: "روغن دیفرانسیل، اکسل و ترانسفر.",
+    partType: "OTHER",
+    sortOrder: 18,
+  },
+  {
+    slug: "hydraulic-oil",
+    nameEn: "Hydraulic Oil",
+    nameFa: "روغن هیدرولیک",
+    shortDescriptionEn: "Power steering and hydraulic oil.",
+    shortDescriptionFa: "روغن هیدرولیک و فرمان.",
+    partType: "OTHER",
+    sortOrder: 19,
+  },
+  {
+    slug: "grease",
+    nameEn: "Grease",
+    nameFa: "گریس",
+    shortDescriptionEn: "Chassis and bearing grease.",
+    shortDescriptionFa: "گریس شاسی و بلبرینگ.",
+    partType: "OTHER",
+    sortOrder: 20,
+  },
+  {
+    slug: "additives",
+    nameEn: "Additives & Car Care",
+    nameFa: "مکمل و اکتان",
+    shortDescriptionEn: "Octane boosters, injector cleaners and washer fluid.",
+    shortDescriptionFa: "اکتان بوستر، شوینده انژکتور و شیشه‌شوی.",
+    partType: "ACCESSORY",
+    sortOrder: 21,
+  },
+  {
+    slug: "air-freshener",
+    nameEn: "Air Freshener",
+    nameFa: "خوشبوکننده خودرو",
+    shortDescriptionEn: "Cabin air fresheners.",
+    shortDescriptionFa: "خوشبوکننده داخل خودرو.",
+    partType: "ACCESSORY",
+    sortOrder: 22,
+  },
+];
+
+// oil-city's taxonomy label -> our slug. Absent on purpose, and staying on the
+// holding shelf until somebody decides otherwise:
+//
+//   روغن موتور سیکلت (92)     motorcycle oil — a different vehicle entirely
+//   فیلتر روغن/هوا/گازوییل سنگین  heavy-truck filters, not the car part
+//   خنک کن (21)               the radiator itself, not a fluid
+//   درپوش فیلتر روغن (7), فیلتر باتری (7), قطعات موتوری (3), روغن کمک فنر (1)
+//                             too few, and each is its own kind of thing
+//
+// Two source wordings deliberately share one target: the front and rear brake
+// pad shelves are one category here, as are automatic and manual gearbox oil,
+// because "which one fits my car" is answered by the product, not the shelf.
+export const SOURCE_CATEGORY_REFILE: Record<string, string> = {
+  "روغن گیربکس اتوماتیک": "gearbox-oil",
+  "روغن گیربکس دستی": "gearbox-oil",
+  "فیلتر گیربکس اتوماتیک": "gearbox-filter",
+  "لنت ترمز جلو": "brake-pads",
+  "لنت ترمز عقب": "brake-pads",
+  "روغن ترمز": "brake-fluid",
+  "کولانت، ضدیخ و ضدجوش": "coolant",
+  "شمع و کویل": "spark-plugs",
+  جلوبندی: "suspension",
+  "تیغه برف پاک کن": "wiper-blades",
+  باتری: "battery",
+  "روغن دیفرانسیل و ترانسفر": "differential-oil",
+  "روغن هیدرولیک": "hydraulic-oil",
+  // Their "industrial oil" shelf holds nothing but 20L HLP68 hydraulic oil.
+  "روغن صنعتی": "hydraulic-oil",
+  گریس: "grease",
+  "مکمل و اکتان": "additives",
+  "خوشبوکننده خودرو": "air-freshener",
+};
+
+// The source writes its taxonomy labels by hand, so a stray ZWNJ or an Arabic
+// yeh in one product's breadcrumb must not drop it back onto the shelf.
+const REFILE_BY_NORMALISED = new Map(
+  Object.entries(SOURCE_CATEGORY_REFILE).map(([label, slug]) => [normaliseForMatch(label), slug]),
+);
+
+/** The category slug a source taxonomy label refiles into, or null to leave it. */
+export function refileCategorySlug(sourceCategoryText: string | null): string | null {
+  if (sourceCategoryText === null) return null;
+  return REFILE_BY_NORMALISED.get(normaliseForMatch(sourceCategoryText)) ?? null;
+}
+
 // Product.brandId is required and `brandLabelFa` is nullable, so a product the
 // source printed no brand for still needs somewhere to hang. Same shape of
 // answer as the holding category, and equally visible: INACTIVE, and counted in
