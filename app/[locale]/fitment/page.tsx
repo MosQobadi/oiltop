@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/storefront/Breadcrumbs";
 import { FitmentCarCard } from "@/components/storefront/fitment/FitmentCarCard";
+import { OilGuidanceCard } from "@/components/storefront/fitment/OilGuidanceCard";
 import { FitmentResults } from "@/components/storefront/fitment/FitmentResults";
 import { FitmentWizard } from "@/components/storefront/fitment/FitmentWizard";
 import { FITMENT_PATH, navHref } from "@/components/storefront/nav-items";
 import { pickLocale, type Locale } from "@/lib/i18n";
-import { getActiveCarEngineContext, resolveFitmentForEngine } from "@/lib/services/fitment";
+import {
+  getActiveCarEngineContext,
+  getOilGuidanceForEngine,
+  resolveFitmentForEngine,
+} from "@/lib/services/fitment";
 import {
   FIT_CATEGORY_PARAM,
   FIT_PARAM,
@@ -91,7 +96,10 @@ export default async function FitmentPage({
     );
   }
 
-  const groups = await resolveFitmentForEngine(car.carEngine.id);
+  const [groups, oilGuidance] = await Promise.all([
+    resolveFitmentForEngine(car.carEngine.id),
+    getOilGuidanceForEngine(car.carEngine.id),
+  ]);
   const carName = formatCarName(locale, car);
 
   // The third state: "See all 44" on a section links back here with the car it
@@ -129,6 +137,12 @@ export default async function FitmentPage({
         changeHref={navHref(locale, FITMENT_PATH)}
         className="mt-5"
       />
+
+      {/* Above the products, and only on the full view: narrowed to one
+          category the customer is comparing filters, not choosing an oil. */}
+      {oilGuidance && !onlyCategory && (
+        <OilGuidanceCard locale={locale} guidance={oilGuidance} className="mt-4" />
+      )}
 
       {onlyCategory && (
         <p className="mt-6">

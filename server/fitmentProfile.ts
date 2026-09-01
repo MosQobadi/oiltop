@@ -133,6 +133,12 @@ export async function getFitmentProfileById(id: string) {
     id: profile.id,
     label: profile.label,
     internalNote: profile.internalNote,
+    oilViscosityStandard: profile.oilViscosityStandard,
+    oilViscosityHot: profile.oilViscosityHot,
+    oilViscosityCold: profile.oilViscosityCold,
+    oilApiGrades: profile.oilApiGrades,
+    oilGuideEn: profile.oilGuideEn,
+    oilGuideFa: profile.oilGuideFa,
     createdAt: profile.createdAt,
     updatedAt: profile.updatedAt,
     items: profile.items.map(serializeItem),
@@ -159,6 +165,22 @@ export async function getFitmentProfileById(id: string) {
 export async function updateFitmentProfile(id: string, input: FitmentProfileUpdateInput) {
   await ensureProfileExists(id);
   return prisma.fitmentProfile.update({ where: { id }, data: input });
+}
+
+/**
+ * The stored viscosity grades, for the PATCH route to merge under a partial
+ * body before validating. Null when the profile does not exist — the update
+ * below raises the proper 404, so this stays a lookup rather than a guard.
+ */
+export async function getFitmentProfileViscosity(id: string) {
+  return prisma.fitmentProfile.findUnique({
+    where: { id },
+    select: {
+      oilViscosityStandard: true,
+      oilViscosityHot: true,
+      oilViscosityCold: true,
+    },
+  });
 }
 
 export async function deleteFitmentProfile(id: string) {

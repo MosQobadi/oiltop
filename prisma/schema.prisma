@@ -492,6 +492,44 @@ model FitmentProfile {
   label        String
   internalNote String?
 
+  // ---------------------------------------------------------------------
+  // Engine-oil guidance — the "which oil, and why" block on the found-car
+  // card, above the products.
+  //
+  // It lives on the profile rather than on CarEngine because that is what the
+  // advice is about: one profile already covers every type that takes the same
+  // recommendation, so a shop writing it once for "i20 2016-2017" covers both
+  // of that car's types without re-entering it.
+  //
+  // **Authored, not derived.** oil-city publishes this block but leaves it
+  // mostly blank — 571 of 660 cars have the template with no viscosity in it,
+  // and 541 carry an identical seven-grade standards list (SJ and SL included,
+  // both obsolete since the 2000s) that says nothing about the car in front of
+  // it. Deriving grades from whichever oils we happen to stock would be worse:
+  // it would turn our inventory into a manufacturer's specification. So these
+  // are written by someone who knows the car, and empty means unknown.
+  // ---------------------------------------------------------------------
+
+  // SAE grades, one per condition — the same three conditions FitmentClimate
+  // names, so the card can sit next to the HOT/COLD product columns and read as
+  // one recommendation. Null means "not stated for this car", which is why the
+  // all-season one is not defaulted: a blank is a fact here.
+  oilViscosityStandard String?
+  oilViscosityHot      String?
+  oilViscosityCold     String?
+
+  // Acceptable API service categories, best first — ["SP", "SN PLUS", "SN"].
+  // A list rather than one value because more than one is genuinely acceptable,
+  // and a customer holding a bottle needs to know whether theirs is on it.
+  oilApiGrades String[]
+
+  // The prose a person would say over the counter: full synthetic for a healthy
+  // low-mileage engine, a heavier grade for one that burns a little oil. Shown
+  // to customers, so it is a bilingual pair like every other customer-facing
+  // text in the schema.
+  oilGuideEn String?
+  oilGuideFa String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

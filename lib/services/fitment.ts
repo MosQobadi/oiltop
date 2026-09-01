@@ -575,6 +575,72 @@ export async function resolveFitmentForEngine(
   );
 }
 
+/**
+ * The engine-oil guidance to print above a car's results, or null when nobody
+ * has written any for it.
+ *
+ * An engine can carry more than one profile, so the first one that actually has
+ * guidance wins — ordered by when it was attached, the same order
+ * `resolveFitmentForEngine` reads them in. Merging two profiles' advice would
+ * mean interleaving two people's recommendations into a third nobody wrote.
+ *
+ * Null is the common answer today and the page has to handle it as a normal
+ * state: 571 of 660 imported cars have no grades because the source published
+ * the block empty. A car with no guidance simply shows its products.
+ */
+export interface OilGuidance {
+  viscosityStandard: string | null;
+  viscosityHot: string | null;
+  viscosityCold: string | null;
+  apiGrades: string[];
+  noteEn: string | null;
+  noteFa: string | null;
+}
+
+export async function getOilGuidanceForEngine(carEngineId: string): Promise<OilGuidance | null> {
+  const links = await prisma.carEngineFitmentProfile.findMany({
+    where: { carEngineId },
+    select: {
+      profile: {
+        select: {
+          oilViscosityStandard: true,
+          oilViscosityHot: true,
+          oilViscosityCold: true,
+          oilApiGrades: true,
+          oilGuideEn: true,
+          oilGuideFa: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  for (const { profile } of links) {
+    const guidance: OilGuidance = {
+      viscosityStandard: profile.oilViscosityStandard,
+      viscosityHot: profile.oilViscosityHot,
+      viscosityCold: profile.oilViscosityCold,
+      apiGrades: profile.oilApiGrades,
+      noteEn: profile.oilGuideEn,
+      noteFa: profile.oilGuideFa,
+    };
+    if (hasOilGuidance(guidance)) return guidance;
+  }
+  return null;
+}
+
+/** Whether there is anything to render — an all-empty profile is not guidance. */
+export function hasOilGuidance(guidance: OilGuidance): boolean {
+  return (
+    guidance.viscosityStandard !== null ||
+    guidance.viscosityHot !== null ||
+    guidance.viscosityCold !== null ||
+    guidance.apiGrades.length > 0 ||
+    guidance.noteEn !== null ||
+    guidance.noteFa !== null
+  );
+}
+
 // --- Car content pages -----------------------------------------------------
 //
 // Everything below serves `/{locale}/cars/<brand>` and `/{locale}/cars/<brand>/<model>`

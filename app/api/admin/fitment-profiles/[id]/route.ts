@@ -6,6 +6,7 @@ import {
   FitmentProfileNotFoundError,
   deleteFitmentProfile,
   getFitmentProfileById,
+  getFitmentProfileViscosity,
   updateFitmentProfile,
 } from "@/server/fitmentProfile";
 
@@ -45,7 +46,24 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
 
   const { id } = await params;
   const body = await request.json().catch(() => null);
-  const parsed = fitmentProfileUpdateSchema.safeParse(body);
+
+  // The "cold grade must differ from the all-season grade" rule is cross-field,
+  // and a PATCH may send only one of them. Filling in what is already stored is
+  // what lets the rule see the state the profile will actually be in — the same
+  // approach the item route takes for the climate rule. Only for keys the body
+  // omitted, so an explicit null still clears.
+  let payload = body;
+  if (body !== null && typeof body === "object" && !Array.isArray(body)) {
+    const current = await getFitmentProfileViscosity(id);
+    if (current) {
+      payload = {
+        ...current,
+        ...(body as Record<string, unknown>),
+      };
+    }
+  }
+
+  const parsed = fitmentProfileUpdateSchema.safeParse(payload);
   if (!parsed.success) {
     return NextResponse.json(
       { success: false, error: parsed.error.issues[0]?.message ?? "Invalid request" },

@@ -4,11 +4,13 @@ import {
   combineYearSpans,
   expandYearRanges,
   groupFitmentItemsByCategory,
+  hasOilGuidance,
   parseMatchSpec,
   selectSharedProfiles,
   type FitmentCategorySummary,
   type FitmentItemWithRelations,
   type FitmentProductSummary,
+  type OilGuidance,
   type SpecMatches,
 } from "./fitment";
 
@@ -444,5 +446,35 @@ describe("selectSharedProfiles", () => {
 
   it("has nothing to state for a model with no attached profiles", () => {
     expect(selectSharedProfiles([], 2)).toEqual([]);
+  });
+});
+
+describe("hasOilGuidance", () => {
+  const empty: OilGuidance = {
+    viscosityStandard: null,
+    viscosityHot: null,
+    viscosityCold: null,
+    apiGrades: [],
+    noteEn: null,
+    noteFa: null,
+  };
+
+  // 571 of the 660 imported cars are exactly this: the source printed the block
+  // with every slot empty. The card must not render a heading over nothing.
+  it("treats an all-empty profile as no guidance", () => {
+    expect(hasOilGuidance(empty)).toBe(false);
+  });
+
+  it("counts a single grade as guidance", () => {
+    expect(hasOilGuidance({ ...empty, viscosityStandard: "5W-30" })).toBe(true);
+  });
+
+  it("counts standards on their own as guidance", () => {
+    expect(hasOilGuidance({ ...empty, apiGrades: ["SP"] })).toBe(true);
+  });
+
+  it("counts a note in either language as guidance", () => {
+    expect(hasOilGuidance({ ...empty, noteFa: "..." })).toBe(true);
+    expect(hasOilGuidance({ ...empty, noteEn: "..." })).toBe(true);
   });
 });

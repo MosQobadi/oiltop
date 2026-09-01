@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  fitmentProfileCreateSchema,
   fitmentProfileItemCreateSchema,
   fitmentProfileItemUpdateSchema,
+  fitmentProfileUpdateSchema,
   fitmentSpecMatchQuerySchema,
 } from "./fitmentProfile";
 
@@ -178,5 +180,82 @@ describe("fitmentSpecMatchQuerySchema", () => {
 
   it("requires a categoryId", () => {
     expect(fitmentSpecMatchQuerySchema.safeParse({ viscosity: "5W-30" }).success).toBe(false);
+  });
+});
+
+// The oil guidance block on the found-car card. Every rule below exists because
+// the imported spec notes actually contain the mistake it rejects.
+describe("fitment profile oil guidance", () => {
+  const base = { label: "Hyundai i20 2016-2017" };
+
+  it("accepts a car's authored guidance", () => {
+    const result = fitmentProfileCreateSchema.safeParse({
+      ...base,
+      oilViscosityStandard: "5W-30",
+      oilViscosityHot: "5W-40",
+      oilApiGrades: ["SP", "SN PLUS"],
+      oilGuideFa: "برای خودروهای سالم و کم‌کارکرد، فول‌سنتتیک بهترین انتخاب است.",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects SQ, which is not a published API category", () => {
+    const result = fitmentProfileCreateSchema.safeParse({ ...base, oilApiGrades: ["SP", "SQ"] });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toContain("SQ is not a published API category");
+  });
+
+  it("rejects the obsolete grades the source lists on 541 cars", () => {
+    for (const grade of ["SJ", "SL", "SM"]) {
+      expect(fitmentProfileCreateSchema.safeParse({ ...base, oilApiGrades: [grade] }).success).toBe(
+        false,
+      );
+    }
+  });
+
+  it("normalises spacing and case, and drops a repeated grade", () => {
+    const result = fitmentProfileCreateSchema.parse({
+      ...base,
+      oilApiGrades: ["sn  plus", "SN PLUS", "sp"],
+    });
+    expect(result.oilApiGrades).toEqual(["SN PLUS", "SP"]);
+  });
+
+  // The contradiction in oil-city's own text: 5w30 printed as both the
+  // all-season answer and the very-cold one, on 52 cars.
+  it("rejects a cold grade identical to the all-season grade", () => {
+    const result = fitmentProfileCreateSchema.safeParse({
+      ...base,
+      oilViscosityStandard: "5W-30",
+      oilViscosityCold: "5W-30",
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["oilViscosityCold"]);
+  });
+
+  it("allows a cold grade that really differs", () => {
+    const result = fitmentProfileCreateSchema.safeParse({
+      ...base,
+      oilViscosityStandard: "5W-30",
+      oilViscosityCold: "0W-30",
+      oilViscosityHot: "5W-40",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("still catches the clash on a PATCH that sends only one grade", () => {
+    // The route merges the stored values in before validating; this is that
+    // merged payload.
+    const result = fitmentProfileUpdateSchema.safeParse({
+      oilViscosityStandard: "5W-30",
+      oilViscosityHot: "5W-30",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("leaves an unstated grade unstated rather than defaulting it", () => {
+    const result = fitmentProfileCreateSchema.parse(base);
+    expect(result.oilViscosityStandard).toBeUndefined();
+    expect(result.oilApiGrades).toBeUndefined();
   });
 });

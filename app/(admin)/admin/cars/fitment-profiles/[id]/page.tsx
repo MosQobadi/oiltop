@@ -3,11 +3,18 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { AlertDialog, Button, Chip } from "@heroui/react";
-import { FormActions, TextField, TextareaField } from "@/components/admin/form";
+import { AlertDialog, Button, Checkbox, CheckboxGroup, Chip, Label } from "@heroui/react";
+import {
+  BilingualTextareaField,
+  FormActions,
+  TextField,
+  TextareaField,
+} from "@/components/admin/form";
+import { API_SERVICE_CATEGORIES } from "@/lib/validation";
+import { VISCOSITY_ERROR, VISCOSITY_PATTERN } from "@/lib/validation/product";
 import { CloseIcon } from "@/components/admin/icons";
 import { ItemFormModal, type CategoryOption, type FitmentProfileItem } from "../ItemFormModal";
 import { AttachEnginesModal } from "../AttachEnginesModal";
@@ -33,14 +40,52 @@ function formatMatchSpec(matchSpec: Record<string, unknown> | null): string | nu
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-const profileFormSchema = z.object({
-  label: z.string().min(1, "Label is required").max(200),
-  internalNote: z.string().max(2000),
-});
+// The grades are typed, not picked from a list: SAE keeps adding them (0W-8 and
+// 0W-16 are both in this catalog already) and a fixed dropdown would be wrong
+// within a year. Validated against the same pattern the product form uses.
+const viscosityField = z
+  .string()
+  .trim()
+  .refine((value) => value === "" || VISCOSITY_PATTERN.test(value.toUpperCase()), VISCOSITY_ERROR);
+
+const profileFormSchema = z
+  .object({
+    label: z.string().min(1, "Label is required").max(200),
+    internalNote: z.string().max(2000),
+    oilViscosityStandard: viscosityField,
+    oilViscosityHot: viscosityField,
+    oilViscosityCold: viscosityField,
+    oilApiGrades: z.array(z.string()),
+    oilGuideEn: z.string().max(2000),
+    oilGuideFa: z.string().max(2000),
+  })
+  // Mirrors the server rule so the admin is told before the round trip. The
+  // source contradicts itself this way on 86 cars — see the schema comment.
+  .superRefine((data, ctx) => {
+    for (const key of ["oilViscosityCold", "oilViscosityHot"] as const) {
+      const value = data[key].trim().toUpperCase();
+      if (value !== "" && value === data.oilViscosityStandard.trim().toUpperCase()) {
+        ctx.addIssue({
+          code: "custom",
+          path: [key],
+          message: "Same as the all-season grade — leave it empty unless this car really differs.",
+        });
+      }
+    }
+  });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-const emptyDefaults: ProfileFormValues = { label: "", internalNote: "" };
+const emptyDefaults: ProfileFormValues = {
+  label: "",
+  internalNote: "",
+  oilViscosityStandard: "",
+  oilViscosityHot: "",
+  oilViscosityCold: "",
+  oilApiGrades: [],
+  oilGuideEn: "",
+  oilGuideFa: "",
+};
 
 interface CarEngineLink {
   id: string;
@@ -57,6 +102,12 @@ interface FitmentProfileDetail {
   id: string;
   label: string;
   internalNote: string | null;
+  oilViscosityStandard: string | null;
+  oilViscosityHot: string | null;
+  oilViscosityCold: string | null;
+  oilApiGrades: string[];
+  oilGuideEn: string | null;
+  oilGuideFa: string | null;
   items: FitmentProfileItem[];
   carEngineLinks: CarEngineLink[];
 }
@@ -135,6 +186,12 @@ export default function FitmentProfileFormPage() {
       reset({
         label: fitmentProfile.label,
         internalNote: fitmentProfile.internalNote ?? "",
+        oilViscosityStandard: fitmentProfile.oilViscosityStandard ?? "",
+        oilViscosityHot: fitmentProfile.oilViscosityHot ?? "",
+        oilViscosityCold: fitmentProfile.oilViscosityCold ?? "",
+        oilApiGrades: fitmentProfile.oilApiGrades ?? [],
+        oilGuideEn: fitmentProfile.oilGuideEn ?? "",
+        oilGuideFa: fitmentProfile.oilGuideFa ?? "",
       });
       setIsLoading(false);
     }
@@ -148,9 +205,19 @@ export default function FitmentProfileFormPage() {
   const onSubmit = async (values: ProfileFormValues) => {
     setSubmitError(null);
 
+    // An empty box means "not stated for this car", which is a fact worth
+    // storing — so it is sent as null rather than dropped from the payload.
+    const orNull = (value: string) => (value.trim() === "" ? null : value.trim());
+
     const payload = {
       label: values.label,
-      internalNote: values.internalNote.trim() ? values.internalNote.trim() : null,
+      internalNote: orNull(values.internalNote),
+      oilViscosityStandard: orNull(values.oilViscosityStandard),
+      oilViscosityHot: orNull(values.oilViscosityHot),
+      oilViscosityCold: orNull(values.oilViscosityCold),
+      oilApiGrades: values.oilApiGrades,
+      oilGuideEn: orNull(values.oilGuideEn),
+      oilGuideFa: orNull(values.oilGuideFa),
     };
 
     const response = await fetch(
@@ -262,6 +329,77 @@ export default function FitmentProfileFormPage() {
           label="Internal Note"
           placeholder="Internal note — not shown to customers"
         />
+
+        {/* The block a customer reads above the products on the found-car card.
+            Separated by a rule because everything above it is admin-only and
+            everything in it is published. */}
+        <section className="flex flex-col gap-5 border-t border-neutral-200 pt-6">
+          <div>
+            <h2 className="text-base font-semibold text-neutral-900">Engine Oil Guidance</h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              Shown to customers on the car card. Leave a field empty when this car&rsquo;s figure
+              isn&rsquo;t known — empty is honest, a guess is not.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <TextField
+              control={control}
+              name="oilViscosityStandard"
+              label="Viscosity — all seasons"
+              placeholder="5W-30"
+            />
+            <TextField
+              control={control}
+              name="oilViscosityCold"
+              label="Viscosity — very cold"
+              placeholder="0W-30"
+            />
+            <TextField
+              control={control}
+              name="oilViscosityHot"
+              label="Viscosity — very hot"
+              placeholder="5W-40"
+            />
+          </div>
+
+          <Controller
+            control={control}
+            name="oilApiGrades"
+            render={({ field }) => (
+              <div className="flex flex-col gap-2">
+                <Label className="text-sm font-medium text-neutral-700">
+                  API standards accepted
+                </Label>
+                <CheckboxGroup
+                  className="flex flex-row flex-wrap gap-4"
+                  value={field.value}
+                  onChange={field.onChange}
+                >
+                  {API_SERVICE_CATEGORIES.map((grade) => (
+                    <Checkbox key={grade} value={grade}>
+                      {grade}
+                    </Checkbox>
+                  ))}
+                </CheckboxGroup>
+                <p className="text-xs text-neutral-500">
+                  Stops at SP: that is the newest published API category. The imported notes list
+                  SQ, which does not exist, alongside SJ/SL/SM, which are decades out of date.
+                </p>
+              </div>
+            )}
+          />
+
+          <BilingualTextareaField
+            control={control}
+            nameEn="oilGuideEn"
+            nameFa="oilGuideFa"
+            label="Guidance note"
+            rows={4}
+            placeholderEn="For a healthy, low-mileage engine a full-synthetic 5W-30 is the best choice…"
+            placeholderFa="برای خودروهای سالم و کم‌کارکرد، روغن فول‌سنتتیک بهترین انتخاب است…"
+          />
+        </section>
 
         {submitError && (
           <p role="alert" className="text-danger text-sm">

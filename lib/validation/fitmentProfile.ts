@@ -3,13 +3,84 @@ import { pageSchema, pageSizeSchema } from "./common";
 import { fitmentClimateSchema, partTypeSchema } from "./enums";
 import { apiGradeSchema, viscositySchema, volumeMlSchema } from "./product";
 
+// API service categories that may be recommended.
+//
+// The list stops at SP on purpose. SQ appears all over the imported spec notes
+// and **is not a published API category** — the sequence ends at SP — so
+// storing it would put a standard that does not exist on a customer's screen.
+// SJ, SL and SM are real but superseded (SJ dates from 1996); an oil meeting
+// only those should not be recommended for a car on the road today. Both are
+// rejected here rather than filtered silently, so an admin who types one is
+// told why.
+export const API_SERVICE_CATEGORIES = ["SN", "SN PLUS", "SP"] as const;
+
+const API_GRADE_ERROR = `Use one of: ${API_SERVICE_CATEGORIES.join(", ")}. SQ is not a published API category, and SJ/SL/SM are obsolete.`;
+
+// Written the way the bottle prints it — "SN PLUS", not "SNPLUS" — after the
+// spacing is normalised, since the source runs them together.
+const oilApiGradeSchema = z
+  .string()
+  .trim()
+  .transform((value) => value.toUpperCase().replace(/\s+/g, " "))
+  .refine(
+    (value) => (API_SERVICE_CATEGORIES as readonly string[]).includes(value),
+    API_GRADE_ERROR,
+  );
+
 const fitmentProfileShape = {
   label: z.string().min(1, "Label is required").max(200),
   internalNote: z.string().max(2000).nullable().optional(),
+
+  // Engine-oil guidance. Nullable rather than merely optional so a PATCH can
+  // clear a grade the shop decided it should not have stated.
+  oilViscosityStandard: viscositySchema.nullable().optional(),
+  oilViscosityHot: viscositySchema.nullable().optional(),
+  oilViscosityCold: viscositySchema.nullable().optional(),
+  // Deduplicated, because the source lists the same grade twice often enough
+  // that it would otherwise reach the card as "SP · SP".
+  oilApiGrades: z
+    .array(oilApiGradeSchema)
+    .max(6)
+    .transform((grades) => [...new Set(grades)])
+    .optional(),
+  oilGuideEn: z.string().max(2000).nullable().optional(),
+  oilGuideFa: z.string().max(2000).nullable().optional(),
 };
 
-export const fitmentProfileCreateSchema = z.object(fitmentProfileShape);
-export const fitmentProfileUpdateSchema = z.object(fitmentProfileShape).partial();
+// The one contradiction the imported notes make constantly: the same grade
+// listed for "all seasons" and for "very cold". A grade cannot be both the
+// year-round answer and the answer for when the year-round one stops working —
+// one of the two slots was left unfilled and the template repeated the other.
+// Caught here so it cannot be saved, rather than shown to a customer as two
+// recommendations that happen to be identical.
+function checkViscosityDistinct(
+  data: { oilViscosityStandard?: string | null; oilViscosityCold?: string | null; oilViscosityHot?: string | null },
+  ctx: z.RefinementCtx,
+) {
+  for (const key of ["oilViscosityCold", "oilViscosityHot"] as const) {
+    const value = data[key];
+    if (value && data.oilViscosityStandard && value === data.oilViscosityStandard) {
+      ctx.addIssue({
+        code: "custom",
+        path: [key],
+        message:
+          "Same grade as the all-season one. Leave it empty unless this car really takes a different oil in that weather.",
+      });
+    }
+  }
+}
+
+export const fitmentProfileCreateSchema = z
+  .object(fitmentProfileShape)
+  .superRefine(checkViscosityDistinct);
+
+// The update route supplies the profile's *current* viscosity values when the
+// body omits them, so a PATCH that sets only the cold grade is still checked
+// against the all-season grade already stored.
+export const fitmentProfileUpdateSchema = z
+  .object(fitmentProfileShape)
+  .partial()
+  .superRefine(checkViscosityDistinct);
 
 export type FitmentProfileCreateInput = z.infer<typeof fitmentProfileCreateSchema>;
 export type FitmentProfileUpdateInput = z.infer<typeof fitmentProfileUpdateSchema>;
