@@ -89,6 +89,21 @@ const SECTION_SPAN: Record<number, string> = {
   3: "lg:col-span-3",
 };
 
+// How wide a card is on a phone, rail or no rail. Narrow enough that the second
+// one in a rail is visibly cut off rather than merely close to the edge — the
+// cut is the only affordance a touch rail gets — and applied to a lone card too,
+// so a category answered by one product and one answered by four put the same
+// card on the page.
+//
+// The `sm:` half gives every mobile-only measurement back, or it leaks into the
+// grid: `flex-none` is inert there but the widths are not.
+//
+// It lives here, with the other layout constants, and is passed to the rail
+// rather than exported from it: the rail is a Client Component, and a constant
+// exported from one of those reaches a Server Component as a client reference,
+// not a string.
+const CARD_WIDTH = "w-[62vw] max-w-[240px] min-w-[168px] sm:w-auto sm:max-w-none sm:min-w-0";
+
 const CARD_COLUMNS: Record<number, string> = {
   1: "",
   2: "sm:grid-cols-2",
@@ -449,9 +464,10 @@ function ClimateColumn({
   );
 }
 
-// One card is not a rail: it would sit at 62vw with empty space beside it and a
-// swipe affordance for nothing. The common result — one product per category —
-// therefore renders exactly the block it always did.
+// One card is not a rail: there is nothing to swipe to, so it renders as the
+// plain block it always did — at the rail's card width, so that a category
+// answered by one product and one answered by four put the same-sized card on
+// the page. Only the scrolling is conditional, never the card.
 function CardGroup({
   className,
   label,
@@ -464,10 +480,16 @@ function CardGroup({
   cards: ReactNode[];
 }) {
   if (cards.length < 2) {
-    return <div className={`${className} grid gap-5`}>{cards}</div>;
+    return <div className={`${className} grid gap-5 ${CARD_WIDTH}`}>{cards}</div>;
   }
 
   return (
-    <FitmentCardRail className={className} label={label} restLayout={restLayout} cards={cards} />
+    <FitmentCardRail
+      className={className}
+      label={label}
+      restLayout={restLayout}
+      cardWidthClass={CARD_WIDTH}
+      cards={cards}
+    />
   );
 }

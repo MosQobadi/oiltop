@@ -19,18 +19,11 @@ import { RailDots, RAIL_TRACK_CLASS, useRailScroll } from "../rail";
 // dots need no breakpoint of their own: a grid does not overflow, so it
 // measures one dot, and one dot renders nothing.
 
-// Narrow enough that the second card is visibly cut off rather than merely
-// close to the edge — the cut is the only affordance a touch rail gets.
-const RAIL_ITEM_CLASS = "w-[62vw] max-w-[240px] min-w-[168px] flex-none snap-start";
-
-// Every mobile-only measurement above has to be given back, or it leaks into
-// the grid: `flex-none` is inert in a grid but the widths are not.
-const RAIL_ITEM_RESET_CLASS = "sm:w-auto sm:max-w-none sm:min-w-0";
-
 export function FitmentCardRail({
   label,
   cards,
   restLayout,
+  cardWidthClass,
   className = "",
 }: {
   /** Names the list for a screen reader — the category, plus its climate if it has one. */
@@ -38,6 +31,12 @@ export function FitmentCardRail({
   cards: ReactNode[];
   /** What the track becomes from `sm` up, e.g. `sm:grid sm:grid-cols-2`. */
   restLayout: string;
+  /**
+   * `FITMENT_CARD_WIDTH_CLASS`, handed down rather than imported: this module is
+   * `"use client"`, so a constant exported from here reaches the Server
+   * Component that renders the section as a client reference, not a string.
+   */
+  cardWidthClass: string;
   className?: string;
 }) {
   const trackRef = useRef<HTMLUListElement>(null);
@@ -53,7 +52,7 @@ export function FitmentCardRail({
         className={`gap-4 pb-1 sm:gap-5 sm:overflow-x-visible sm:pb-0 ${RAIL_TRACK_CLASS} ${restLayout}`}
       >
         {cards.map((card, index) => (
-          <li key={index} className={`${RAIL_ITEM_CLASS} ${RAIL_ITEM_RESET_CLASS}`}>
+          <li key={index} className={`flex-none snap-start ${cardWidthClass}`}>
             {card}
           </li>
         ))}
