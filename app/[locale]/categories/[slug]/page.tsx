@@ -48,7 +48,8 @@ import {
 //
 // Everything the two pages share (the sort control, pagination, the fit banner,
 // the href builder) is shared code rather than a second implementation; what
-// differs is the hero above it and the two filter controls this page pins.
+// differs is the category's photo behind it and the two filter controls this
+// page pins.
 
 export default async function CategoryLandingPage({
   params,
@@ -110,26 +111,42 @@ export default async function CategoryLandingPage({
   );
 
   return (
-    <div className="mx-auto w-full max-w-[1180px] px-4 py-10 sm:px-6">
-      <Breadcrumbs
-        locale={locale}
-        structuredData
-        items={[
-          { label: pickLocale(locale, "Home", "خانه"), href: navHref(locale, "") },
-          {
-            label: pickLocale(locale, "Products", "محصولات"),
-            href: navHref(locale, PRODUCTS_PATH),
-          },
-          { label: name },
-        ]}
-      />
+    <>
+      {/* The category's own photo, demoted from a hero to the page's ground.
+          It sits behind everything, fixed so it doesn't slide away as the grid
+          scrolls, and knocked back hard — desaturated, blurred and under a
+          white scrim that clears to solid by the fold — because its job here
+          is to tint the page, not to be looked at. Decorative: the heading
+          below already names the category. */}
+      {category.image && (
+        <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+          <Image
+            src={category.image}
+            alt=""
+            fill
+            sizes="100vw"
+            priority
+            className="scale-105 object-cover opacity-25 blur-[3px] saturate-50"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-white/85 to-white" />
+        </div>
+      )}
 
-      <div
-        className={`mt-5 grid items-center gap-6 ${
-          category.image ? "sm:grid-cols-[minmax(0,1fr)_260px]" : ""
-        }`}
-      >
-        <div>
+      <div className="mx-auto w-full max-w-[1180px] px-4 py-10 sm:px-6">
+        <Breadcrumbs
+          locale={locale}
+          structuredData
+          items={[
+            { label: pickLocale(locale, "Home", "خانه"), href: navHref(locale, "") },
+            {
+              label: pickLocale(locale, "Products", "محصولات"),
+              href: navHref(locale, PRODUCTS_PATH),
+            },
+            { label: name },
+          ]}
+        />
+
+        <div className="mt-5">
           <h1 className="text-[27px] font-semibold tracking-[-0.025em] text-neutral-900">{name}</h1>
           {showSecondaryName && (
             <p dir="auto" className="mt-1 text-[14px] text-neutral-500">
@@ -143,119 +160,105 @@ export default async function CategoryLandingPage({
           )}
         </div>
 
-        {category.image && (
-          <div className="relative h-[150px] overflow-hidden rounded-2xl bg-neutral-100">
-            {/* Decorative: the heading beside it already names the category. */}
-            <Image
-              src={category.image}
-              alt=""
-              fill
-              sizes="(min-width: 640px) 260px, 100vw"
-              className="object-cover"
-              priority
-            />
-          </div>
+        {car && (
+          <FitContextBanner
+            locale={locale}
+            car={car}
+            dismissHref={buildProductListHref(basePath, { ...currentParams, fit: undefined })}
+            className="mt-5"
+          />
         )}
-      </div>
 
-      {car && (
-        <FitContextBanner
-          locale={locale}
-          car={car}
-          dismissHref={buildProductListHref(basePath, { ...currentParams, fit: undefined })}
-          className="mt-5"
-        />
-      )}
+        <div className="mt-6 grid gap-6 lg:grid-cols-[228px_minmax(0,1fr)] lg:gap-8">
+          <ProductFilters
+            locale={locale}
+            basePath={basePath}
+            params={currentParams}
+            brands={brands.map((brand) => ({
+              value: brand.slug,
+              label: pickLocale(locale, brand.nameEn, brand.nameFa),
+            }))}
+            // The category is the page itself here — see PinnedProductFilter.
+            pinned={["category"]}
+            className="lg:sticky lg:top-24 lg:self-start"
+          />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[228px_minmax(0,1fr)] lg:gap-8">
-        <ProductFilters
-          locale={locale}
-          basePath={basePath}
-          params={currentParams}
-          brands={brands.map((brand) => ({
-            value: brand.slug,
-            label: pickLocale(locale, brand.nameEn, brand.nameFa),
-          }))}
-          // The category is the page itself here — see PinnedProductFilter.
-          pinned={["category"]}
-          className="lg:sticky lg:top-24 lg:self-start"
-        />
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+              <p aria-live="polite" className="text-[13px] text-neutral-500">
+                {productCountLabel(locale, total)}
+              </p>
+              <ProductSortSelect locale={locale} basePath={basePath} params={currentParams} />
+            </div>
 
-        <div>
-          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-            <p aria-live="polite" className="text-[13px] text-neutral-500">
-              {productCountLabel(locale, total)}
-            </p>
-            <ProductSortSelect locale={locale} basePath={basePath} params={currentParams} />
-          </div>
-
-          {/* Both empty states offer a way onward, not just the filtered one:
+            {/* Both empty states offer a way onward, not just the filtered one:
               a landing page is somewhere a customer arrives directly, so an
               empty category with nothing to clear is otherwise a dead end. */}
-          {products.length === 0 ? (
-            <div className="mt-5 rounded-2xl border border-neutral-200 bg-white px-5 py-10 text-center">
-              <p className="text-[15px] font-medium text-neutral-900">
-                {filtersApplied
-                  ? pickLocale(
-                      locale,
-                      "Nothing matches these filters.",
-                      "چیزی با این فیلترها پیدا نشد.",
-                    )
-                  : pickLocale(
-                      locale,
-                      "Nothing is listed in this category yet.",
-                      "هنوز محصولی در این دسته‌بندی ثبت نشده است.",
-                    )}
-              </p>
-              <Link
-                href={
-                  filtersApplied
-                    ? buildProductListHref(basePath, clearProductFilters(currentParams))
-                    : buildProductListHref(navHref(locale, PRODUCTS_PATH), {
-                        fit: currentParams.fit,
-                      })
-                }
-                className="focus-visible:ring-accent text-accent mt-3 inline-flex min-h-11 items-center rounded text-[13.5px] font-medium transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            {products.length === 0 ? (
+              <div className="mt-5 rounded-2xl border border-neutral-200 bg-white px-5 py-10 text-center">
+                <p className="text-[15px] font-medium text-neutral-900">
+                  {filtersApplied
+                    ? pickLocale(
+                        locale,
+                        "Nothing matches these filters.",
+                        "چیزی با این فیلترها پیدا نشد.",
+                      )
+                    : pickLocale(
+                        locale,
+                        "Nothing is listed in this category yet.",
+                        "هنوز محصولی در این دسته‌بندی ثبت نشده است.",
+                      )}
+                </p>
+                <Link
+                  href={
+                    filtersApplied
+                      ? buildProductListHref(basePath, clearProductFilters(currentParams))
+                      : buildProductListHref(navHref(locale, PRODUCTS_PATH), {
+                          fit: currentParams.fit,
+                        })
+                  }
+                  className="focus-visible:ring-accent text-accent mt-3 inline-flex min-h-11 items-center rounded text-[13.5px] font-medium transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                >
+                  {filtersApplied
+                    ? pickLocale(locale, "Clear all filters", "پاک کردن همه‌ی فیلترها")
+                    : pickLocale(locale, "Browse all products", "مشاهده‌ی همه‌ی محصولات")}
+                </Link>
+              </div>
+            ) : (
+              <ul
+                data-testid="product-grid"
+                className="mt-5 grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4"
               >
-                {filtersApplied
-                  ? pickLocale(locale, "Clear all filters", "پاک کردن همه‌ی فیلترها")
-                  : pickLocale(locale, "Browse all products", "مشاهده‌ی همه‌ی محصولات")}
-              </Link>
-            </div>
-          ) : (
-            <ul
-              data-testid="product-grid"
-              className="mt-5 grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4"
-            >
-              {products.map((product) => (
-                <li key={product.id}>
-                  <ProductCard
-                    locale={locale}
-                    product={product}
-                    href={
-                      car
-                        ? withFitContext(
-                            navHref(locale, `/products/${product.slug}`),
-                            car.carEngine.id,
-                          )
-                        : undefined
-                    }
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
+                {products.map((product) => (
+                  <li key={product.id}>
+                    <ProductCard
+                      locale={locale}
+                      product={product}
+                      href={
+                        car
+                          ? withFitContext(
+                              navHref(locale, `/products/${product.slug}`),
+                              car.carEngine.id,
+                            )
+                          : undefined
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
 
-          <Pagination
-            locale={locale}
-            page={query.page}
-            pageCount={pageCount}
-            hrefForPage={(page) => buildProductListHref(basePath, { ...currentParams, page })}
-            className="mt-8"
-          />
+            <Pagination
+              locale={locale}
+              page={query.page}
+              pageCount={pageCount}
+              hrefForPage={(page) => buildProductListHref(basePath, { ...currentParams, page })}
+              className="mt-8"
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
