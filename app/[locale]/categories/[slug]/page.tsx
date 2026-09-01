@@ -112,12 +112,17 @@ export default async function CategoryLandingPage({
 
   return (
     <>
-      {/* The category's own photo, demoted from a hero to the page's ground.
-          It sits behind everything, fixed so it doesn't slide away as the grid
-          scrolls, and knocked back hard — desaturated, blurred and under a
-          white scrim that clears to solid by the fold — because its job here
-          is to tint the page, not to be looked at. Decorative: the heading
-          below already names the category. */}
+      {/* The category's own photo, demoted from a hero to the page's ground:
+          fixed, so it holds still while the grid scrolls over it, blurred to a
+          soft wash and held under a white scrim. The scrim is what keeps the
+          page readable — these photos are dark enough to carry white text on
+          the homepage cards, so without it a dark frame would swallow the
+          neutral-500 copy above. It thickens toward the bottom so the product
+          cards sit on near-solid white. Colour is deliberately left alone: the
+          tint is the only thing that survives the blur, and desaturating it
+          leaves nothing but grey.
+
+          Decorative — the heading below already names the category. */}
       {category.image && (
         <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
           <Image
@@ -126,9 +131,9 @@ export default async function CategoryLandingPage({
             fill
             sizes="100vw"
             priority
-            className="scale-105 object-cover opacity-25 blur-[3px] saturate-50"
+            className="scale-110 object-cover blur-[10px]"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-white/85 to-white" />
+          <div className="absolute inset-0 bg-gradient-to-b from-white/70 via-white/80 to-white/92" />
         </div>
       )}
 
