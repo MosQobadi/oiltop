@@ -14,8 +14,26 @@ import { buildProductListHref } from "@/lib/storefront/plp";
 //
 // A brand with no logo uploaded yet gets a monogram tile rather than an empty
 // box: brands are a wall of small cells, and one hole in it reads as broken.
+//
+// The tiles are built to read as siblings of the category cards directly above
+// them — same radius, same ring, same accent ring on hover, and the same
+// name-and-chevron row at the bottom. What they can't share is the treatment
+// itself: a category card is a photograph with the name laid over it, and a
+// logo laid over is a logo cropped. So the card splits instead — a white stage
+// the logo sits in whole, and a name plate under it — and the shared grammar
+// carries the family resemblance rather than the shared ground.
 
 const LOGO_SIZES = "(min-width: 1024px) 160px, (min-width: 640px) 22vw, 40vw";
+
+// The one thing the tile has that the category card doesn't: a breath of the
+// brand accent behind the logo, off until the card is hovered. A logo on white
+// gives hover nothing to change — the ring alone is easy to miss on a wall of
+// eight — so the stage itself warms up. Mixed from `--accent` rather than
+// written as a hex, so it stays the theme's rust if the theme ever moves.
+const STAGE_GLOW_STYLE = {
+  backgroundImage:
+    "radial-gradient(circle at 50% 42%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 70%)",
+};
 
 export function BrandBrowseSection({
   locale,
@@ -56,9 +74,11 @@ export function BrandBrowseSection({
           </Link>
         </div>
 
-        <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {brands.map((brand) => (
-            <li key={brand.id}>
+            // Stretched, so a brand whose second name wraps doesn't leave a
+            // shorter tile floating next to it.
+            <li key={brand.id} className="h-full">
               <BrandCard
                 locale={locale}
                 brand={brand}
@@ -90,9 +110,20 @@ function BrandCard({
   return (
     <Link
       href={href}
-      className="group focus-visible:ring-accent hover:border-accent/50 relative block aspect-[4/3] overflow-hidden rounded-2xl border border-neutral-200 bg-white text-center transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      className="group focus-visible:ring-accent hover:ring-accent flex h-full flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-neutral-200 transition-shadow ring-inset hover:ring-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
     >
-      <span className="absolute inset-0 flex items-center justify-center">
+      {/* The stage. Its own aspect ratio rather than the whole card's, so the
+          logo keeps its room whether the plate below runs to one line or two.
+          Taller on a phone, where two names on the plate cost the same 68px on a
+          164px tile as on a 271px one — a 5:3 stage there leaves the logo less
+          room than the caption under it. */}
+      <span className="relative flex aspect-[4/3] w-full items-center justify-center sm:aspect-[5/3]">
+        <span
+          aria-hidden="true"
+          style={STAGE_GLOW_STYLE}
+          className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 motion-reduce:transition-none"
+        />
+
         {brand.logo ? (
           <Image
             src={brand.logo}
@@ -101,39 +132,44 @@ function BrandCard({
             sizes={LOGO_SIZES}
             // Contained, not cropped — the one rule the category cards next door
             // don't share. A photo of an air filter survives losing its edges;
-            // a logo *is* its edges, so it gets the whole card to sit in rather
+            // a logo *is* its edges, so it gets the whole stage to sit in rather
             // than being blown up to fill it.
-            className="object-contain p-5 transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+            className="object-contain p-4 transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100 sm:p-5"
           />
         ) : (
           <span
             aria-hidden="true"
-            // Grown with the card — a 56px disc that read as a tile when the
-            // tile was 130px tall just looks lost in one nearly twice that.
-            className="text-accent bg-accent/10 flex size-16 items-center justify-center rounded-full text-[19px] font-semibold tracking-[-0.02em]"
+            // A tile, not a disc: it stands in for a logo, so it should read as
+            // one sitting on the stage rather than as an avatar.
+            className="text-accent ring-accent/15 relative flex size-14 items-center justify-center rounded-2xl bg-white text-[18px] font-semibold tracking-[-0.02em] ring-1 ring-inset"
           >
             {brandMonogram(brand.nameEn || brand.nameFa)}
           </span>
         )}
       </span>
 
-      {/* The category cards' scrim, inverted: the ground here is white, so what
-          the name needs protecting from is a tall logo reaching down behind it,
-          not a bright photo. Same job, opposite colour. */}
-      <span
-        aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 block h-2/5 bg-gradient-to-t from-white via-white/85 to-transparent"
-      />
-
-      <span className="absolute inset-x-0 bottom-0 block min-w-0 px-3 pb-3.5">
-        <span className="block truncate text-[14.5px] font-semibold tracking-[-0.015em] text-neutral-900">
-          {primaryName}
-        </span>
-        {showSecondaryName && (
-          <span dir="auto" className="mt-0.5 block truncate text-[12.5px] text-neutral-500">
-            {secondaryName}
+      {/* The category card's bottom row, moved off the artwork and onto its own
+          plate — name on the lead edge, chevron on the trailing one. The hairline
+          is what makes it a plate instead of the scrim it used to be, and the
+          scrim is what the logo above kept fading into. The plate stays white
+          with the rest of the card rather than taking a grey: the section's own
+          ground is that grey, and a grey plate on it ends the card at the
+          hairline instead of at its edge. */}
+      <span className="mt-auto flex items-end justify-between gap-2 border-t border-neutral-200 px-3.5 py-3">
+        <span className="block min-w-0">
+          <span className="block truncate text-[14.5px] font-semibold tracking-[-0.015em] text-neutral-900">
+            {primaryName}
           </span>
-        )}
+          {showSecondaryName && (
+            <span dir="auto" className="mt-0.5 block truncate text-[12.5px] text-neutral-500">
+              {secondaryName}
+            </span>
+          )}
+        </span>
+        <ChevronIcon
+          aria-hidden
+          className="group-hover:text-accent h-4 w-4 shrink-0 text-neutral-400 transition-colors rtl:-scale-x-100"
+        />
       </span>
     </Link>
   );
