@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { FitmentCardRail } from "./FitmentCardRail";
 import { SpecOnlyCard } from "./SpecOnlyCard";
 import { CATEGORY_ICONS, GridIcon } from "../icons";
 import { FITMENT_PATH, navHref } from "../nav-items";
@@ -69,8 +70,9 @@ export interface FitmentResultsProps {
 }
 
 // Cards sit in a two- or three-up grid here, never the PLP's four-up, so the
-// image request is a size wider than the default.
-const FITMENT_IMAGE_SIZES = "(min-width: 1024px) 370px, (min-width: 640px) 46vw, 90vw";
+// image request is a size wider than the default — except on a phone, where a
+// multi-card section is a rail of 62vw cards rather than one full-width column.
+const FITMENT_IMAGE_SIZES = "(min-width: 1024px) 370px, (min-width: 640px) 46vw, 62vw";
 
 // How many of the results grid's columns a section takes, and how its own cards
 // divide that up. Both are keyed on the number of cards the section holds, so a
@@ -314,7 +316,11 @@ function CategorySection({
       data-testid="fitment-category"
       data-category={group.category.partType}
       data-category-slug={group.category.slug}
-      className={SECTION_SPAN[span]}
+      // `min-w-0`, because a grid item's automatic minimum size is its
+      // content's — which on a phone is a rail wide enough to hold every card
+      // in the section. Without it the section grows to that width instead of
+      // letting the rail scroll, and takes the whole page's layout with it.
+      className={`min-w-0 ${SECTION_SPAN[span]}`}
     >
       <div className="border-t border-neutral-200 pt-4">
         <h2 className="flex items-center gap-2.5 text-[17px] font-semibold tracking-[-0.02em] text-neutral-900">
@@ -352,6 +358,7 @@ function CategorySection({
           {shownHot.items.length > 0 && (
             <ClimateColumn
               locale={locale}
+              categoryName={categoryName}
               climate="HOT"
               items={shownHot.items}
               renderItem={renderItem}
@@ -360,6 +367,7 @@ function CategorySection({
           {shownCold.items.length > 0 && (
             <ClimateColumn
               locale={locale}
+              categoryName={categoryName}
               climate="COLD"
               items={shownCold.items}
               renderItem={renderItem}
@@ -369,11 +377,12 @@ function CategorySection({
       )}
 
       {shownStandard.items.length > 0 && (
-        <div
-          className={`mt-4 grid gap-5 ${CARD_COLUMNS[clampColumns(Math.min(countFitmentCards(shownStandard.items), span))]}`}
-        >
-          {shownStandard.items.flatMap(renderItem)}
-        </div>
+        <CardGroup
+          className="mt-4"
+          label={categoryName}
+          restLayout={`sm:grid ${CARD_COLUMNS[clampColumns(Math.min(countFitmentCards(shownStandard.items), span))]}`}
+          cards={shownStandard.items.flatMap(renderItem)}
+        />
       )}
 
       {totalCards > shownCards && (
@@ -407,23 +416,58 @@ const CLIMATE_PILL: Record<"HOT" | "COLD", string> = {
 // once and each stacks however many co-equal items that climate has.
 function ClimateColumn({
   locale,
+  categoryName,
   climate,
   items,
   renderItem,
 }: {
   locale: Locale;
+  categoryName: string;
   climate: "HOT" | "COLD";
   items: FitmentResolvedItem[];
   renderItem: (item: FitmentResolvedItem) => ReactNode[];
 }) {
+  const label = climateColumnLabel(locale, climate);
+
   return (
-    <div data-testid="fitment-climate-column" data-climate={climate}>
+    // `min-w-0` for the same reason as the section above: this is a grid item
+    // too, and the rail inside it is wider than the column.
+    <div data-testid="fitment-climate-column" data-climate={climate} className="min-w-0">
       <span
         className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-[12.5px] font-medium ${CLIMATE_PILL[climate]}`}
       >
-        {climateColumnLabel(locale, climate)}
+        {label}
       </span>
-      <div className="mt-3 flex flex-col gap-5">{items.flatMap(renderItem)}</div>
+      {/* A column from `sm` up — the rail only ever replaces it on a phone. */}
+      <CardGroup
+        className="mt-3"
+        label={`${categoryName} — ${label}`}
+        restLayout="sm:flex-col"
+        cards={items.flatMap(renderItem)}
+      />
     </div>
+  );
+}
+
+// One card is not a rail: it would sit at 62vw with empty space beside it and a
+// swipe affordance for nothing. The common result — one product per category —
+// therefore renders exactly the block it always did.
+function CardGroup({
+  className,
+  label,
+  restLayout,
+  cards,
+}: {
+  className: string;
+  label: string;
+  restLayout: string;
+  cards: ReactNode[];
+}) {
+  if (cards.length < 2) {
+    return <div className={`${className} grid gap-5`}>{cards}</div>;
+  }
+
+  return (
+    <FitmentCardRail className={className} label={label} restLayout={restLayout} cards={cards} />
   );
 }

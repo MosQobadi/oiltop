@@ -7,20 +7,25 @@ export interface PriceDisplayProps {
   price: number;
   /** What the customer actually pays — `price * (1 - discountPercent / 100)`. */
   finalPrice: number;
-  /** `sm` in a cart line, `md` on a product card, `lg` on the PDP's buy box. */
+  /**
+   * `sm` in a cart line, `md` on a product card, `lg` on the PDP's buy box.
+   * `md` is the only responsive one: a card is at its narrowest on a phone,
+   * which is exactly where a price and its struck-through original stop fitting
+   * on one line and start costing the card a whole row of height.
+   */
   size?: "sm" | "md" | "lg";
   className?: string;
 }
 
 const FINAL_PRICE_CLASS: Record<NonNullable<PriceDisplayProps["size"]>, string> = {
   sm: "text-[15px] font-semibold tracking-tight",
-  md: "text-[17px] font-semibold tracking-tight",
+  md: "text-[15px] font-semibold tracking-tight sm:text-[17px]",
   lg: "text-3xl font-semibold tracking-tight",
 };
 
 const ORIGINAL_PRICE_CLASS: Record<NonNullable<PriceDisplayProps["size"]>, string> = {
   sm: "text-[12.5px]",
-  md: "text-[13px]",
+  md: "text-[12px] sm:text-[13px]",
   lg: "text-[17px]",
 };
 

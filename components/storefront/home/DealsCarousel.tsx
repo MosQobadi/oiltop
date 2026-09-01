@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import Link from "next/link";
 import { ChevronIcon } from "../icons";
 import { navHref, PRODUCTS_PATH } from "../nav-items";
 import { ProductCard } from "../ProductCard";
+import { RailDots, RAIL_TRACK_CLASS, useRailScroll } from "../rail";
 import { pickLocale, type Locale } from "@/lib/i18n";
 import type { StorefrontProductCard } from "@/lib/services/catalog";
 
@@ -13,26 +14,19 @@ import type { StorefrontProductCard } from "@/lib/services/catalog";
 // because it's a taster, not the catalog — the PLP is one click away for anyone
 // who wants all of it.
 //
-// Scroll-snap does the sliding; no carousel library. The arrows and the dots
-// only nudge a native scroll container, so touch, trackpad, keyboard focus and
-// RTL all work without being reimplemented — which is also why this ships as a
-// Client Component only for those controls and the scroll position they read.
+// Scroll-snap does the sliding, and `useRailScroll` does the bookkeeping the
+// arrows and dots read — see `../rail`. This ships as a Client Component only
+// for those controls and the scroll position behind them.
 //
 // Cards are the shared ProductCard: same markup, same add-to-cart, same
 // out-of-stock behaviour as the PLP. A rail is a different layout, not a
 // different product card.
 
-const CARD_IMAGE_SIZES = "(min-width: 1024px) 240px, (min-width: 640px) 40vw, 66vw";
+const CARD_IMAGE_SIZES = "(min-width: 1024px) 240px, (min-width: 640px) 40vw, 62vw";
 
 // How much of the visible width one arrow press travels. Just under a full
 // screenful, so a card stays half-visible as a hint that the rail continues.
 const SCROLL_RATIO = 0.85;
-
-// Ceiling on the dots. A dot per screenful is honest on a wide screen (five of
-// them), but a phone fits barely more than one card at a time — twenty deals
-// would be fifteen dots, wider than the screen they sit under. Past this many,
-// each dot stands for an equal slice of the rail instead of a screenful.
-const MAX_DOTS = 8;
 
 export function DealsCarousel({
   locale,
@@ -42,59 +36,7 @@ export function DealsCarousel({
   products: StorefrontProductCard[];
 }) {
   const trackRef = useRef<HTMLUListElement>(null);
-  const [atStart, setAtStart] = useState(true);
-  const [atEnd, setAtEnd] = useState(false);
-  const [dotCount, setDotCount] = useState(1);
-  const [activeDot, setActiveDot] = useState(0);
-
-  const syncEdges = useCallback(() => {
-    const track = trackRef.current;
-    if (!track) return;
-    // RTL scroll positions run negative in every browser that matters now, so
-    // the distance travelled is the absolute value either way.
-    const travelled = Math.abs(track.scrollLeft);
-    const max = track.scrollWidth - track.clientWidth;
-    setAtStart(travelled <= 1);
-    setAtEnd(travelled >= max - 1);
-
-    // One dot per screenful, capped (see MAX_DOTS). Spacing them across the
-    // scrollable range rather than in fixed page widths keeps the first and
-    // last dot pinned to the two ends however the cap lands — the last
-    // screenful is always a part-page, so page widths would overshoot it.
-    const width = track.clientWidth;
-    const dots = width > 0 ? Math.min(MAX_DOTS, Math.ceil(max / width) + 1) : 1;
-    const step = dots > 1 ? max / (dots - 1) : 0;
-    setDotCount(dots);
-    setActiveDot(step > 0 ? Math.min(dots - 1, Math.round(travelled / step)) : 0);
-  }, []);
-
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-
-    syncEdges();
-    // A resize changes how much of the rail fits, and so whether an arrow still
-    // has anywhere to go.
-    const observer = new ResizeObserver(syncEdges);
-    observer.observe(track);
-    return () => observer.disconnect();
-  }, [syncEdges]);
-
-  const scrollByPage = (direction: 1 | -1) => {
-    const track = trackRef.current;
-    if (!track) return;
-    // In an RTL container "forward" is a negative scrollLeft delta.
-    const sign = getComputedStyle(track).direction === "rtl" ? -1 : 1;
-    track.scrollBy({ left: direction * sign * track.clientWidth * SCROLL_RATIO });
-  };
-
-  const scrollToDot = (dot: number) => {
-    const track = trackRef.current;
-    if (!track || dotCount < 2) return;
-    const sign = getComputedStyle(track).direction === "rtl" ? -1 : 1;
-    const max = track.scrollWidth - track.clientWidth;
-    track.scrollTo({ left: (sign * dot * max) / (dotCount - 1) });
-  };
+  const rail = useRailScroll(trackRef);
 
   const railLabel = pickLocale(locale, "Deals and best-sellers", "تخفیف‌ها و پرفروش‌ها");
 
@@ -131,13 +73,13 @@ export function DealsCarousel({
               over content that is already in the DOM. */}
           <div aria-hidden="true" className="hidden items-center gap-2 sm:flex">
             <RailButton
-              onClick={() => scrollByPage(-1)}
-              disabled={atStart}
+              onClick={() => rail.scrollByPage(-1, SCROLL_RATIO)}
+              disabled={rail.atStart}
               className="-scale-x-100 rtl:scale-x-100"
             />
             <RailButton
-              onClick={() => scrollByPage(1)}
-              disabled={atEnd}
+              onClick={() => rail.scrollByPage(1, SCROLL_RATIO)}
+              disabled={rail.atEnd}
               className="rtl:-scale-x-100"
             />
           </div>
@@ -146,44 +88,21 @@ export function DealsCarousel({
 
       <ul
         ref={trackRef}
-        onScroll={syncEdges}
+        onScroll={rail.onScroll}
         aria-label={railLabel}
-        className="mt-6 flex snap-x snap-mandatory [scrollbar-width:none] gap-3.5 overflow-x-auto scroll-smooth pb-2 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        className={`mt-6 gap-3.5 pb-2 ${RAIL_TRACK_CLASS}`}
       >
         {products.map((product) => (
           <li
             key={product.id}
-            className="w-[66vw] max-w-[248px] min-w-[176px] flex-none snap-start sm:w-[40vw] lg:w-[23%]"
+            className="w-[62vw] max-w-[240px] min-w-[168px] flex-none snap-start sm:w-[40vw] lg:w-[23%]"
           >
             <ProductCard locale={locale} product={product} imageSizes={CARD_IMAGE_SIZES} />
           </li>
         ))}
       </ul>
 
-      {/* Hidden from assistive tech for the same reason as the arrows: the rail
-          is already a list a screen reader walks item by item, and these only
-          move the viewport over content that is in the DOM either way. */}
-      {dotCount > 1 && (
-        <div aria-hidden="true" className="flex items-center justify-center gap-0.5">
-          {Array.from({ length: dotCount }, (_, dot) => (
-            <button
-              key={dot}
-              type="button"
-              tabIndex={-1}
-              onClick={() => scrollToDot(dot)}
-              className="group flex h-7 w-6 items-center justify-center"
-            >
-              <span
-                className={
-                  dot === activeDot
-                    ? "bg-accent h-1.5 w-5 rounded-full transition-all"
-                    : "h-1.5 w-1.5 rounded-full bg-neutral-300 transition-all group-hover:bg-neutral-400"
-                }
-              />
-            </button>
-          ))}
-        </div>
-      )}
+      <RailDots count={rail.dotCount} active={rail.activeDot} onSelect={rail.scrollToDot} />
     </section>
   );
 }
