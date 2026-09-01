@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronIcon } from "../icons";
 import { categoryHref, navHref, PRODUCTS_PATH } from "../nav-items";
-import { pickLocale, type Locale } from "@/lib/i18n";
+import { formatDigits, pickLocale, type Locale } from "@/lib/i18n";
 import type { StorefrontCategory } from "@/lib/services/catalog";
 
 // The escape hatch from the car-finder: a customer who already knows they want
@@ -10,6 +10,47 @@ import type { StorefrontCategory } from "@/lib/services/catalog";
 // Each card goes to that category's landing page rather than a pre-filtered PLP
 // URL — same grid either way, but the landing page is the one with the copy and
 // the SEO pair, and linking it from the homepage is what keeps it crawlable.
+//
+// Twenty-one active shelves is not a homepage. Nine lead, the rest open behind
+// "Show more" — the same two-zone shape a car's results page uses, and for the
+// same reason: everything is still here, but the fold belongs to what a
+// customer actually came to buy.
+
+// The nine, in the order they are shown. A product decision rather than an
+// admin one, so it is stated here and not read from `sortOrder` — the running
+// order the nav and the PLP rail share answers "where does this shelf sit in
+// the catalogue", which is a different question from "what does the homepage
+// lead with". Keyed on slug, a category's stable identity; never on its name.
+// A slug that no longer exists (or isn't ACTIVE) simply drops out.
+const HOME_CATEGORY_SLUGS = [
+  "engine-oil",
+  "gearbox-oil",
+  "oil-filter",
+  "air-filter",
+  "fuel-filter",
+  "cabin-filter",
+  "hydraulic-oil",
+  "coolant",
+  "accessory",
+] as const;
+
+const HOME_RANK = new Map<string, number>(HOME_CATEGORY_SLUGS.map((slug, index) => [slug, index]));
+
+/** The section's two zones: the nine, and what "Show more" opens. */
+function partitionHomeCategories(categories: StorefrontCategory[]) {
+  return {
+    // Sorted by this list rather than by `sortOrder`, so the nine read in the
+    // order above whatever the admin's running order happens to be.
+    featured: categories
+      .filter((category) => HOME_RANK.has(category.slug))
+      .sort((a, b) => HOME_RANK.get(a.slug)! - HOME_RANK.get(b.slug)!),
+    // Everything else keeps the admin's order, which is how the service
+    // already handed it over.
+    rest: categories.filter((category) => !HOME_RANK.has(category.slug)),
+  };
+}
+
+const CARD_GRID = "grid gap-4 sm:grid-cols-2 lg:grid-cols-3";
 
 const CARD_IMAGE_SIZES = "(min-width: 1024px) 360px, (min-width: 640px) 46vw, 92vw";
 
@@ -29,6 +70,7 @@ export function CategoryBrowseSection({
   categories: StorefrontCategory[];
 }) {
   const browseHref = navHref(locale, PRODUCTS_PATH);
+  const { featured, rest } = partitionHomeCategories(categories);
 
   return (
     <section className="mx-auto w-full max-w-[1180px] px-4 py-14 sm:px-6 lg:py-16">
@@ -64,15 +106,60 @@ export function CategoryBrowseSection({
           )}
         </p>
       ) : (
-        <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {categories.map((category) => (
-            <li key={category.id}>
-              <CategoryCard locale={locale} category={category} />
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className={`mt-6 ${CARD_GRID}`}>
+            {featured.map((category) => (
+              <li key={category.id}>
+                <CategoryCard locale={locale} category={category} />
+              </li>
+            ))}
+          </ul>
+
+          {rest.length > 0 && <MoreCategories locale={locale} categories={rest} />}
+        </>
       )}
     </section>
+  );
+}
+
+// A native <details> rather than a client-side toggle, the same as the results
+// page's secondary zone: no "use client" for one button, open to a keyboard and
+// a screen reader without help, and a browser's in-page find can open it.
+function MoreCategories({
+  locale,
+  categories,
+}: {
+  locale: Locale;
+  categories: StorefrontCategory[];
+}) {
+  return (
+    <details data-testid="home-more-categories" className="group mt-6">
+      <summary className="focus-visible:ring-accent mx-auto flex w-fit cursor-pointer list-none items-center gap-2 rounded-full border border-neutral-200 bg-white px-5 py-2.5 text-[13.5px] font-medium text-neutral-700 transition-colors hover:border-neutral-400 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+        {/* Both labels are rendered and one is hidden by the open state, so the
+            button says "Show less" once it has been opened rather than lying. */}
+        <span className="group-open:hidden">{pickLocale(locale, "Show more", "نمایش بیشتر")}</span>
+        <span className="hidden group-open:inline">
+          {pickLocale(locale, "Show less", "نمایش کمتر")}
+        </span>
+        {/* The space is literal, not just the margin: a screen reader reads the
+            text nodes, and "Show more12" is what it would otherwise say. */}{" "}
+        <span className="text-neutral-400 group-open:hidden">
+          {formatDigits(categories.length, locale)}
+        </span>
+        <ChevronIcon
+          aria-hidden
+          className="h-3.5 w-3.5 rotate-90 text-neutral-400 transition-transform group-open:-rotate-90"
+        />
+      </summary>
+
+      <ul className={`mt-6 ${CARD_GRID}`}>
+        {categories.map((category) => (
+          <li key={category.id}>
+            <CategoryCard locale={locale} category={category} />
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
