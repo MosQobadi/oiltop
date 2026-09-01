@@ -30,6 +30,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "../lib/db";
+import { calendarForCar, relabelYear } from "../lib/cars/calendar";
 import { findExactModel, matchKey, parseYearSpanFromName } from "../lib/enrich";
 import { IMPORTED_YEAR_START, toLatinDigits } from "../lib/import";
 import { parseEnrichmentFile, type EnrichmentModel } from "../lib/validation/enrichment";
@@ -111,6 +112,7 @@ async function main() {
   const updated: string[] = [];
   const fromHamrah: string[] = [];
   const ambiguous: string[] = [];
+  const relabelled: string[] = [];
   const noYears: string[] = [];
   const alreadySet: string[] = [];
 
@@ -148,6 +150,22 @@ async function main() {
         if (span === null) {
           noYears.push(label);
           continue;
+        }
+
+        // What the car is quoted in beats what the source happened to print.
+        // This is the guard that «پژو پارس 2000 تا 2020» needed: the name
+        // states Gregorian years for an IKCO car nobody buys by a Gregorian
+        // year, and without this the span goes in wearing the wrong calendar
+        // and reads as a 2020 Pars. An unclassified car has no opinion here and
+        // keeps whatever the source said.
+        const quotedIn = calendarForCar(model.carBrand.nameFa, model.nameFa);
+        if (quotedIn !== null && quotedIn !== span.yearCalendar) {
+          span = {
+            yearStart: relabelYear(span.yearStart, quotedIn),
+            yearEnd: relabelYear(span.yearEnd, quotedIn),
+            yearCalendar: quotedIn,
+          };
+          relabelled.push(label);
         }
 
         // Never overwrite a span somebody narrowed by hand. The import leaves a
@@ -194,6 +212,7 @@ async function main() {
 
   report("Years read from the model's own name", updated);
   report("Years from hamrah-mechanic, exact name match", fromHamrah);
+  report("Relabelled — the source printed the other calendar for this car", relabelled);
   report("Left alone — the name matches more than one hamrah-mechanic model", ambiguous);
   // Not necessarily a human: a previous run of this script leaves exactly the
   // same trace. Either way the span is no longer the import's placeholder, and
