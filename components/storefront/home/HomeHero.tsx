@@ -1,28 +1,19 @@
 import Link from "next/link";
-import {
-  ArrowIcon,
-  CATEGORY_ICONS,
-  GearIcon,
-  GridIcon,
-  MedalIcon,
-  ShieldIcon,
-  TruckIcon,
-  type StorefrontIcon,
-} from "../icons";
+import { ArrowIcon, GearIcon, MedalIcon, ShieldIcon, TruckIcon } from "../icons";
 import { FitmentWizard } from "../fitment/FitmentWizard";
-import { categoryHref, navHref, PRODUCTS_PATH } from "../nav-items";
+import { navHref, PRODUCTS_PATH } from "../nav-items";
 import { pickLocale, type Locale } from "@/lib/i18n";
-import type { StorefrontCategory } from "@/lib/services/catalog";
 
 // The homepage's opening screen: a dark banner carrying the pitch on one side
-// and the car-finder on the other. The wizard is still the point of the page —
-// everything to its left is there to say what this shop sells and to give a
+// and the car-finder on the other. The wizard is the point of the page —
+// everything beside it is there to say what this shop sells and to give a
 // customer who already knows what they want a way past it.
 //
-// Four bands, top to bottom: eyebrow + headline + line of copy, a row of
-// category shortcuts, the "browse everything" button, and a strip of four
-// promises closing the banner off. The wizard spans the first three on desktop
-// and drops under them on mobile.
+// Three bands, top to bottom: eyebrow + headline + line of copy (with the
+// wizard alongside on desktop, under them on mobile), the "browse everything"
+// button, and a strip of four promises closing the banner off. The button sits
+// *after* the wizard in both layouts — it's the way out of the finder, so it
+// shouldn't be reachable before you've seen the finder.
 
 // Warm near-black, with an accent-tinted glow low on the wizard's side — the
 // same ground the category cards sit on, lit rather than flat.
@@ -34,28 +25,18 @@ const HERO_STYLE = {
   ].join(","),
 };
 
-// The shortcut row is a taste of the catalogue, not a second navigation: three
-// categories and a way to see the rest. `listActiveCategories` is already sorted
-// by the display order admins set, so "the first three" is their choice.
-const SHORTCUT_COUNT = 3;
-
-export function HomeHero({
-  locale,
-  categories,
-}: {
-  locale: Locale;
-  categories: StorefrontCategory[];
-}) {
+export function HomeHero({ locale }: { locale: Locale }) {
   // Persian has no capital letters, and letter-spacing breaks its joined
   // letterforms — so the banner's all-caps, wide-tracked treatment is applied
   // to the English tree only. Both trees get the same layout and weight.
   const isEn = locale === "en";
   const capsClass = isEn ? "uppercase tracking-[0.14em]" : "tracking-normal";
-  const shortcuts = categories.slice(0, SHORTCUT_COUNT);
 
   return (
     <section style={HERO_STYLE} className="text-white">
-      <div className="mx-auto w-full max-w-[1180px] px-4 pt-12 sm:px-6 lg:pt-16">
+      {/* The promise strip carries the banner's bottom padding, and it's gone
+          on phones — so the container has to supply that padding itself there. */}
+      <div className="mx-auto w-full max-w-[1180px] px-4 pt-12 pb-10 sm:px-6 sm:pb-0 lg:pt-16">
         <div className="grid gap-10 lg:grid-cols-[1fr_minmax(0,430px)] lg:items-center lg:gap-14">
           <div>
             <p className={`flex items-center gap-3 text-[12px] text-white/70 ${capsClass}`}>
@@ -87,35 +68,6 @@ export function HomeHero({
                 "بگویید چه خودرویی دارید. ما دقیقاً همان گرانروی، استاندارد و فیلتری را پیدا می‌کنیم که موتور شما برایش ساخته شده است.",
               )}
             </p>
-
-            {shortcuts.length > 0 && (
-              <ul className="mt-8 flex flex-wrap items-start gap-y-5">
-                {shortcuts.map((category) => (
-                  <ShortcutTile
-                    key={category.id}
-                    capsClass={capsClass}
-                    href={categoryHref(locale, category.slug)}
-                    icon={CATEGORY_ICONS[category.slug] ?? GridIcon}
-                    label={pickLocale(locale, category.nameEn, category.nameFa)}
-                  />
-                ))}
-
-                <ShortcutTile
-                  capsClass={capsClass}
-                  href={navHref(locale, PRODUCTS_PATH)}
-                  icon={GridIcon}
-                  label={pickLocale(locale, "And more", "و بیشتر")}
-                />
-              </ul>
-            )}
-
-            <Link
-              href={navHref(locale, PRODUCTS_PATH)}
-              className={`bg-accent hover:bg-accent/90 focus-visible:ring-accent-on-dark mt-8 inline-flex min-h-12 items-center gap-3 rounded-[10px] px-6 text-[14px] font-semibold text-white transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900 focus-visible:outline-none ${capsClass}`}
-            >
-              {pickLocale(locale, "Shop now", "شروع خرید")}
-              <ArrowIcon className="h-4 w-4 rtl:-scale-x-100" />
-            </Link>
           </div>
 
           {/* The wizard keeps its own white card — on this background it reads as
@@ -123,45 +75,29 @@ export function HomeHero({
           <FitmentWizard locale={locale} mode="compact" />
         </div>
 
+        {/* Outside the grid so it lands under the wizard in both layouts, not
+            beside it. */}
+        <Link
+          href={navHref(locale, PRODUCTS_PATH)}
+          className={`bg-accent hover:bg-accent/90 focus-visible:ring-accent-on-dark mt-8 inline-flex min-h-12 items-center gap-3 rounded-[10px] px-6 text-[14px] font-semibold text-white transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900 focus-visible:outline-none ${capsClass}`}
+        >
+          {pickLocale(locale, "Shop now", "شروع خرید")}
+          <ArrowIcon className="h-4 w-4 rtl:-scale-x-100" />
+        </Link>
+
         <PromiseStrip locale={locale} />
       </div>
     </section>
   );
 }
 
-function ShortcutTile({
-  href,
-  icon: Icon,
-  label,
-  capsClass,
-}: {
-  href: string;
-  icon: StorefrontIcon;
-  label: string;
-  capsClass: string;
-}) {
-  return (
-    <li className="border-s border-white/12 ps-5 pe-5 first:border-s-0 first:ps-0 last:pe-0">
-      <Link
-        href={href}
-        className="group focus-visible:ring-accent-on-dark flex w-[86px] flex-col items-center gap-2.5 rounded-lg py-1 text-center focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900 focus-visible:outline-none"
-      >
-        <span className="group-hover:border-accent-on-dark/70 group-hover:text-accent-on-dark flex size-12 items-center justify-center rounded-full border border-white/25 text-white/85 transition-colors">
-          <Icon className="h-5 w-5" />
-        </span>
-        <span
-          className={`text-[11px] leading-tight text-white/75 group-hover:text-white ${capsClass}`}
-        >
-          {label}
-        </span>
-      </Link>
-    </li>
-  );
-}
-
 // The four claims closing the banner. Deliberately terse — the pre-footer
 // TrustStrip is where the same promises get a sentence each and a phone number
 // to act on; here they're a reassurance you read on the way to the wizard.
+//
+// Hidden on phones: on a narrow screen they stack into four full-width rows
+// that push the whole banner past a screen and a half, and the TrustStrip says
+// all of it again further down the page anyway.
 function PromiseStrip({ locale }: { locale: Locale }) {
   const items = [
     {
@@ -187,7 +123,7 @@ function PromiseStrip({ locale }: { locale: Locale }) {
   ];
 
   return (
-    <ul className="mt-12 grid gap-x-6 gap-y-5 border-t border-white/12 py-6 sm:grid-cols-2 lg:mt-16 lg:grid-cols-4 lg:gap-x-0">
+    <ul className="mt-12 hidden gap-x-6 gap-y-5 border-t border-white/12 py-6 sm:grid sm:grid-cols-2 lg:mt-16 lg:grid-cols-4 lg:gap-x-0">
       {items.map(({ icon: Icon, title, body }) => (
         <li
           key={title}
