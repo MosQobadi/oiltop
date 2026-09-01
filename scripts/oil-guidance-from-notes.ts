@@ -30,14 +30,33 @@
 // rather than stored — the same rule `fitmentProfileCreateSchema` enforces for
 // anything typed by hand.
 //
-// Only ever writes to a profile whose three grade columns are all still empty,
-// so a run can never overwrite what a person entered.
+// The capacity is the exception to all of the above: it is the one part of the
+// block the source reliably fills in — 647 of 660 cars state both figures, all
+// of them plausible — so it is copied. One car states them the wrong way round
+// and has both dropped rather than guessed at.
+//
+// Writes column by column and only where the column is still empty, so a run
+// can never overwrite what a person entered, and a car that already has its
+// grades still picks up its capacity.
 
 import { prisma } from "../lib/db";
 
 const ALL_SEASON = /([0-9]{1,2}w[0-9]{1,2})\s*؛?\s*مناسب برای تمام فصول/i;
 const VERY_COLD = /([0-9]{1,2}w[0-9]{1,2})\s*؛?\s*مناسب برای دماهای بسیار سرد/i;
 const VERY_HOT = /([0-9]{1,2}w[0-9]{1,2})\s*؛?\s*مناسب برای دماهای بسیار گرم/i;
+const CAPACITY_NO_FILTER = /بدون تعویض فیلتر روغن\s*:?\s*حدود\s*([0-9.]+)\s*لیتر/i;
+const CAPACITY_WITH_FILTER = /همراه با تعویض فیلتر روغن\s*:?\s*حدود\s*([0-9.]+)\s*لیتر/i;
+
+/** Litres as the note writes them, as the millilitres the column stores. */
+function capacityMl(raw: string | undefined): number | null {
+  if (!raw) return null;
+  const litres = Number(raw);
+  if (!Number.isFinite(litres)) return null;
+  const ml = Math.round(litres * 1000);
+  // The same rails the schema enforces — a figure outside them is a slipped
+  // decimal point, not a car.
+  return ml >= 500 && ml <= 20_000 ? ml : null;
+}
 
 /** "5w30" as the catalog writes it — `viscositySchema` uppercases and hyphenates. */
 function normaliseGrade(raw: string | undefined): string | null {
@@ -71,6 +90,8 @@ async function main() {
           oilViscosityStandard: true,
           oilViscosityHot: true,
           oilViscosityCold: true,
+          oilCapacityNoFilterMl: true,
+          oilCapacityWithFilterMl: true,
         },
       },
     },
@@ -93,21 +114,14 @@ async function main() {
   let alreadySet = 0;
   let coldDropped = 0;
   let hotDropped = 0;
+  let capacitiesWritten = 0;
+  const capacityRejected: string[] = [];
   const examples: string[] = [];
 
   try {
     await prisma.$transaction(
       async (tx) => {
         for (const { profile, note } of notes.values()) {
-          if (
-            profile.oilViscosityStandard !== null ||
-            profile.oilViscosityHot !== null ||
-            profile.oilViscosityCold !== null
-          ) {
-            alreadySet++;
-            continue;
-          }
-
           const standard = normaliseGrade(ALL_SEASON.exec(note)?.[1]);
           let hot = normaliseGrade(VERY_HOT.exec(note)?.[1]);
           let cold = normaliseGrade(VERY_COLD.exec(note)?.[1]);
@@ -127,19 +141,56 @@ async function main() {
             hotDropped++;
           }
 
-          if (standard === null && hot === null && cold === null) {
+          let capacityNoFilter = capacityMl(CAPACITY_NO_FILTER.exec(note)?.[1]);
+          let capacityWithFilter = capacityMl(CAPACITY_WITH_FILTER.exec(note)?.[1]);
+
+          // A new filter has to be filled too, so the with-filter figure is the
+          // larger. One imported car states them the other way round (Samand
+          // XU7: 4.5 without, 4.1 with). Neither figure can be trusted once they
+          // disagree about which is which, so both are dropped and reported —
+          // guessing that they were merely swapped would be inventing a spec.
+          if (
+            capacityNoFilter !== null &&
+            capacityWithFilter !== null &&
+            capacityWithFilter <= capacityNoFilter
+          ) {
+            capacityNoFilter = null;
+            capacityWithFilter = null;
+            capacityRejected.push(profile.label);
+          }
+
+          if (
+            standard === null &&
+            hot === null &&
+            cold === null &&
+            capacityNoFilter === null &&
+            capacityWithFilter === null
+          ) {
             blank++;
             continue;
           }
 
-          await tx.fitmentProfile.update({
-            where: { id: profile.id },
-            data: {
-              oilViscosityStandard: standard,
-              oilViscosityHot: hot,
-              oilViscosityCold: cold,
-            },
-          });
+          // Field by field, filling only what is still empty. All-or-nothing
+          // would have skipped the capacity on every car that already got its
+          // grades from an earlier run, and a profile is edited a column at a
+          // time in the admin anyway.
+          const data: Record<string, string | number | null> = {};
+          const fill = (column: string, stored: unknown, parsed: string | number | null) => {
+            if (stored === null && parsed !== null) data[column] = parsed;
+          };
+          fill("oilViscosityStandard", profile.oilViscosityStandard, standard);
+          fill("oilViscosityHot", profile.oilViscosityHot, hot);
+          fill("oilViscosityCold", profile.oilViscosityCold, cold);
+          fill("oilCapacityNoFilterMl", profile.oilCapacityNoFilterMl, capacityNoFilter);
+          fill("oilCapacityWithFilterMl", profile.oilCapacityWithFilterMl, capacityWithFilter);
+
+          if (Object.keys(data).length === 0) {
+            alreadySet++;
+            continue;
+          }
+
+          await tx.fitmentProfile.update({ where: { id: profile.id }, data });
+          if ("oilCapacityWithFilterMl" in data) capacitiesWritten++;
           written++;
           if (examples.length < 12) {
             examples.push(
@@ -156,11 +207,16 @@ async function main() {
     if (!(error instanceof DryRunRollback)) throw error;
   }
 
-  console.log(`grades written            ${written}`);
+  console.log(`profiles updated          ${written}`);
   console.log(`  ...cold slot dropped as a duplicate of the all-season one: ${coldDropped}`);
   console.log(`  ...hot slot dropped for the same reason:                     ${hotDropped}`);
-  console.log(`source left the slots empty ${blank}`);
-  console.log(`already had grades          ${alreadySet}`);
+  console.log(`capacities written        ${capacitiesWritten}`);
+  if (capacityRejected.length > 0) {
+    console.log(`  ...pairs dropped as contradictory (with-filter not larger): ${capacityRejected.length}`);
+    for (const label of capacityRejected) console.log(`      ${label}`);
+  }
+  console.log(`source left every slot empty ${blank}`);
+  console.log(`nothing left to fill        ${alreadySet}`);
   console.log(`\nexamples:`);
   for (const line of examples) console.log(`   ${line}`);
   console.log(

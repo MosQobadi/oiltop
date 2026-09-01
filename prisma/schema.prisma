@@ -523,6 +523,19 @@ model FitmentProfile {
   // and a customer holding a bottle needs to know whether theirs is on it.
   oilApiGrades String[]
 
+  // How much oil the engine takes, in millilitres — the unit `Product.volumeMl`
+  // already uses, so a 4-litre recommendation and a 4-litre bottle are the same
+  // kind of number. Entered and displayed in litres, which is how the source
+  // writes it and how anyone doing the job thinks about it.
+  //
+  // The two figures differ because a new filter has to be filled too, so the
+  // with-filter figure is always the larger — a Zod rule rejects a pair that
+  // says otherwise, which is how the one reversed row in the imported data was
+  // caught. This is the only part of the source's oil block that is reliably
+  // filled in: 647 of 660 cars state both, all of them plausible.
+  oilCapacityNoFilterMl   Int?
+  oilCapacityWithFilterMl Int?
+
   // The prose a person would say over the counter: full synthetic for a healthy
   // low-mileage engine, a heavier grade for one that burns a little oil. Shown
   // to customers, so it is a bilingual pair like every other customer-facing

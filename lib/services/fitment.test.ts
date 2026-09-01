@@ -455,6 +455,8 @@ describe("hasOilGuidance", () => {
     viscosityHot: null,
     viscosityCold: null,
     apiGrades: [],
+    capacityNoFilterMl: null,
+    capacityWithFilterMl: null,
     noteEn: null,
     noteFa: null,
   };
@@ -476,5 +478,11 @@ describe("hasOilGuidance", () => {
   it("counts a note in either language as guidance", () => {
     expect(hasOilGuidance({ ...empty, noteFa: "..." })).toBe(true);
     expect(hasOilGuidance({ ...empty, noteEn: "..." })).toBe(true);
+  });
+
+  // The common case for imported cars: the source filled in the capacity and
+  // nothing else, so the card is a capacity and a heading.
+  it("counts a capacity on its own as guidance", () => {
+    expect(hasOilGuidance({ ...empty, capacityWithFilterMl: 3500 })).toBe(true);
   });
 });

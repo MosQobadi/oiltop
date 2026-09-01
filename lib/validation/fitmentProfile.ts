@@ -14,6 +14,18 @@ import { apiGradeSchema, viscositySchema, volumeMlSchema } from "./product";
 // told why.
 export const API_SERVICE_CATEGORIES = ["SN", "SN PLUS", "SP"] as const;
 
+// Litres, as a millilitre count. The floor and ceiling are sanity rails, not
+// engineering limits: the 647 imported figures span 2.7 to 9.2 litres, and a
+// motorcycle sump is still comfortably above 500 ml.
+export const OIL_CAPACITY_MIN_ML = 500;
+export const OIL_CAPACITY_MAX_ML = 20_000;
+
+const oilCapacityMlSchema = z
+  .number()
+  .int("Oil capacity must be a whole number of millilitres")
+  .min(OIL_CAPACITY_MIN_ML, "That is too little oil for an engine — check the decimal point")
+  .max(OIL_CAPACITY_MAX_ML, "That is too much oil for an engine — check the decimal point");
+
 const API_GRADE_ERROR = `Use one of: ${API_SERVICE_CATEGORIES.join(", ")}. SQ is not a published API category, and SJ/SL/SM are obsolete.`;
 
 // Written the way the bottle prints it — "SN PLUS", not "SNPLUS" — after the
@@ -43,9 +55,34 @@ const fitmentProfileShape = {
     .max(6)
     .transform((grades) => [...new Set(grades)])
     .optional(),
+  // Bounded rather than merely positive: the imported figures run 2.7 to 9.2
+  // litres, and a car needing less than half a litre or more than twenty is a
+  // slipped decimal point, not a car. The form takes litres and converts.
+  oilCapacityNoFilterMl: oilCapacityMlSchema.nullable().optional(),
+  oilCapacityWithFilterMl: oilCapacityMlSchema.nullable().optional(),
   oilGuideEn: z.string().max(2000).nullable().optional(),
   oilGuideFa: z.string().max(2000).nullable().optional(),
 };
+
+// A new filter has to be filled too, so the with-filter figure is the larger of
+// the two. Equal is wrong for the same reason. The imported data had exactly
+// one pair the wrong way round — Samand XU7, 4.5 without and 4.1 with — which
+// is the kind of thing that reads as authoritative on a car card and sends
+// somebody home half a litre short.
+function checkOilCapacityOrder(
+  data: { oilCapacityNoFilterMl?: number | null; oilCapacityWithFilterMl?: number | null },
+  ctx: z.RefinementCtx,
+) {
+  const { oilCapacityNoFilterMl: without, oilCapacityWithFilterMl: with_ } = data;
+  if (typeof without === "number" && typeof with_ === "number" && with_ <= without) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["oilCapacityWithFilterMl"],
+      message:
+        "Must be more than the figure without a filter change — the new filter has to be filled too.",
+    });
+  }
+}
 
 // The one contradiction the imported notes make constantly: the same grade
 // listed for "all seasons" and for "very cold". A grade cannot be both the
@@ -72,7 +109,10 @@ function checkViscosityDistinct(
 
 export const fitmentProfileCreateSchema = z
   .object(fitmentProfileShape)
-  .superRefine(checkViscosityDistinct);
+  .superRefine((data, ctx) => {
+    checkViscosityDistinct(data, ctx);
+    checkOilCapacityOrder(data, ctx);
+  });
 
 // The update route supplies the profile's *current* viscosity values when the
 // body omits them, so a PATCH that sets only the cold grade is still checked
@@ -80,7 +120,10 @@ export const fitmentProfileCreateSchema = z
 export const fitmentProfileUpdateSchema = z
   .object(fitmentProfileShape)
   .partial()
-  .superRefine(checkViscosityDistinct);
+  .superRefine((data, ctx) => {
+    checkViscosityDistinct(data, ctx);
+    checkOilCapacityOrder(data, ctx);
+  });
 
 export type FitmentProfileCreateInput = z.infer<typeof fitmentProfileCreateSchema>;
 export type FitmentProfileUpdateInput = z.infer<typeof fitmentProfileUpdateSchema>;

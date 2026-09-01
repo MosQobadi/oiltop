@@ -50,8 +50,32 @@ function conditions(locale: Locale, guidance: OilGuidance) {
   ].filter((row) => row.grade !== null);
 }
 
+// Stored in millilitres to match Product.volumeMl; shown in litres, which is
+// how the bottle is labelled and how anyone doing the job says it. Trailing
+// zeros are trimmed so 3500 reads "3.5" and 4000 reads "4", not "4.0".
+function litres(ml: number, locale: Locale): string {
+  const value = (ml / 1000).toFixed(1).replace(/\.0$/, "");
+  return new Intl.NumberFormat(locale === "fa" ? "fa-IR" : "en-US").format(Number(value));
+}
+
+function capacities(locale: Locale, guidance: OilGuidance) {
+  return [
+    {
+      key: "with-filter",
+      ml: guidance.capacityWithFilterMl,
+      label: pickLocale(locale, "With a new oil filter", "همراه با تعویض فیلتر روغن"),
+    },
+    {
+      key: "no-filter",
+      ml: guidance.capacityNoFilterMl,
+      label: pickLocale(locale, "Without changing the filter", "بدون تعویض فیلتر روغن"),
+    },
+  ].filter((row): row is { key: string; ml: number; label: string } => row.ml !== null);
+}
+
 export function OilGuidanceCard({ locale, guidance, className = "" }: OilGuidanceCardProps) {
   const rows = conditions(locale, guidance);
+  const volumes = capacities(locale, guidance);
   const note = pickLocale(locale, guidance.noteEn, guidance.noteFa) ?? null;
   const hasGrades = guidance.apiGrades.length > 0;
 
@@ -100,6 +124,27 @@ export function OilGuidanceCard({ locale, guidance, className = "" }: OilGuidanc
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {volumes.length > 0 && (
+        <div className="mt-4 border-t border-neutral-100 pt-4">
+          <p className="text-[13px] font-medium text-neutral-700">
+            {pickLocale(locale, "How much it takes", "حجم روغن موتور")}
+          </p>
+          <dl className="mt-2 flex flex-wrap gap-x-8 gap-y-2">
+            {volumes.map((row) => (
+              <div key={row.key} data-testid={`oil-capacity-${row.key}`} className="flex flex-col">
+                <dd className="font-mono text-[15px] font-semibold text-neutral-900">
+                  {litres(row.ml, locale)}{" "}
+                  <span className="font-sans text-[12.5px] font-normal text-neutral-500">
+                    {pickLocale(locale, "L", "لیتر")}
+                  </span>
+                </dd>
+                <dt className="text-[12.5px] text-neutral-500">{row.label}</dt>
+              </div>
+            ))}
+          </dl>
         </div>
       )}
 

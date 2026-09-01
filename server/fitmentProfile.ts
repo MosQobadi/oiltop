@@ -133,6 +133,8 @@ export async function getFitmentProfileById(id: string) {
     id: profile.id,
     label: profile.label,
     internalNote: profile.internalNote,
+    oilCapacityNoFilterMl: profile.oilCapacityNoFilterMl,
+    oilCapacityWithFilterMl: profile.oilCapacityWithFilterMl,
     oilViscosityStandard: profile.oilViscosityStandard,
     oilViscosityHot: profile.oilViscosityHot,
     oilViscosityCold: profile.oilViscosityCold,
@@ -168,17 +170,23 @@ export async function updateFitmentProfile(id: string, input: FitmentProfileUpda
 }
 
 /**
- * The stored viscosity grades, for the PATCH route to merge under a partial
- * body before validating. Null when the profile does not exist — the update
- * below raises the proper 404, so this stays a lookup rather than a guard.
+ * The stored fields the update schema compares against each other, for the
+ * PATCH route to merge under a partial body before validating — the grades and
+ * the two capacities. A patch that sets only the with-filter capacity still has
+ * to be checked against the without-filter one already stored.
+ *
+ * Null when the profile does not exist; the update below raises the proper 404,
+ * so this stays a lookup rather than a guard.
  */
-export async function getFitmentProfileViscosity(id: string) {
+export async function getFitmentProfileCrossFields(id: string) {
   return prisma.fitmentProfile.findUnique({
     where: { id },
     select: {
       oilViscosityStandard: true,
       oilViscosityHot: true,
       oilViscosityCold: true,
+      oilCapacityNoFilterMl: true,
+      oilCapacityWithFilterMl: true,
     },
   });
 }

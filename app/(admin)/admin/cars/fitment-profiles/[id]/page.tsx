@@ -40,6 +40,27 @@ function formatMatchSpec(matchSpec: Record<string, unknown> | null): string | nu
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
+// Capacity is stored in millilitres (matching Product.volumeMl) and entered in
+// litres, which is the unit on the bottle and in the workshop. One decimal is
+// all the source ever states — "حدود 3.5 لیتر".
+const litresField = z
+  .string()
+  .trim()
+  .refine(
+    (value) => value === "" || /^\d{1,2}(\.\d)?$/.test(value),
+    'Enter litres, like "4" or "3.5"',
+  );
+
+function mlToLitres(ml: number | null): string {
+  return ml === null ? "" : String(Number((ml / 1000).toFixed(1)));
+}
+
+function litresToMl(value: string): number | null {
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  return Math.round(Number(trimmed) * 1000);
+}
+
 // The grades are typed, not picked from a list: SAE keeps adding them (0W-8 and
 // 0W-16 are both in this catalog already) and a fixed dropdown would be wrong
 // within a year. Validated against the same pattern the product form uses.
@@ -56,11 +77,15 @@ const profileFormSchema = z
     oilViscosityHot: viscosityField,
     oilViscosityCold: viscosityField,
     oilApiGrades: z.array(z.string()),
+    // Litres, because that is what the bottle and the workshop say. Converted
+    // to the millilitres the column stores on submit.
+    oilCapacityNoFilterL: litresField,
+    oilCapacityWithFilterL: litresField,
     oilGuideEn: z.string().max(2000),
     oilGuideFa: z.string().max(2000),
   })
-  // Mirrors the server rule so the admin is told before the round trip. The
-  // source contradicts itself this way on 86 cars — see the schema comment.
+  // Mirrors the server rules so the admin is told before the round trip. The
+  // source contradicts itself both ways — see the schema comment.
   .superRefine((data, ctx) => {
     for (const key of ["oilViscosityCold", "oilViscosityHot"] as const) {
       const value = data[key].trim().toUpperCase();
@@ -71,6 +96,20 @@ const profileFormSchema = z
           message: "Same as the all-season grade — leave it empty unless this car really differs.",
         });
       }
+    }
+
+    const without = Number(data.oilCapacityNoFilterL.trim());
+    const withFilter = Number(data.oilCapacityWithFilterL.trim());
+    if (
+      data.oilCapacityNoFilterL.trim() !== "" &&
+      data.oilCapacityWithFilterL.trim() !== "" &&
+      withFilter <= without
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["oilCapacityWithFilterL"],
+        message: "Must be more than the figure without a filter change — the filter holds oil too.",
+      });
     }
   });
 
@@ -83,6 +122,8 @@ const emptyDefaults: ProfileFormValues = {
   oilViscosityHot: "",
   oilViscosityCold: "",
   oilApiGrades: [],
+  oilCapacityNoFilterL: "",
+  oilCapacityWithFilterL: "",
   oilGuideEn: "",
   oilGuideFa: "",
 };
@@ -106,6 +147,8 @@ interface FitmentProfileDetail {
   oilViscosityHot: string | null;
   oilViscosityCold: string | null;
   oilApiGrades: string[];
+  oilCapacityNoFilterMl: number | null;
+  oilCapacityWithFilterMl: number | null;
   oilGuideEn: string | null;
   oilGuideFa: string | null;
   items: FitmentProfileItem[];
@@ -190,6 +233,8 @@ export default function FitmentProfileFormPage() {
         oilViscosityHot: fitmentProfile.oilViscosityHot ?? "",
         oilViscosityCold: fitmentProfile.oilViscosityCold ?? "",
         oilApiGrades: fitmentProfile.oilApiGrades ?? [],
+        oilCapacityNoFilterL: mlToLitres(fitmentProfile.oilCapacityNoFilterMl),
+        oilCapacityWithFilterL: mlToLitres(fitmentProfile.oilCapacityWithFilterMl),
         oilGuideEn: fitmentProfile.oilGuideEn ?? "",
         oilGuideFa: fitmentProfile.oilGuideFa ?? "",
       });
@@ -216,6 +261,8 @@ export default function FitmentProfileFormPage() {
       oilViscosityHot: orNull(values.oilViscosityHot),
       oilViscosityCold: orNull(values.oilViscosityCold),
       oilApiGrades: values.oilApiGrades,
+      oilCapacityNoFilterMl: litresToMl(values.oilCapacityNoFilterL),
+      oilCapacityWithFilterMl: litresToMl(values.oilCapacityWithFilterL),
       oilGuideEn: orNull(values.oilGuideEn),
       oilGuideFa: orNull(values.oilGuideFa),
     };
@@ -360,6 +407,21 @@ export default function FitmentProfileFormPage() {
               name="oilViscosityHot"
               label="Viscosity — very hot"
               placeholder="5W-40"
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              control={control}
+              name="oilCapacityWithFilterL"
+              label="Oil capacity with a new filter (litres)"
+              placeholder="3.5"
+            />
+            <TextField
+              control={control}
+              name="oilCapacityNoFilterL"
+              label="Oil capacity without changing the filter (litres)"
+              placeholder="3.2"
             />
           </div>
 

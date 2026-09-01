@@ -253,6 +253,54 @@ describe("fitment profile oil guidance", () => {
     expect(result.success).toBe(false);
   });
 
+  // A new filter has to be filled too. The imported data had exactly one pair
+  // the wrong way round — Samand XU7, 4.5 L without and 4.1 L with.
+  it("rejects a with-filter capacity that is not larger", () => {
+    const result = fitmentProfileCreateSchema.safeParse({
+      ...base,
+      oilCapacityNoFilterMl: 4500,
+      oilCapacityWithFilterMl: 4100,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["oilCapacityWithFilterMl"]);
+  });
+
+  it("rejects two capacities that are equal", () => {
+    expect(
+      fitmentProfileCreateSchema.safeParse({
+        ...base,
+        oilCapacityNoFilterMl: 4000,
+        oilCapacityWithFilterMl: 4000,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts a sane pair", () => {
+    expect(
+      fitmentProfileCreateSchema.safeParse({
+        ...base,
+        oilCapacityNoFilterMl: 3200,
+        oilCapacityWithFilterMl: 3500,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("catches a slipped decimal point in either direction", () => {
+    // 3.5 litres typed as 35 ml, and as 35 litres.
+    expect(fitmentProfileCreateSchema.safeParse({ ...base, oilCapacityWithFilterMl: 35 }).success).toBe(
+      false,
+    );
+    expect(
+      fitmentProfileCreateSchema.safeParse({ ...base, oilCapacityWithFilterMl: 35_000 }).success,
+    ).toBe(false);
+  });
+
+  it("allows one capacity on its own", () => {
+    expect(
+      fitmentProfileCreateSchema.safeParse({ ...base, oilCapacityWithFilterMl: 3500 }).success,
+    ).toBe(true);
+  });
+
   it("leaves an unstated grade unstated rather than defaulting it", () => {
     const result = fitmentProfileCreateSchema.parse(base);
     expect(result.oilViscosityStandard).toBeUndefined();

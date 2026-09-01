@@ -593,6 +593,9 @@ export interface OilGuidance {
   viscosityHot: string | null;
   viscosityCold: string | null;
   apiGrades: string[];
+  /** Millilitres, as stored. The card renders litres. */
+  capacityNoFilterMl: number | null;
+  capacityWithFilterMl: number | null;
   noteEn: string | null;
   noteFa: string | null;
 }
@@ -607,6 +610,8 @@ export async function getOilGuidanceForEngine(carEngineId: string): Promise<OilG
           oilViscosityHot: true,
           oilViscosityCold: true,
           oilApiGrades: true,
+          oilCapacityNoFilterMl: true,
+          oilCapacityWithFilterMl: true,
           oilGuideEn: true,
           oilGuideFa: true,
         },
@@ -621,6 +626,8 @@ export async function getOilGuidanceForEngine(carEngineId: string): Promise<OilG
       viscosityHot: profile.oilViscosityHot,
       viscosityCold: profile.oilViscosityCold,
       apiGrades: profile.oilApiGrades,
+      capacityNoFilterMl: profile.oilCapacityNoFilterMl,
+      capacityWithFilterMl: profile.oilCapacityWithFilterMl,
       noteEn: profile.oilGuideEn,
       noteFa: profile.oilGuideFa,
     };
@@ -636,6 +643,8 @@ export function hasOilGuidance(guidance: OilGuidance): boolean {
     guidance.viscosityHot !== null ||
     guidance.viscosityCold !== null ||
     guidance.apiGrades.length > 0 ||
+    guidance.capacityNoFilterMl !== null ||
+    guidance.capacityWithFilterMl !== null ||
     guidance.noteEn !== null ||
     guidance.noteFa !== null
   );
