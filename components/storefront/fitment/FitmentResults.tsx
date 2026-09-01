@@ -294,7 +294,6 @@ function CategorySection({
             locale={locale}
             product={product}
             imageSizes={FITMENT_IMAGE_SIZES}
-            imageBox="tall"
           />
         ))
       : [
