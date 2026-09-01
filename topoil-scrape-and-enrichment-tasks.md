@@ -32,6 +32,14 @@ factual data about products. Descriptions and product photography are the source
 oil-city is a direct competitor. Descriptive prose and images are captured as _reference material for
 the reviewer_ and must not reach the storefront as-is. This is why every imported row lands INACTIVE.
 
+> **Amended for images, on the owner's instruction.** The prose half of this decision stands. The
+> image half was revisited once it was established that there is no supplier photo pack to draw on
+> and no realistic way to obtain ~300 white-ground product shots otherwise, and that most of what
+> oil-city serves is manufacturer packaging artwork it is itself re-using rather than photography it
+> commissioned. Product images are therefore fetched from the captured `imageUrls` by
+> `scripts/images/product-images.ts`, normalised, and attached. Descriptions remain reference-only.
+> Nothing about the INACTIVE-on-import rule changes.
+
 **2. Cars come from oil-city, years come from hamrah-mechanic.** oil-city publishes the fitment but no
 years or types; hamrah-mechanic publishes years and types but no fitment. Importing cars from
 hamrah-mechanic would mean joining two Persian name sets across ~800 models, and

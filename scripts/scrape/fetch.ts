@@ -34,7 +34,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { type Browser, chromium } from "@playwright/test";
+import { type Browser, type BrowserContext, chromium } from "@playwright/test";
 
 /** A 4xx, or a 5xx that survived its retries. Carries the status so a caller can record it. */
 export class HttpStatusError extends Error {
@@ -229,6 +229,15 @@ function browser(): Promise<Browser> {
 
 /** Scrapers must call this when finished, or the process will not exit. */
 export async function closeBrowser(): Promise<void> {
+  // The warmed binary contexts hold the browser open on their own, so they go
+  // first — closing the browser out from under them logs a torn-down-context
+  // error on the way out.
+  const contexts = [...binaryContextByOrigin.values()];
+  binaryContextByOrigin.clear();
+  await Promise.all(
+    contexts.map(async (pending) => (await pending).close().catch(() => undefined)),
+  );
+
   if (browserPromise === null) return;
   const instance = await browserPromise;
   browserPromise = null;
@@ -502,6 +511,160 @@ export async function fetchPage(url: string, options: FetchPageOptions = {}): Pr
           return body;
         } else {
           lastError = new HttpStatusError(status, url);
+        }
+      } catch (error) {
+        if (error instanceof HttpStatusError && error.status < 500) throw error;
+        lastError = error;
+      }
+
+      if (attempt < MAX_ATTEMPTS) await sleep(interval * 2 ** attempt);
+    }
+
+    throw lastError instanceof Error ? lastError : new Error(`Failed to fetch ${url}`);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Binary fetching
+// ---------------------------------------------------------------------------
+
+/**
+ * A browser context per origin that has already been through the CDN shim.
+ *
+ * `fetchPage` can afford a throwaway context per page because it navigates, and
+ * a navigation runs the shim's script and polls until the real page replaces
+ * it. Chrome's request API does not run scripts, so a cold context asking for
+ * an image gets 6KB of "Transferring to the website..." at HTTP 200 — which is
+ * a perfectly valid response holding no image, and it is what the first run of
+ * this function actually returned for all twelve files it was given.
+ *
+ * Navigating once per origin and keeping the context is what fixes it: the shim
+ * leaves its clearance cookie in the context, and every later request from the
+ * same context carries it. One extra page load per host, not per file.
+ */
+const binaryContextByOrigin = new Map<string, Promise<BrowserContext>>();
+
+async function openWarmContext(origin: string): Promise<BrowserContext> {
+  const context = await (await browser()).newContext({ userAgent: USER_AGENT });
+  const page = await context.newPage();
+  try {
+    await page.goto(origin, { waitUntil: "domcontentloaded", timeout: NAVIGATION_TIMEOUT_MS });
+    const deadline = Date.now() + INTERSTITIAL_TIMEOUT_MS;
+    // Same poll as loadInBrowser, and for the same reason: the shim takes about
+    // four seconds to swap itself out, and a page that arrived intact costs
+    // nothing to check.
+    while (Date.now() < deadline) {
+      try {
+        if (!isCdnInterstitial(await page.content())) break;
+      } catch {
+        // page.content() throws while a navigation is in flight, which is
+        // exactly what the shim does on its way out. Keep polling.
+      }
+      await page.waitForTimeout(250);
+    }
+  } finally {
+    await page.close();
+  }
+  return context;
+}
+
+function warmedContext(origin: string): Promise<BrowserContext> {
+  let existing = binaryContextByOrigin.get(origin);
+  if (existing === undefined) {
+    existing = openWarmContext(origin);
+    binaryContextByOrigin.set(origin, existing);
+  }
+  return existing;
+}
+
+/** Drops a context whose clearance has gone stale, so the next call warms a new one. */
+async function discardContext(origin: string): Promise<void> {
+  const existing = binaryContextByOrigin.get(origin);
+  if (existing === undefined) return;
+  binaryContextByOrigin.delete(origin);
+  await (await existing).close().catch(() => undefined);
+}
+
+/**
+ * Where a downloaded binary lives. Raw bytes, not a JSON envelope: images are
+ * the only binaries we fetch and base64 in a JSON wrapper would inflate a
+ * multi-thousand-file cache by a third for no benefit. The file existing IS the
+ * cache hit, so a failed download leaves nothing behind to be mistaken for one.
+ */
+export function binaryCachePathFor(url: string, cacheRoot = CACHE_ROOT): string {
+  const { host } = new URL(url);
+  const hash = createHash("sha256").update(url).digest("hex").slice(0, 32);
+  return path.join(cacheRoot, host, "bin", hash);
+}
+
+/**
+ * Fetches a URL as bytes, honouring the same cache, rate limit and robots.txt
+ * as `fetchPage`.
+ *
+ * Uses Chrome's request API rather than a navigation: an image is not a
+ * document, so there is no shim to poll away and no rendered text to judge
+ * emptiness by. It goes through the browser anyway so that the TLS and header
+ * profile match the pages we already fetch — a CDN that serves the HTML happily
+ * and then 403s a bare Node request for the image it references is a normal
+ * thing to run into.
+ *
+ * Throws the same errors as `fetchPage`, plus a plain Error for a response that
+ * is technically fine but holds no bytes.
+ */
+export async function fetchBinary(url: string, options: FetchPageOptions = {}): Promise<Buffer> {
+  const { cacheRoot = CACHE_ROOT } = options;
+  const parsed = new URL(url);
+  const cacheFile = binaryCachePathFor(url, cacheRoot);
+
+  try {
+    return await readFile(cacheFile);
+  } catch {
+    // Missing or unreadable is a cache miss, same as the text cache.
+  }
+
+  const robots = await robotsFor(parsed.origin);
+  const disallowedBy = isAllowedByRobots(robots, robotsTargetFor(parsed));
+  if (disallowedBy !== null) {
+    throw new RobotsDisallowedError(
+      `${parsed.origin}/robots.txt disallows ${robotsTargetFor(parsed)} — the matching rule is ` +
+        `"Disallow: ${disallowedBy.pattern}". This is not overridable in code; if the data is ` +
+        `needed anyway, that is a conversation to have with the host.`,
+    );
+  }
+
+  const interval = Math.max(MIN_INTERVAL_MS, robots.crawlDelayMs ?? 0);
+
+  return schedule(parsed.host, interval, async () => {
+    let lastError: unknown = null;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+      try {
+        const context = await warmedContext(parsed.origin);
+        const response = await context.request.get(url, { timeout: NAVIGATION_TIMEOUT_MS });
+        const status = response.status();
+
+        if (status >= 400 && status < 500) throw new HttpStatusError(status, url);
+        if (status < 200 || status >= 400) {
+          lastError = new HttpStatusError(status, url);
+        } else {
+          const body = await response.body();
+          // Three ways a 200 can hold nothing usable, and none of them may
+          // reach the cache — a cached non-answer is returned instantly and
+          // forever, and reports itself as "the file was empty" rather than as
+          // "it was never read".
+          if (body.length === 0) {
+            lastError = new Error(`${url} returned an empty body`);
+          } else if (isCdnInterstitial(body.subarray(0, 2048).toString("utf8"))) {
+            // The shim, at HTTP 200, in place of the bytes. The warm-up should
+            // have prevented it; a context can still go stale mid-run, so throw
+            // this one away and let the retry build a fresh one.
+            await discardContext(parsed.origin);
+            lastError = new Error(`${url} returned the CDN interstitial instead of the file`);
+          } else {
+            await mkdir(path.dirname(cacheFile), { recursive: true });
+            await writeFile(cacheFile, body);
+            return body;
+          }
         }
       } catch (error) {
         if (error instanceof HttpStatusError && error.status < 500) throw error;
