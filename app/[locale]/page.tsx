@@ -49,7 +49,7 @@ export default async function StorefrontHome({ params }: { params: Promise<{ loc
 
   return (
     <>
-      <HomeHero locale={locale} />
+      <HomeHero locale={locale} categories={categories} />
 
       {/* An empty rail is worse than no rail — a shop with nothing on offer
           shouldn't announce it. */}
