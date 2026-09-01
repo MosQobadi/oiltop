@@ -39,3 +39,26 @@ body {
 button:not(:disabled):not([aria-disabled="true"]) {
   cursor: pointer;
 }
+
+/* HeroUI's drawer positions its panel with `justify-content: flex-start/end`,
+   which is flow-relative, but animates it with `translate: ±100%`, which is
+   physical. Under `dir="rtl"` the two disagree: `placement="right"` slides the
+   panel in from the physical right, then parks it on the physical left, because
+   `flex-end` on an RTL main axis *is* the left. Pin the alignment to the
+   physical side the placement names so the panel lands where it slid in from.
+
+   Its close button has the same split — `right-4` is physical, so in RTL it
+   stays on the right, on top of the heading and the menu items, which is where
+   an RTL panel's content starts. Move it to the inline end. */
+[dir="rtl"] .drawer__content--left {
+  justify-content: flex-end;
+}
+
+[dir="rtl"] .drawer__content--right {
+  justify-content: flex-start;
+}
+
+[dir="rtl"] .drawer__close-trigger {
+  right: auto;
+  left: 1rem;
+}

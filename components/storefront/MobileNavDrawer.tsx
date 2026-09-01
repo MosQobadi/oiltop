@@ -29,7 +29,10 @@ export function MobileNavDrawer({ locale, pathname }: { locale: Locale; pathname
       </Drawer.Trigger>
 
       <Drawer.Backdrop>
-        {/* Slides in from whichever side the reading direction starts on. */}
+        {/* Slides in from — and rests on — whichever side the reading direction
+            starts on: left for English, right for Persian. HeroUI's own RTL
+            handling of this placement is broken in both halves; globals.css
+            corrects it. */}
         <Drawer.Content placement={localeDir(locale) === "rtl" ? "right" : "left"}>
           <Drawer.Dialog>
             <Drawer.Header>
