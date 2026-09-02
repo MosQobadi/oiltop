@@ -33,34 +33,33 @@ import { pickLocale, type Locale } from "@/lib/i18n";
 // (it is emphatically not a white-background pack shot).
 const HERO_PHOTO = "/hero-parts.png";
 
-// Where the slot begins, and the one number on this banner worth deriving
-// rather than eyeballing. The copy column is a *fixed* 560px inside a container
-// that centres at 1180px, while the slot is a share of the viewport — so a
-// percentage alone puts the parts under the finder card at the narrow end of
-// `lg`, which is exactly where a percentage is smallest.
+// The slot lives *inside* the 1180px content container, not in the full-bleed
+// section. That is what keeps the parts still: measured against the viewport
+// they drift outward as the window widens — the container stops growing at
+// 1180px but the viewport does not, so every pixel past that pushed the
+// still-life further from the copy and made it look bigger and bigger. Bounded
+// by the container instead, the photograph stops where the promise strip below
+// it stops, and past 1180px nothing about it changes.
 //
-// The copy column's outer edge is 24px of container padding + 560px, offset by
-// whatever margin centring leaves: 584px while the container is still growing,
-// and `50% - 6px` once it has stopped at 1180. Take the later of the two and
-// add a 30px gutter, and the parts clear the card at every width.
-const HERO_PHOTO_START = "max(614px, calc(50% + 24px))";
-
+// 620px is the copy column's own width — a fixed 560px — plus the container's
+// 24px of padding and a 36px gutter. Below that the parts would run under the
+// finder card, which is exactly what a viewport percentage did at 1024px.
 const HERO_PHOTO_SLOT_STYLE = {
   top: 0,
   // Clear of the promise strip, so the parts stand on something rather than
   // overlapping four lines of text.
   bottom: "6rem",
-  insetInlineStart: HERO_PHOTO_START,
+  insetInlineStart: "620px",
   insetInlineEnd: 0,
 };
 
-// Only ever rendered at `lg` and up, where the slot is at its widest a little
-// under half of a 1180px container — so one width covers every case that
-// actually draws it. Under `lg` the slot is `display:none` and the browser
-// skips the download; `1px` rather than the more obvious `0px` because a zero
-// slot makes some browsers pick the *smallest* candidate in the srcset and
-// paint that, rather than fetching nothing.
-const HERO_PHOTO_SIZES = "(min-width: 1024px) 640px, 1px";
+// Only ever rendered at `lg` and up, where the slot tops out a little over
+// 500px — so one width covers every case that actually draws it. Under `lg`
+// the slot is `display:none` and the browser skips the download; `1px` rather
+// than the more obvious `0px` because a zero slot makes some browsers pick the
+// *smallest* candidate in the srcset and paint that, rather than fetching
+// nothing.
+const HERO_PHOTO_SIZES = "(min-width: 1024px) 560px, 1px";
 
 // Near-black, warm rather than blue — the same family as the category cards'
 // ground, dropped to banner depth. Everything lit on top of it is one accent
@@ -155,31 +154,31 @@ export function HomeHero({ locale }: { locale: Locale }) {
         className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-32"
       />
 
-      {/* Spans from the copy column's edge to the inline end of the banner, so
-          it lands opposite the copy in both trees and bleeds past the container
-          rather than stopping at it. `contain` keeps the still-life whole at
-          every width; the banner's height is set by the column beside it, not
-          by the photograph, which is why the parts get smaller on a narrow
-          desktop instead of the banner getting taller. */}
-      <div
-        style={HERO_PHOTO_SLOT_STYLE}
-        className="pointer-events-none absolute -z-10 hidden lg:block"
-      >
-        <Image
-          src={HERO_PHOTO}
-          // Decorative: the parts are named in the copy and in every section
-          // below. A description here would be read out before the headline.
-          alt=""
-          fill
-          sizes={HERO_PHOTO_SIZES}
-          // Above the fold on the screens that render it, and large enough to
-          // be the LCP element on most of them.
-          priority
-          className="object-contain object-bottom"
-        />
-      </div>
-
       <div className="relative mx-auto w-full max-w-[1180px] px-4 pt-12 pb-10 sm:px-6 sm:pb-0 lg:pt-20">
+        {/* Runs from the copy column's edge to the container's, so it lands
+            opposite the copy in both trees and ends where the promise strip
+            below it ends. `contain` keeps the still-life whole at every width;
+            the banner's height is set by the column beside it, not by the
+            photograph, which is why the parts get smaller on a narrow desktop
+            instead of the banner getting taller. */}
+        <div
+          style={HERO_PHOTO_SLOT_STYLE}
+          className="pointer-events-none absolute -z-10 hidden lg:block"
+        >
+          <Image
+            src={HERO_PHOTO}
+            // Decorative: the parts are named in the copy and in every section
+            // below. A description here would be read out before the headline.
+            alt=""
+            fill
+            sizes={HERO_PHOTO_SIZES}
+            // Above the fold on the screens that render it, and large enough to
+            // be the LCP element on most of them.
+            priority
+            className="object-contain object-bottom"
+          />
+        </div>
+
         {/* The copy column is capped rather than fractional: past about 560px
             the headline stops being two lines and the whole composition
             changes shape. The photograph takes whatever is left. */}
