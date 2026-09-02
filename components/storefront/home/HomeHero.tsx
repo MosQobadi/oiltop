@@ -16,9 +16,16 @@ import { pickLocale, type Locale } from "@/lib/i18n";
 // because it is the only bordered, blurred panel on the banner, not because it
 // is the only white thing — see `tone="dark"` on FitmentWizard.
 
-// The photograph: parts lit against black, no background of its own — a PNG or
-// WebP with a transparent or true-black ground, shot or cut out so its edges
-// dissolve into the banner rather than ending on a visible rectangle.
+// The photograph: parts lit against black, no background of its own — cut out
+// so its edges dissolve into the banner rather than ending on a visible
+// rectangle, and cropped tight to the subject so `object-bottom` stands the
+// parts on the floor line instead of on invisible padding.
+//
+// Deliberately *not* mirrored on /fa, unlike every decorative layer here: the
+// bottle is labelled, and a flipped label is unreadable rather than merely
+// backwards. The composition is close enough to symmetric to take being read
+// from either side — in LTR its open side (the air filter) faces the copy, in
+// RTL the bottle's mass does.
 //
 // Saved by hand into public/ rather than uploaded through the admin, the same
 // as TrustStrip's workshop photo: this is art direction for the banner, not
@@ -26,8 +33,29 @@ import { pickLocale, type Locale } from "@/lib/i18n";
 // (it is emphatically not a white-background pack shot).
 const HERO_PHOTO = "/hero-parts.png";
 
-// Only ever rendered at `lg` and up, where it occupies a fixed share of a
-// container that stops growing at 1180px — so one width covers every case that
+// Where the slot begins, and the one number on this banner worth deriving
+// rather than eyeballing. The copy column is a *fixed* 560px inside a container
+// that centres at 1180px, while the slot is a share of the viewport — so a
+// percentage alone puts the parts under the finder card at the narrow end of
+// `lg`, which is exactly where a percentage is smallest.
+//
+// The copy column's outer edge is 24px of container padding + 560px, offset by
+// whatever margin centring leaves: 584px while the container is still growing,
+// and `50% - 6px` once it has stopped at 1180. Take the later of the two and
+// add a 30px gutter, and the parts clear the card at every width.
+const HERO_PHOTO_START = "max(614px, calc(50% + 24px))";
+
+const HERO_PHOTO_SLOT_STYLE = {
+  top: 0,
+  // Clear of the promise strip, so the parts stand on something rather than
+  // overlapping four lines of text.
+  bottom: "6rem",
+  insetInlineStart: HERO_PHOTO_START,
+  insetInlineEnd: 0,
+};
+
+// Only ever rendered at `lg` and up, where the slot is at its widest a little
+// under half of a 1180px container — so one width covers every case that
 // actually draws it. Under `lg` the slot is `display:none` and the browser
 // skips the download; `1px` rather than the more obvious `0px` because a zero
 // slot makes some browsers pick the *smallest* candidate in the srcset and
@@ -127,12 +155,16 @@ export function HomeHero({ locale }: { locale: Locale }) {
         className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-32"
       />
 
-      {/* Anchored to the inline end so it lands opposite the copy in both
-          trees, and bottomed out just above the promise strip so the parts
-          stand on something rather than overlapping four lines of text.
-          `contain` keeps the still-life whole at every width; the banner's
-          height is set by the column beside it, not by the photograph. */}
-      <div className="pointer-events-none absolute top-0 bottom-24 -z-10 hidden w-[52%] max-w-[720px] end-0 lg:block">
+      {/* Spans from the copy column's edge to the inline end of the banner, so
+          it lands opposite the copy in both trees and bleeds past the container
+          rather than stopping at it. `contain` keeps the still-life whole at
+          every width; the banner's height is set by the column beside it, not
+          by the photograph, which is why the parts get smaller on a narrow
+          desktop instead of the banner getting taller. */}
+      <div
+        style={HERO_PHOTO_SLOT_STYLE}
+        className="pointer-events-none absolute -z-10 hidden lg:block"
+      >
         <Image
           src={HERO_PHOTO}
           // Decorative: the parts are named in the copy and in every section
