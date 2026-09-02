@@ -198,7 +198,13 @@ export function FitmentWizard({
           describedBy={note ? noteId : undefined}
           onChange={step.onChange}
         />
-        {note}
+        {/* The note slot is always in the layout, empty or not. Every note here
+            is transient — "Loading…" is gone in well under a second — and a
+            slot that appears with it grows the card, which on the homepage
+            grows the whole banner: the hero photograph is sized off the
+            banner's height, and the promise strip below it gets shoved down.
+            One line's worth of reserved height costs 16px and nothing moves. */}
+        <div className="min-h-4">{note}</div>
       </div>
     );
 
@@ -279,7 +285,7 @@ function renderNote({
 
   if (flags.failed) {
     return (
-      <p id={noteId} role="alert" className={`text-[12.5px] ${alertClass}`}>
+      <p id={noteId} role="alert" className={`text-[12.5px] leading-4 ${alertClass}`}>
         {pickLocale(locale, "Couldn't load these options.", "بارگذاری گزینه‌ها ممکن نشد.")}{" "}
         <button
           type="button"
@@ -296,7 +302,7 @@ function renderNote({
 
   if (flags.loading) {
     return (
-      <p id={noteId} role="status" className={`text-[12.5px] ${mutedClass}`}>
+      <p id={noteId} role="status" className={`text-[12.5px] leading-4 ${mutedClass}`}>
         {pickLocale(locale, "Loading…", "در حال بارگذاری…")}
       </p>
     );
@@ -304,7 +310,7 @@ function renderNote({
 
   if (!step.disabled && step.options.length === 0) {
     return (
-      <p id={noteId} className={`text-[12.5px] ${mutedClass}`}>
+      <p id={noteId} className={`text-[12.5px] leading-4 ${mutedClass}`}>
         {step.emptyMessage}
       </p>
     );
