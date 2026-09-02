@@ -24,6 +24,13 @@ import { formatEngineOptionLabel, withFitContext } from "@/lib/storefront/fitmen
 
 export type FitmentWizardMode = "compact" | "full";
 
+/**
+ * The ground the card sits on. `dark` is the homepage hero, where the banner is
+ * near-black and a white card would be a hole in the middle of it. Only the
+ * card, its four controls and their notes change — the layout is identical.
+ */
+export type FitmentWizardTone = "light" | "dark";
+
 export interface FitmentWizardProps {
   locale: Locale;
   /**
@@ -31,6 +38,8 @@ export interface FitmentWizardProps {
    * `full` is the fitment page — a numbered stepper with room to breathe.
    */
   mode?: FitmentWizardMode;
+  /** Defaults to `light`. Only the homepage hero passes `dark`. */
+  tone?: FitmentWizardTone;
   /**
    * Drops the steps the surrounding page has already answered — a car model
    * page starts the customer at Year. See `FitmentWizardScope` for the `key`
@@ -60,6 +69,7 @@ interface StepView {
 export function FitmentWizard({
   locale,
   mode = "full",
+  tone = "light",
   scope,
   onResolve,
   className = "",
@@ -169,12 +179,13 @@ export function FitmentWizard({
   const renderStep = (step: StepView, index: number) => {
     const stepFlags = flags[step.key];
     const noteId = `${baseId}-${step.key}-note`;
-    const note = renderNote({ locale, step, flags: stepFlags, noteId, onRetry: wizard.retry });
+    const note = renderNote({ locale, step, flags: stepFlags, noteId, onRetry: wizard.retry, tone });
 
     const field = (
       <div className="flex flex-col gap-1.5">
         <SelectMenu
           locale={locale}
+          tone={tone}
           testId={`fitment-select-${step.key}`}
           label={step.label}
           value={step.value}
@@ -219,7 +230,16 @@ export function FitmentWizard({
     );
   };
 
-  const cardClass = `rounded-2xl border border-neutral-200 bg-white ${
+  // A panel on the hero rather than a card on the page: translucent white over
+  // the banner's own ground, so the light behind it still reads through. It's
+  // still the one thing on the banner you're meant to touch — that now comes
+  // from being the only bordered, blurred surface there, not from being white.
+  const cardTone =
+    tone === "dark"
+      ? "border-white/12 bg-white/6 backdrop-blur-md"
+      : "border-neutral-200 bg-white";
+
+  const cardClass = `rounded-2xl border ${cardTone} ${
     mode === "compact" ? "p-4 sm:p-5" : "p-5 sm:p-6"
   } ${className}`;
 
@@ -243,21 +263,30 @@ function renderNote({
   flags,
   noteId,
   onRetry,
+  tone,
 }: {
   locale: Locale;
   step: StepView;
   flags: { loading: boolean; failed: boolean };
   noteId: string;
   onRetry: () => void;
+  tone: FitmentWizardTone;
 }): ReactNode {
+  const mutedClass = tone === "dark" ? "text-white/60" : "text-neutral-500";
+  // red-600 is a dark red; on the banner it sits at roughly the ground's own
+  // lightness and the message disappears. red-300 is the same warning, legible.
+  const alertClass = tone === "dark" ? "text-red-300" : "text-red-600";
+
   if (flags.failed) {
     return (
-      <p id={noteId} role="alert" className="text-[12.5px] text-red-600">
+      <p id={noteId} role="alert" className={`text-[12.5px] ${alertClass}`}>
         {pickLocale(locale, "Couldn't load these options.", "بارگذاری گزینه‌ها ممکن نشد.")}{" "}
         <button
           type="button"
           onClick={onRetry}
-          className="focus-visible:ring-accent rounded font-medium underline underline-offset-2 focus-visible:ring-2 focus-visible:outline-none"
+          className={`rounded font-medium underline underline-offset-2 focus-visible:ring-2 focus-visible:outline-none ${
+            tone === "dark" ? "focus-visible:ring-accent-on-dark" : "focus-visible:ring-accent"
+          }`}
         >
           {pickLocale(locale, "Try again", "تلاش دوباره")}
         </button>
@@ -267,7 +296,7 @@ function renderNote({
 
   if (flags.loading) {
     return (
-      <p id={noteId} role="status" className="text-[12.5px] text-neutral-500">
+      <p id={noteId} role="status" className={`text-[12.5px] ${mutedClass}`}>
         {pickLocale(locale, "Loading…", "در حال بارگذاری…")}
       </p>
     );
@@ -275,7 +304,7 @@ function renderNote({
 
   if (!step.disabled && step.options.length === 0) {
     return (
-      <p id={noteId} className="text-[12.5px] text-neutral-500">
+      <p id={noteId} className={`text-[12.5px] ${mutedClass}`}>
         {step.emptyMessage}
       </p>
     );

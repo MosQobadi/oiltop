@@ -1,147 +1,190 @@
-import Link from "next/link";
-import {
-  ArrowIcon,
-  CATEGORY_ICONS,
-  GearIcon,
-  GridIcon,
-  MedalIcon,
-  ShieldIcon,
-  TruckIcon,
-  type StorefrontIcon,
-} from "../icons";
+import Image from "next/image";
+import { GearIcon, MedalIcon, ShieldIcon, TruckIcon } from "../icons";
 import { FitmentWizard } from "../fitment/FitmentWizard";
-import { categoryHref, navHref, PRODUCTS_PATH } from "../nav-items";
 import { pickLocale, type Locale } from "@/lib/i18n";
-import type { StorefrontCategory } from "@/lib/services/catalog";
 
-// The homepage's opening screen: a dark banner carrying the pitch on one side
-// and the car-finder on the other. The wizard is still the point of the page —
-// everything to its left is there to say what this shop sells and to give a
-// customer who already knows what they want a way past it.
+// The homepage's opening screen: a lit product still-life on a near-black
+// ground, with the pitch and the car-finder stacked in a column beside it.
 //
-// Four bands, top to bottom: eyebrow + headline + line of copy, a row of
-// category shortcuts, the "browse everything" button, and a strip of four
-// promises closing the banner off. The wizard spans the first three on desktop
-// and drops under them on mobile.
+// One column, top to bottom: eyebrow, two-line headline, a line of copy, the
+// finder, and a strip of four promises closing the banner off. The photograph
+// takes the other half of the banner from `lg` up and is dropped entirely below
+// that — on a phone it would push the finder a screen and a half down, which is
+// the opposite of what this banner is for.
 //
-// A phone gets a shorter version of that: the shortcut row and the promise
-// strip are both hidden below `sm`, and the button moves to sit *after* the
-// wizard rather than before it. All three are the same edit in different form —
-// on a narrow screen the banner ran well past a screenful before the finder
-// came into view, and each of these bands repeats something the page says again
-// further down (the header and CategoryBrowseSection for the shortcuts, the
-// pre-footer TrustStrip for the promises).
+// The wizard is still the point of the page. It reads as the thing to touch
+// because it is the only bordered, blurred panel on the banner, not because it
+// is the only white thing — see `tone="dark"` on FitmentWizard.
 
-// Warm near-black, with an accent-tinted glow low on the wizard's side — the
-// same ground the category cards sit on, lit rather than flat.
+// The photograph: parts lit against black, no background of its own — a PNG or
+// WebP with a transparent or true-black ground, shot or cut out so its edges
+// dissolve into the banner rather than ending on a visible rectangle.
+//
+// Saved by hand into public/ rather than uploaded through the admin, the same
+// as TrustStrip's workshop photo: this is art direction for the banner, not
+// catalogue content, and it follows neither of the catalogue's two image rules
+// (it is emphatically not a white-background pack shot).
+const HERO_PHOTO = "/hero-parts.png";
+
+// Only ever rendered at `lg` and up, where it occupies a fixed share of a
+// container that stops growing at 1180px — so one width covers every case that
+// actually draws it. Under `lg` the slot is `display:none` and the browser
+// skips the download; `1px` rather than the more obvious `0px` because a zero
+// slot makes some browsers pick the *smallest* candidate in the srcset and
+// paint that, rather than fetching nothing.
+const HERO_PHOTO_SIZES = "(min-width: 1024px) 640px, 1px";
+
+// Near-black, warm rather than blue — the same family as the category cards'
+// ground, dropped to banner depth. Everything lit on top of it is one accent
+// hue (50), so the banner reads as a single light source rather than a set of
+// separate gradients.
 const HERO_STYLE = {
-  backgroundColor: "oklch(0.22 0.012 55)",
+  backgroundColor: "oklch(0.16 0.007 55)",
+};
+
+// Three lighting layers, drawn in one element behind everything else.
+//
+// The key light sits behind the photograph and falls off before it reaches the
+// text, so the copy column keeps a flat ground to read against. The floor line
+// is what the reference gets from a studio sweep — a bright horizontal at the
+// height the parts stand on, which is what stops the bottom of the banner from
+// reading as a void. The streaks are the one purely graphic element: thin
+// accent rules raked across the far corner, faded out by a mask before they
+// reach the headline.
+const BACKDROP_STYLE = {
   backgroundImage: [
-    "radial-gradient(80% 70% at 78% 8%, oklch(0.36 0.06 42 / 0.75) 0%, transparent 62%)",
-    "radial-gradient(60% 60% at 8% 100%, oklch(0.30 0.03 50 / 0.6) 0%, transparent 70%)",
+    // Key light, behind the parts.
+    "radial-gradient(58% 70% at 74% 46%, oklch(0.42 0.09 45 / 0.5) 0%, transparent 68%)",
+    // A cooler lift low on the copy side, so the column isn't sitting on pure black.
+    "radial-gradient(46% 55% at 6% 96%, oklch(0.26 0.02 55 / 0.55) 0%, transparent 72%)",
   ].join(","),
 };
 
-// The shortcut row is a taste of the catalogue, not a second navigation: three
-// categories and a way to see the rest. `listActiveCategories` is already sorted
-// by the display order admins set, so "the first three" is their choice.
-const SHORTCUT_COUNT = 3;
+// Separate from BACKDROP_STYLE because it carries its own mask: the rules have
+// to stop before they cross the headline, and a mask applies to the whole
+// element, not to one background layer.
+// The mask is in percentages of the banner, so it tightens on its own as the
+// screen narrows — which it has to: on a phone a corner big enough to look
+// right at 1440px rakes the rules straight across the headline.
+const STREAK_MASK = "radial-gradient(54% 68% at 100% 0%, #000 0%, transparent 72%)";
 
-export function HomeHero({
-  locale,
-  categories,
-}: {
-  locale: Locale;
-  categories: StorefrontCategory[];
-}) {
+const STREAK_STYLE = {
+  backgroundImage:
+    "repeating-linear-gradient(64deg, transparent 0 34px, oklch(0.62 0.18 45 / 0.5) 34px 36px)",
+  maskImage: STREAK_MASK,
+  WebkitMaskImage: STREAK_MASK,
+};
+
+// The bright horizontal the parts stand on, plus the haze it throws upward.
+// Kept low: the promise strip sits in this band, and a haze strong enough to
+// read as a lit floor is also strong enough to lift the ground behind those
+// four lines of white text until they stop being white *on* something. The
+// hairline is what does the work — the glow only has to say where it came from.
+const FLOOR_STYLE = {
+  backgroundImage: [
+    "linear-gradient(to top, oklch(0.55 0.16 45 / 0.1) 0%, transparent 100%)",
+    // Symmetric about the centre on purpose. Everything else on this banner is
+    // keyed to a side and mirrors on /fa; a hairline that brightens toward the
+    // middle reads the same in both trees and needs no flip.
+    "linear-gradient(to right, transparent 0%, oklch(0.7 0.19 45 / 0.5) 28%, oklch(0.76 0.2 45 / 0.8) 52%, oklch(0.7 0.19 45 / 0.5) 74%, transparent 100%)",
+  ].join(","),
+  backgroundSize: "100% 100%, 100% 1px",
+  backgroundPosition: "bottom, bottom",
+  backgroundRepeat: "no-repeat, no-repeat",
+};
+
+export function HomeHero({ locale }: { locale: Locale }) {
   // Persian has no capital letters, and letter-spacing breaks its joined
   // letterforms — so the banner's all-caps, wide-tracked treatment is applied
   // to the English tree only. Both trees get the same layout and weight.
   const isEn = locale === "en";
   const capsClass = isEn ? "uppercase tracking-[0.14em]" : "tracking-normal";
-  const shortcuts = categories.slice(0, SHORTCUT_COUNT);
 
   return (
-    <section style={HERO_STYLE} className="text-white">
-      {/* The promise strip carries the banner's bottom padding, and it's gone
-          on phones — so the container has to supply that padding itself there. */}
-      <div className="mx-auto w-full max-w-[1180px] px-4 pt-12 pb-10 sm:px-6 sm:pb-0 lg:pt-16">
-        {/* The copy, the wizard and the button are three siblings of one grid so
-            that the button can be placed by CSS rather than rendered twice: it
-            follows the wizard in source order (where a stacked phone layout
-            wants it) and is pulled back under the copy at `lg`, where the
-            two-column layout wants it. */}
-        <div className="grid gap-10 lg:grid-cols-[1fr_minmax(0,430px)] lg:items-center lg:gap-x-14 lg:gap-y-8">
-          <div className="lg:col-start-1 lg:row-start-1">
-            <p className={`flex items-center gap-3 text-[12px] text-white/70 ${capsClass}`}>
-              <span aria-hidden="true" className="bg-accent-on-dark h-px w-9 shrink-0" />
-              {pickLocale(locale, "Premium", "اصل و تضمینی")}
-            </p>
+    <section style={HERO_STYLE} className="relative isolate overflow-hidden text-white">
+      {/* All four decorative layers are siblings of the content rather than
+          backgrounds on it, so each can carry its own mask, blend and RTL
+          behaviour without fighting the others.
 
-            {/* Two lines by design, the second in the accent — the banner's
-                whole shape depends on the break landing in the same place, so
-                it's a block element rather than a wrapped phrase. */}
-            <h1
-              className={`mt-4 text-[34px] leading-[1.05] font-bold text-balance sm:text-[46px] lg:text-[52px] ${
-                // The optical tightening a big Latin headline wants is the same
-                // adjustment that pulls joined Persian letterforms into each
-                // other, so it stops at the English tree too.
-                isEn ? "tracking-[-0.02em] uppercase" : ""
-              }`}
-            >
-              <span className="block">{pickLocale(locale, "The right parts", "قطعه‌ی درست")}</span>
-              <span className="text-accent-on-dark block">
-                {pickLocale(locale, "for your car", "برای خودروی شما")}
-              </span>
-            </h1>
+          The first two are keyed to a side — the key light belongs behind the
+          photograph and the cool lift belongs under the copy — so both mirror
+          on /fa, where those two sides swap. Nothing in either layer is
+          legible, which is what makes mirroring safe: the photograph itself is
+          *not* mirrored, because the labels on it are. */}
+      <span
+        aria-hidden="true"
+        style={BACKDROP_STYLE}
+        className="pointer-events-none absolute inset-0 -z-10 rtl:-scale-x-100"
+      />
+      <span
+        aria-hidden="true"
+        style={STREAK_STYLE}
+        className="pointer-events-none absolute inset-0 -z-10 rtl:-scale-x-100"
+      />
+      <span
+        aria-hidden="true"
+        style={FLOOR_STYLE}
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-32"
+      />
 
-            <p className="mt-5 max-w-[46ch] text-[15px] text-pretty text-white/70 sm:text-[16px]">
-              {pickLocale(
-                locale,
-                "Tell us what you drive. We match the exact viscosity, spec and filter your engine was built for.",
-                "بگویید چه خودرویی دارید. ما دقیقاً همان گرانروی، استاندارد و فیلتری را پیدا می‌کنیم که موتور شما برایش ساخته شده است.",
-              )}
-            </p>
+      {/* Anchored to the inline end so it lands opposite the copy in both
+          trees, and bottomed out just above the promise strip so the parts
+          stand on something rather than overlapping four lines of text.
+          `contain` keeps the still-life whole at every width; the banner's
+          height is set by the column beside it, not by the photograph. */}
+      <div className="pointer-events-none absolute top-0 bottom-24 -z-10 hidden w-[52%] max-w-[720px] end-0 lg:block">
+        <Image
+          src={HERO_PHOTO}
+          // Decorative: the parts are named in the copy and in every section
+          // below. A description here would be read out before the headline.
+          alt=""
+          fill
+          sizes={HERO_PHOTO_SIZES}
+          // Above the fold on the screens that render it, and large enough to
+          // be the LCP element on most of them.
+          priority
+          className="object-contain object-bottom"
+        />
+      </div>
 
-            {shortcuts.length > 0 && (
-              <ul className="mt-8 hidden flex-wrap items-start gap-y-5 sm:flex">
-                {shortcuts.map((category) => (
-                  <ShortcutTile
-                    key={category.id}
-                    capsClass={capsClass}
-                    href={categoryHref(locale, category.slug)}
-                    icon={CATEGORY_ICONS[category.slug] ?? GridIcon}
-                    label={pickLocale(locale, category.nameEn, category.nameFa)}
-                  />
-                ))}
-
-                <ShortcutTile
-                  capsClass={capsClass}
-                  href={navHref(locale, PRODUCTS_PATH)}
-                  icon={GridIcon}
-                  label={pickLocale(locale, "And more", "و بیشتر")}
-                />
-              </ul>
-            )}
-          </div>
-
-          {/* The wizard keeps its own white card — on this background it reads as
-              the one thing on the page you're meant to touch. */}
-          <FitmentWizard
-            locale={locale}
-            mode="compact"
-            className="lg:col-start-2 lg:row-start-1 lg:row-span-2"
-          />
-
-          {/* A grid item, so `justify-self-start` is what keeps it from
-              stretching to the column's full width. */}
-          <Link
-            href={navHref(locale, PRODUCTS_PATH)}
-            className={`bg-accent hover:bg-accent/90 focus-visible:ring-accent-on-dark inline-flex min-h-12 items-center gap-3 justify-self-start rounded-[10px] px-6 text-[14px] font-semibold text-white transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900 focus-visible:outline-none lg:col-start-1 lg:row-start-2 ${capsClass}`}
+      <div className="relative mx-auto w-full max-w-[1180px] px-4 pt-12 pb-10 sm:px-6 sm:pb-0 lg:pt-20">
+        {/* The copy column is capped rather than fractional: past about 560px
+            the headline stops being two lines and the whole composition
+            changes shape. The photograph takes whatever is left. */}
+        <div className="max-w-[560px]">
+          <p
+            className={`text-accent-on-dark flex items-center gap-3 text-[12px] font-medium ${capsClass}`}
           >
-            {pickLocale(locale, "Shop now", "شروع خرید")}
-            <ArrowIcon className="h-4 w-4 rtl:-scale-x-100" />
-          </Link>
+            <span aria-hidden="true" className="bg-accent-on-dark h-px w-9 shrink-0" />
+            {pickLocale(locale, "Premium quality", "اصل و تضمینی")}
+          </p>
+
+          {/* Two lines by design, the second in the accent — the banner's whole
+              shape depends on the break landing in the same place, so each is a
+              block element rather than a wrapped phrase. */}
+          <h1
+            className={`mt-5 text-[40px] leading-[1.02] font-bold text-balance sm:text-[56px] lg:text-[64px] ${
+              // The optical tightening a big Latin headline wants is the same
+              // adjustment that pulls joined Persian letterforms into each
+              // other, so it stops at the English tree.
+              isEn ? "tracking-[-0.035em]" : ""
+            }`}
+          >
+            <span className="block">{pickLocale(locale, "The right parts", "قطعه‌ی درست")}</span>
+            <span className="text-accent-on-dark block">
+              {pickLocale(locale, "for your car", "برای خودروی شما")}
+            </span>
+          </h1>
+
+          <p className="mt-6 max-w-[44ch] text-[15px] text-pretty text-white/65 sm:text-[16.5px]">
+            {pickLocale(
+              locale,
+              "Tell us what you drive. We match the exact viscosity, spec and filter your engine was built for.",
+              "بگویید چه خودرویی دارید. ما دقیقاً همان گرانروی، استاندارد و فیلتری را پیدا می‌کنیم که موتور شما برایش ساخته شده است.",
+            )}
+          </p>
+
+          <FitmentWizard locale={locale} mode="compact" tone="dark" className="mt-9" />
         </div>
 
         <PromiseStrip locale={locale} />
@@ -150,39 +193,9 @@ export function HomeHero({
   );
 }
 
-function ShortcutTile({
-  href,
-  icon: Icon,
-  label,
-  capsClass,
-}: {
-  href: string;
-  icon: StorefrontIcon;
-  label: string;
-  capsClass: string;
-}) {
-  return (
-    <li className="border-s border-white/12 ps-5 pe-5 first:border-s-0 first:ps-0 last:pe-0">
-      <Link
-        href={href}
-        className="group focus-visible:ring-accent-on-dark flex w-[86px] flex-col items-center gap-2.5 rounded-lg py-1 text-center focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900 focus-visible:outline-none"
-      >
-        <span className="group-hover:border-accent-on-dark/70 group-hover:text-accent-on-dark flex size-12 items-center justify-center rounded-full border border-white/25 text-white/85 transition-colors">
-          <Icon className="h-5 w-5" />
-        </span>
-        <span
-          className={`text-[11px] leading-tight text-white/75 group-hover:text-white ${capsClass}`}
-        >
-          {label}
-        </span>
-      </Link>
-    </li>
-  );
-}
-
 // The four claims closing the banner. Deliberately terse — the pre-footer
 // TrustStrip is where the same promises get a sentence each and a phone number
-// to act on; here they're a reassurance you read on the way to the wizard.
+// to act on; here they're a reassurance you read on the way to the finder.
 //
 // Hidden on phones: on a narrow screen they stack into four full-width rows
 // that push the whole banner past a screen and a half, and the TrustStrip says
@@ -191,8 +204,8 @@ function PromiseStrip({ locale }: { locale: Locale }) {
   const items = [
     {
       icon: ShieldIcon,
-      title: pickLocale(locale, "Premium quality", "کیفیت اصل"),
-      body: pickLocale(locale, "Reliable performance", "عملکرد مطمئن"),
+      title: pickLocale(locale, "High performance", "عملکرد بالا"),
+      body: pickLocale(locale, "Reliable protection", "محافظت مطمئن"),
     },
     {
       icon: GearIcon,
@@ -211,8 +224,12 @@ function PromiseStrip({ locale }: { locale: Locale }) {
     },
   ];
 
+  // No top rule: the floor line behind the strip already draws one across the
+  // banner, and a second hairline a few pixels off it reads as a mistake. The
+  // four items keep the dividers *between* them, which is what makes them a
+  // row rather than four loose blocks.
   return (
-    <ul className="mt-12 hidden gap-x-6 gap-y-5 border-t border-white/12 py-6 sm:grid sm:grid-cols-2 lg:mt-16 lg:grid-cols-4 lg:gap-x-0">
+    <ul className="mt-14 hidden gap-x-6 gap-y-5 pb-8 sm:grid sm:grid-cols-2 lg:mt-20 lg:grid-cols-4 lg:gap-x-0">
       {items.map(({ icon: Icon, title, body }) => (
         <li
           key={title}

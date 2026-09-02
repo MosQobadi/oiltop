@@ -21,6 +21,8 @@ import { matchesSearch } from "@/lib/storefront/option-search";
 // trigger, popover and items keep the classes below, so a searchable menu and a
 // plain one are the same control to look at.
 
+export type SelectMenuTone = "light" | "dark";
+
 export interface SelectMenuOption {
   value: string;
   label: string;
@@ -62,6 +64,14 @@ export interface SelectMenuProps {
   /** `inline` puts the label beside the trigger; the default stacks them. */
   orientation?: "stacked" | "inline";
   /**
+   * The ground the *trigger* sits on. `dark` is the homepage hero's finder,
+   * where the control is inside a translucent panel on a near-black banner and
+   * a white box would punch a hole in it. The open menu stays light either way:
+   * it floats over the page rather than sitting in the banner, and the brand
+   * step's 85-entry scrolling list is easier to read on white.
+   */
+  tone?: SelectMenuTone;
+  /**
    * Lands on the trigger, for the e2e suite. A listbox trigger's accessible
    * name is its *value* followed by its label ("All Brand"), so it moves as the
    * customer uses it — `getByLabel` can't address one the way it could a native
@@ -81,10 +91,29 @@ const EMPTY_KEY = "__empty__";
 const toKey = (value: string) => (value === "" ? EMPTY_KEY : value);
 const fromKey = (key: string) => (key === EMPTY_KEY ? "" : key);
 
-const TRIGGER_CLASS =
-  "focus-visible:border-accent focus-visible:ring-accent flex min-h-11 w-full items-center justify-between gap-2 rounded-[10px] border border-neutral-300 bg-white px-3 py-2 text-start text-sm text-neutral-900 transition-colors hover:border-neutral-400 focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:border-neutral-200 disabled:bg-neutral-50 disabled:text-neutral-400 disabled:hover:border-neutral-200";
+// One shape, two grounds. Everything a tone doesn't name — height, radius,
+// padding, the truncating value — is shared, so a dark trigger and a light one
+// are the same control with the colours swapped.
+const TRIGGER_BASE =
+  "flex min-h-11 w-full items-center justify-between gap-2 rounded-[10px] border px-3 py-2 text-start text-sm transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed";
 
-const LABEL_CLASS = "text-[12.5px] font-medium text-neutral-600";
+const TRIGGER_TONE: Record<SelectMenuTone, string> = {
+  light:
+    "focus-visible:border-accent focus-visible:ring-accent border-neutral-300 bg-white text-neutral-900 hover:border-neutral-400 disabled:border-neutral-200 disabled:bg-neutral-50 disabled:text-neutral-400 disabled:hover:border-neutral-200",
+  // --accent, the solid brand rust, is too dark to read as a focus ring here;
+  // --accent-on-dark is the same hue raised for exactly this ground.
+  dark: "focus-visible:border-accent-on-dark focus-visible:ring-accent-on-dark border-white/15 bg-white/6 text-white hover:border-white/30 disabled:border-white/8 disabled:bg-white/3 disabled:text-white/35 disabled:hover:border-white/8",
+};
+
+const LABEL_TONE: Record<SelectMenuTone, string> = {
+  light: "text-[12.5px] font-medium text-neutral-600",
+  dark: "text-[12.5px] font-medium text-white/65",
+};
+
+const INDICATOR_TONE: Record<SelectMenuTone, string> = {
+  light: "size-4 shrink-0 text-neutral-400",
+  dark: "size-4 shrink-0 text-white/45",
+};
 
 const POPOVER_CLASS = "rounded-[12px] border border-neutral-200 bg-white p-1 shadow-lg";
 
@@ -147,12 +176,14 @@ export function SelectMenu({
   isSearchable = false,
   describedBy,
   orientation = "stacked",
+  tone = "light",
   testId,
   className = "",
 }: SelectMenuProps) {
   const isInline = orientation === "inline";
   const rootClass = `flex ${isInline ? "flex-row items-center gap-2" : "flex-col gap-1.5"} ${className}`;
-  const labelClass = `${LABEL_CLASS} ${isInline ? "shrink-0" : ""}`;
+  const labelClass = `${LABEL_TONE[tone]} ${isInline ? "shrink-0" : ""}`;
+  const triggerClass = `${TRIGGER_BASE} ${TRIGGER_TONE[tone]}`;
 
   if (isSearchable) {
     return (
@@ -160,6 +191,8 @@ export function SelectMenu({
         locale={locale}
         label={label}
         labelClass={labelClass}
+        triggerClass={triggerClass}
+        indicatorClass={INDICATOR_TONE[tone]}
         rootClass={rootClass}
         options={options}
         value={value}
@@ -182,9 +215,9 @@ export function SelectMenu({
       className={rootClass}
     >
       <Label className={labelClass}>{label}</Label>
-      <Select.Trigger data-testid={testId} className={TRIGGER_CLASS}>
+      <Select.Trigger data-testid={testId} className={triggerClass}>
         <Select.Value className="min-w-0 truncate" />
-        <Select.Indicator className="size-4 shrink-0 text-neutral-400" />
+        <Select.Indicator className={INDICATOR_TONE[tone]} />
       </Select.Trigger>
       <Select.Popover className={`${POPOVER_CLASS} ${popoverDirClass(locale)}`}>
         <OptionList label={label} options={options} />
@@ -206,6 +239,8 @@ function SearchableSelectMenu({
   locale,
   label,
   labelClass,
+  triggerClass,
+  indicatorClass,
   rootClass,
   options,
   value,
@@ -218,6 +253,8 @@ function SearchableSelectMenu({
   locale: Locale;
   label: string;
   labelClass: string;
+  triggerClass: string;
+  indicatorClass: string;
   rootClass: string;
   options: SelectMenuOption[];
   value: string;
@@ -250,9 +287,9 @@ function SearchableSelectMenu({
       className={rootClass}
     >
       <Label className={labelClass}>{label}</Label>
-      <Autocomplete.Trigger data-testid={testId} className={TRIGGER_CLASS}>
+      <Autocomplete.Trigger data-testid={testId} className={triggerClass}>
         <Autocomplete.Value className="min-w-0 truncate" />
-        <Autocomplete.Indicator className="size-4 shrink-0 text-neutral-400" />
+        <Autocomplete.Indicator className={indicatorClass} />
       </Autocomplete.Trigger>
       {/* Two dev-console warnings come out of HeroUI's own composition here and
           neither is reachable from this file. `Autocomplete.Indicator` wraps its
