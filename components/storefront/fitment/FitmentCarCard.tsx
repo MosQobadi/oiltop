@@ -30,12 +30,18 @@ export interface FitmentCarCardProps {
   className?: string;
 }
 
-// Warm, barely-there wash rather than flat white: this is the one panel on the
-// page that isn't a product, and it should read as the page's subject.
+// Warm, barely-there wash rather than a flat surface: this is the one panel on
+// the page that isn't a product, and it should read as the page's subject.
+//
+// Built from the theme's own tokens rather than fixed colours, because a
+// gradient written in inline styles is invisible to the `.dark` class — a card
+// that fades to white would stay white on a dark page while every card around
+// it flipped. The accent wash keeps its own alpha so it stays a whisper in both
+// themes rather than a red panel in one of them.
 const CARD_STYLE = {
   backgroundImage: [
-    "radial-gradient(120% 140% at 100% 0%, oklch(0.97 0.024 45 / 0.9) 0%, transparent 60%)",
-    "linear-gradient(180deg, #fff 0%, oklch(0.99 0.004 60) 100%)",
+    "radial-gradient(120% 140% at 100% 0%, color-mix(in oklch, var(--accent) 7%, transparent) 0%, transparent 60%)",
+    "linear-gradient(180deg, var(--app-surface) 0%, var(--app-surface-sunken) 100%)",
   ].join(","),
 };
 
@@ -79,7 +85,7 @@ export function FitmentCarCard({ locale, car, changeHref, className = "" }: Fitm
     <header
       data-testid="fitment-car-card"
       style={CARD_STYLE}
-      className={`grid overflow-hidden rounded-2xl border border-neutral-200 md:grid-cols-[minmax(0,42%)_minmax(0,1fr)] lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] ${className}`}
+      className={`grid overflow-hidden rounded-2xl border border-line md:grid-cols-[minmax(0,42%)_minmax(0,1fr)] lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] ${className}`}
     >
       {/* The photo is the panel, not a thumbnail beside one — the same treatment
           the homepage category cards get. Below `md` it's a 2:1 band above the
@@ -94,7 +100,7 @@ export function FitmentCarCard({ locale, car, changeHref, className = "" }: Fitm
         ) : (
           <span
             style={PLACEHOLDER_STYLE}
-            className="flex h-full w-full items-center justify-center bg-neutral-800 text-neutral-500"
+            className="flex h-full w-full items-center justify-center bg-neutral-800 text-fg-subtle"
           >
             <CarIcon className="h-14 w-14" />
           </span>
@@ -120,23 +126,23 @@ export function FitmentCarCard({ locale, car, changeHref, className = "" }: Fitm
 
       <div className="flex flex-col justify-center gap-4 p-4 sm:p-6">
         <div>
-          <p className="font-mono text-[10.5px] tracking-[0.08em] text-neutral-500 uppercase">
+          <p className="font-mono text-[10.5px] tracking-[0.08em] text-fg-subtle uppercase">
             {pickLocale(locale, "Your type", "تیپ شما")}
           </p>
-          <p dir="auto" className="mt-1 text-[17px] font-medium text-neutral-900">
+          <p dir="auto" className="mt-1 text-[17px] font-medium text-fg">
             {formatEngineOptionLabel(locale, car.carEngine)}
           </p>
         </div>
 
         {/* Capped rather than spread across the whole panel: three short values
             strung out over 700px stop reading as one spec table. */}
-        <dl className="grid max-w-md grid-cols-2 gap-x-6 gap-y-3.5 border-t border-neutral-200/80 pt-4 sm:grid-cols-3">
+        <dl className="grid max-w-md grid-cols-2 gap-x-6 gap-y-3.5 border-t border-line/80 pt-4 sm:grid-cols-3">
           {specs.map((spec) => (
             <div key={spec.label}>
-              <dt className="font-mono text-[10.5px] tracking-[0.08em] text-neutral-500 uppercase">
+              <dt className="font-mono text-[10.5px] tracking-[0.08em] text-fg-subtle uppercase">
                 {spec.label}
               </dt>
-              <dd dir="auto" className="mt-1 text-[14.5px] font-medium text-neutral-800">
+              <dd dir="auto" className="mt-1 text-[14.5px] font-medium text-fg">
                 {spec.value}
               </dd>
             </div>
@@ -145,7 +151,7 @@ export function FitmentCarCard({ locale, car, changeHref, className = "" }: Fitm
 
         <Link
           href={changeHref}
-          className="focus-visible:ring-accent flex min-h-11 w-full items-center justify-center rounded-[9px] border border-neutral-200 bg-white px-4 text-[13px] font-medium text-neutral-600 transition-colors hover:border-neutral-400 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-fit"
+          className="focus-visible:ring-accent flex min-h-11 w-full items-center justify-center rounded-[9px] border border-line bg-surface px-4 text-[13px] font-medium text-fg-muted transition-colors hover:border-line-strong focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:w-fit"
         >
           {pickLocale(locale, "Change car", "تغییر خودرو")}
         </Link>

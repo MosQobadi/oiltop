@@ -43,7 +43,7 @@ export function DeliveryMethodField({
 }) {
   return (
     <fieldset>
-      <legend className="text-[16px] font-semibold tracking-[-0.015em] text-neutral-900">
+      <legend className="text-[16px] font-semibold tracking-[-0.015em] text-fg">
         {pickLocale(locale, "Delivery method", "روش ارسال")}
       </legend>
 
@@ -56,7 +56,7 @@ export function DeliveryMethodField({
           return (
             <label
               key={method}
-              className="has-checked:border-accent has-focus-visible:ring-accent flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3.5 transition-colors hover:border-neutral-400 has-checked:bg-[oklch(0.975_0.012_45)] has-focus-visible:ring-2 has-focus-visible:ring-offset-2"
+              className="has-checked:border-accent has-focus-visible:ring-accent flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-line bg-surface p-3.5 transition-colors hover:border-line-strong has-checked:bg-accent-soft has-focus-visible:ring-2 has-focus-visible:ring-offset-2"
             >
               {/* Named outright rather than left to the wrapping label: the
                   three spans below are laid out as columns, and an option read
@@ -75,17 +75,17 @@ export function DeliveryMethodField({
                   input — the dot inside is a nephew, not a sibling. */}
               <span
                 aria-hidden="true"
-                className="peer-checked:border-accent peer-checked:[&>span]:bg-accent flex size-4 flex-none items-center justify-center rounded-full border-[1.5px] border-neutral-300"
+                className="peer-checked:border-accent peer-checked:[&>span]:bg-accent-solid flex size-4 flex-none items-center justify-center rounded-full border-[1.5px] border-line-strong"
               >
                 <span className="size-2 rounded-full bg-transparent" />
               </span>
               <span aria-hidden="true" className="min-w-0">
-                <span className="block text-[14px] font-medium text-neutral-900">{label}</span>
-                <span className="block text-[12.5px] text-neutral-500">{eta}</span>
+                <span className="block text-[14px] font-medium text-fg">{label}</span>
+                <span className="block text-[12.5px] text-fg-subtle">{eta}</span>
               </span>
               <span
                 aria-hidden="true"
-                className="ms-auto flex-none text-[13.5px] font-medium text-neutral-900 tabular-nums"
+                className="ms-auto flex-none text-[13.5px] font-medium text-fg tabular-nums"
               >
                 {cost}
               </span>

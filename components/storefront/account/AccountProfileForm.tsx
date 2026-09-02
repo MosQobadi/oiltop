@@ -209,7 +209,7 @@ export function AccountProfileForm({ locale, profile }: AccountProfileFormProps)
       </Field>
 
       {formError && (
-        <p role="alert" className="text-[12.5px] text-red-600">
+        <p role="alert" className="text-[12.5px] text-danger">
           {formError}
         </p>
       )}
@@ -217,7 +217,7 @@ export function AccountProfileForm({ locale, profile }: AccountProfileFormProps)
       {/* `isDirty` hides it the moment the customer types again, so the notice
           can never sit above a form that no longer matches what was saved. */}
       {saved && !isDirty && !formError && (
-        <p role="status" data-testid="profile-saved" className="text-[12.5px] text-green-700">
+        <p role="status" data-testid="profile-saved" className="text-[12.5px] text-success">
           {pickLocale(locale, "Your details are saved.", "اطلاعات شما ذخیره شد.")}
         </p>
       )}
@@ -225,7 +225,7 @@ export function AccountProfileForm({ locale, profile }: AccountProfileFormProps)
       <button
         type="submit"
         disabled={isSubmitting}
-        className="focus-visible:ring-accent bg-accent mt-2 min-h-12 rounded-[11px] px-5 text-[15px] font-medium text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-60 sm:self-start"
+        className="focus-visible:ring-accent bg-accent-solid mt-2 min-h-12 rounded-[11px] px-5 text-[15px] font-medium text-white transition-colors hover:bg-accent-solid-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-60 sm:self-start"
       >
         {isSubmitting
           ? pickLocale(locale, "Saving…", "در حال ذخیره…")

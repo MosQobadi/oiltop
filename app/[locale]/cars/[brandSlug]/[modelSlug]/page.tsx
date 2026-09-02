@@ -77,26 +77,26 @@ export default async function CarModelPage({
         }`}
       >
         <div>
-          <h1 className="text-[27px] font-semibold tracking-[-0.025em] text-neutral-900">
+          <h1 className="text-[27px] font-semibold tracking-[-0.025em] text-fg">
             {pickLocale(locale, `${carName} oil and filters`, `روغن و فیلتر ${carName}`)}
           </h1>
 
           {fitment.span && (
-            <p className="mt-2 text-[14px] text-neutral-500">
+            <p className="mt-2 text-[14px] text-fg-subtle">
               {formatYearSpan(locale, fitment.span)} ·{" "}
               {formatTypeCount(locale, fitment.engines.length)}
             </p>
           )}
 
           {description && (
-            <p className="mt-3 max-w-[62ch] text-[14.5px] text-pretty text-neutral-500">
+            <p className="mt-3 max-w-[62ch] text-[14.5px] text-pretty text-fg-subtle">
               {description}
             </p>
           )}
         </div>
 
         {carModel.image && (
-          <div className="relative h-[150px] overflow-hidden rounded-2xl bg-neutral-100">
+          <div className="relative h-[150px] overflow-hidden rounded-2xl bg-surface-muted">
             {/* Decorative: the heading beside it already names the car. */}
             <Image
               src={carModel.image}
@@ -124,14 +124,14 @@ export default async function CarModelPage({
       )}
 
       <section className="mt-9">
-        <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-neutral-900">
+        <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-fg">
           {pickLocale(
             locale,
             `Find the exact match for your ${modelName}`,
             `تطابق دقیق برای ${modelName} خود را پیدا کنید`,
           )}
         </h2>
-        <p className="mt-1.5 max-w-[60ch] text-[14px] text-neutral-500">
+        <p className="mt-1.5 max-w-[60ch] text-[14px] text-fg-subtle">
           {pickLocale(
             locale,
             "Two taps — we already know the car.",
@@ -152,7 +152,7 @@ export default async function CarModelPage({
         />
       </section>
 
-      <p className="mt-10 max-w-[70ch] text-[12.5px] leading-relaxed text-neutral-500">
+      <p className="mt-10 max-w-[70ch] text-[12.5px] leading-relaxed text-fg-subtle">
         {pickLocale(
           locale,
           "Fitment data is advisory — always confirm against your owner's manual.",

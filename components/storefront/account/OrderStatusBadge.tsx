@@ -14,17 +14,17 @@ import { orderStatusLabel, paymentStatusLabel } from "@/lib/storefront/orders";
 // Colour is a second channel, never the only one — the word is always there, so
 // nothing here depends on distinguishing amber from green.
 const ORDER_STATUS_TONE: Record<OrderStatus, string> = {
-  PENDING: "border-neutral-200 bg-neutral-50 text-neutral-700",
-  SENDING: "border-amber-200 bg-amber-50 text-amber-800",
+  PENDING: "border-line bg-surface-sunken text-fg-muted",
+  SENDING: "border-warning/30 bg-warning-soft text-warning",
   SENT: "border-sky-200 bg-sky-50 text-sky-800",
-  DELIVERED: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  DELIVERED: "border-success/30 bg-success-soft text-success",
   CANCELLED: "border-rose-200 bg-rose-50 text-rose-800",
 };
 
 const PAYMENT_STATUS_TONE: Record<PaymentStatus, string> = {
-  UNPAID: "border-amber-200 bg-amber-50 text-amber-800",
-  PAID: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  REFUNDED: "border-neutral-200 bg-neutral-50 text-neutral-700",
+  UNPAID: "border-warning/30 bg-warning-soft text-warning",
+  PAID: "border-success/30 bg-success-soft text-success",
+  REFUNDED: "border-line bg-surface-sunken text-fg-muted",
 };
 
 interface BadgeProps {
@@ -44,7 +44,7 @@ function Badge({
     <span
       className={`inline-flex gap-1.5 ${showLabel ? "flex-col items-start" : "items-center"} ${className}`}
     >
-      <span className={showLabel ? "text-[12.5px] text-neutral-500" : "sr-only"}>{label}</span>
+      <span className={showLabel ? "text-[12.5px] text-fg-subtle" : "sr-only"}>{label}</span>
       <span
         className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[12.5px] font-medium ${tone}`}
       >

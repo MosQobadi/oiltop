@@ -178,7 +178,7 @@ export function AccountRegisterForm({ locale, from }: { locale: Locale; from?: s
       </Field>
 
       {formError && (
-        <p role="alert" className="text-[12.5px] text-red-600">
+        <p role="alert" className="text-[12.5px] text-danger">
           {formError}
         </p>
       )}
@@ -186,7 +186,7 @@ export function AccountRegisterForm({ locale, from }: { locale: Locale; from?: s
       <button
         type="submit"
         disabled={isSubmitting}
-        className="focus-visible:ring-accent bg-accent mt-2 min-h-12 w-full rounded-[11px] px-4 text-[15px] font-medium text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-60"
+        className="focus-visible:ring-accent bg-accent-solid mt-2 min-h-12 w-full rounded-[11px] px-4 text-[15px] font-medium text-white transition-colors hover:bg-accent-solid-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-60"
       >
         {isSubmitting
           ? pickLocale(locale, "Creating account…", "در حال ساخت حساب…")

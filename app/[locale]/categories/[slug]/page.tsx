@@ -133,7 +133,7 @@ export default async function CategoryLandingPage({
             priority
             className="scale-110 object-cover blur-[10px]"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/70 via-white/80 to-white/92" />
+          <div className="absolute inset-0 bg-gradient-to-b from-surface/70 via-surface/80 to-surface/92" />
         </div>
       )}
 
@@ -152,14 +152,14 @@ export default async function CategoryLandingPage({
         />
 
         <div className="mt-5">
-          <h1 className="text-[27px] font-semibold tracking-[-0.025em] text-neutral-900">{name}</h1>
+          <h1 className="text-[27px] font-semibold tracking-[-0.025em] text-fg">{name}</h1>
           {showSecondaryName && (
-            <p dir="auto" className="mt-1 text-[14px] text-neutral-500">
+            <p dir="auto" className="mt-1 text-[14px] text-fg-subtle">
               {secondaryName}
             </p>
           )}
           {shortDescription.trim() !== "" && (
-            <p className="mt-3 max-w-[60ch] text-[14.5px] text-pretty text-neutral-500">
+            <p className="mt-3 max-w-[60ch] text-[14.5px] text-pretty text-fg-subtle">
               {shortDescription}
             </p>
           )}
@@ -190,7 +190,7 @@ export default async function CategoryLandingPage({
 
           <div>
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-              <p aria-live="polite" className="text-[13px] text-neutral-500">
+              <p aria-live="polite" className="text-[13px] text-fg-subtle">
                 {productCountLabel(locale, total)}
               </p>
               <ProductSortSelect locale={locale} basePath={basePath} params={currentParams} />
@@ -200,8 +200,8 @@ export default async function CategoryLandingPage({
               a landing page is somewhere a customer arrives directly, so an
               empty category with nothing to clear is otherwise a dead end. */}
             {products.length === 0 ? (
-              <div className="mt-5 rounded-2xl border border-neutral-200 bg-white px-5 py-10 text-center">
-                <p className="text-[15px] font-medium text-neutral-900">
+              <div className="mt-5 rounded-2xl border border-line bg-surface px-5 py-10 text-center">
+                <p className="text-[15px] font-medium text-fg">
                   {filtersApplied
                     ? pickLocale(
                         locale,

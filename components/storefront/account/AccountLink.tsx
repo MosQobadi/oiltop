@@ -33,7 +33,7 @@ export function AccountLink({ locale, className = "" }: { locale: Locale; classN
       // and go with the breakpoint that hides the text.
       aria-label={label}
       data-testid="account-link"
-      className={`focus-visible:ring-accent hover:border-accent hover:text-accent inline-flex min-h-9 items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium whitespace-nowrap text-neutral-700 transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none ${className}`}
+      className={`focus-visible:ring-accent hover:border-accent hover:text-accent inline-flex min-h-9 items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium whitespace-nowrap text-fg-muted transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none ${className}`}
     >
       <UserIcon className="h-4 w-4" />
       {/* Same treatment as the cart's label: the glyph carries it on a phone,

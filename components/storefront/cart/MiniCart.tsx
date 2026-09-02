@@ -42,14 +42,14 @@ export function MiniCart({ locale, className = "" }: { locale: Locale; className
         tabIndex={0}
         aria-label={count > 0 ? `${label} (${formatDigits(count, locale)})` : label}
         data-testid="mini-cart-trigger"
-        className={`focus-visible:ring-accent hover:border-accent hover:text-accent inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none ${className}`}
+        className={`focus-visible:ring-accent hover:border-accent hover:text-accent inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-fg-muted transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none ${className}`}
       >
         <CartIcon className="h-4 w-4" />
         <span className="hidden sm:inline">{label}</span>
         {count > 0 && (
           <span
             data-testid="cart-count"
-            className="bg-accent inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] leading-none font-semibold text-white"
+            className="bg-accent-solid inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] leading-none font-semibold text-white"
           >
             {formatDigits(count, locale)}
           </span>
@@ -58,13 +58,13 @@ export function MiniCart({ locale, className = "" }: { locale: Locale; className
 
       <Popover.Content placement="bottom end" className="w-[268px]">
         <Popover.Dialog className="p-4" aria-label={label}>
-          <Popover.Heading className="text-[14px] font-semibold text-neutral-900">
+          <Popover.Heading className="text-[14px] font-semibold text-fg">
             {label}
           </Popover.Heading>
 
           {count === 0 ? (
             <>
-              <p className="mt-2 text-[13px] text-neutral-500">
+              <p className="mt-2 text-[13px] text-fg-subtle">
                 {pickLocale(locale, "Nothing in here yet.", "هنوز چیزی اینجا نیست.")}
               </p>
               <Link
@@ -79,16 +79,16 @@ export function MiniCart({ locale, className = "" }: { locale: Locale; className
             <>
               <dl className="mt-3 flex flex-col gap-1.5 text-[13px]">
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-neutral-500">{pickLocale(locale, "Items", "اقلام")}</dt>
-                  <dd data-testid="mini-cart-count" className="text-neutral-900 tabular-nums">
+                  <dt className="text-fg-subtle">{pickLocale(locale, "Items", "اقلام")}</dt>
+                  <dd data-testid="mini-cart-count" className="text-fg tabular-nums">
                     {formatDigits(count, locale)}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <dt className="text-neutral-500">{pickLocale(locale, "Subtotal", "جمع کل")}</dt>
+                  <dt className="text-fg-subtle">{pickLocale(locale, "Subtotal", "جمع کل")}</dt>
                   <dd
                     data-testid="mini-cart-subtotal"
-                    className="font-semibold text-neutral-900 tabular-nums"
+                    className="font-semibold text-fg tabular-nums"
                   >
                     {formatToman(subtotal, locale)}
                   </dd>
@@ -98,7 +98,7 @@ export function MiniCart({ locale, className = "" }: { locale: Locale; className
               {/* The estimate is labelled here too, in one line: the panel
                   shows the same captured-price sum the cart page does, and
                   neither of them is the amount checkout will charge. */}
-              <p className="mt-2 text-[11.5px] leading-relaxed text-neutral-500">
+              <p className="mt-2 text-[11.5px] leading-relaxed text-fg-subtle">
                 {pickLocale(
                   locale,
                   "Estimate — delivery and the final total are confirmed at checkout.",
@@ -110,7 +110,7 @@ export function MiniCart({ locale, className = "" }: { locale: Locale; className
                 href={navHref(locale, CART_PATH)}
                 onClick={state.close}
                 data-testid="mini-cart-view"
-                className="focus-visible:ring-accent bg-accent mt-4 flex min-h-11 w-full items-center justify-center rounded-[9px] px-4 text-[13.5px] font-medium text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="focus-visible:ring-accent bg-accent-solid mt-4 flex min-h-11 w-full items-center justify-center rounded-[9px] px-4 text-[13.5px] font-medium text-white transition-colors hover:bg-accent-solid-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               >
                 {pickLocale(locale, "View cart", "مشاهده‌ی سبد")}
               </Link>

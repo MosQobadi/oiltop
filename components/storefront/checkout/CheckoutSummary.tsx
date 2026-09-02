@@ -44,21 +44,21 @@ export function CheckoutSummary({
   const totals = checkoutTotals(subtotal, deliveryMethod);
 
   return (
-    <aside className="rounded-2xl border border-neutral-200 bg-white p-5 lg:sticky lg:top-24 lg:self-start">
-      <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-neutral-900">
+    <aside className="rounded-2xl border border-line bg-surface p-5 lg:sticky lg:top-24 lg:self-start">
+      <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-fg">
         {pickLocale(locale, "Order summary", "خلاصه‌ی سفارش")}
       </h2>
 
-      <ul className="mt-4 flex flex-col gap-3 border-b border-neutral-200 pb-4">
+      <ul className="mt-4 flex flex-col gap-3 border-b border-line pb-4">
         {lines.map((line) => (
           <li key={line.item.productId} className="flex items-start gap-2.5">
-            <span className="flex-none pt-px font-mono text-[11.5px] text-neutral-500">
+            <span className="flex-none pt-px font-mono text-[11.5px] text-fg-subtle">
               {formatDigits(line.item.quantity, locale)}×
             </span>
-            <span className="min-w-0 text-[13.5px] leading-snug text-neutral-900">
+            <span className="min-w-0 text-[13.5px] leading-snug text-fg">
               {pickLocale(locale, line.item.nameEn, line.item.nameFa)}
             </span>
-            <span className="ms-auto flex-none text-[13px] font-medium text-neutral-900 tabular-nums">
+            <span className="ms-auto flex-none text-[13px] font-medium text-fg tabular-nums">
               {formatToman(line.item.price * line.item.quantity, locale)}
             </span>
           </li>
@@ -79,13 +79,13 @@ export function CheckoutSummary({
         >
           {formatToman(includedVat(totals.total), locale)}
         </SummaryRow>
-        <div className="flex items-center justify-between gap-4 border-t border-neutral-200 pt-3">
-          <dt className="text-[14px] font-medium text-neutral-900">
+        <div className="flex items-center justify-between gap-4 border-t border-line pt-3">
+          <dt className="text-[14px] font-medium text-fg">
             {pickLocale(locale, "Total", "مبلغ نهایی")}
           </dt>
           <dd
             data-testid="checkout-total"
-            className="text-[16px] font-semibold text-neutral-900 tabular-nums"
+            className="text-[16px] font-semibold text-fg tabular-nums"
           >
             {formatToman(totals.total, locale)}
           </dd>
@@ -96,7 +96,7 @@ export function CheckoutSummary({
         type="submit"
         disabled={disabled || submitting}
         data-testid="place-order"
-        className="focus-visible:ring-accent bg-accent mt-5 min-h-12 w-full rounded-[11px] px-4 text-[15px] font-medium text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-neutral-200 disabled:text-neutral-500"
+        className="focus-visible:ring-accent bg-accent-solid mt-5 min-h-12 w-full rounded-[11px] px-4 text-[15px] font-medium text-white transition-colors hover:bg-accent-solid-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-line disabled:text-fg-subtle"
       >
         {submitting
           ? pickLocale(locale, "Placing your order…", "در حال ثبت سفارش…")
@@ -108,7 +108,7 @@ export function CheckoutSummary({
           role="status"
           data-testid="checkout-note"
           className={`mt-3 text-[12.5px] leading-relaxed ${
-            note.tone === "error" ? "text-red-600" : "text-neutral-600"
+            note.tone === "error" ? "text-danger" : "text-fg-muted"
           }`}
         >
           {note.text}
@@ -126,7 +126,7 @@ export function CheckoutSummary({
         </p>
       )}
 
-      <p className="mt-3 text-[12.5px] leading-relaxed text-neutral-500">
+      <p className="mt-3 text-[12.5px] leading-relaxed text-fg-subtle">
         {pickLocale(
           locale,
           "Prices are confirmed against the catalogue when you place the order. You will land on the gateway next — nothing is charged until you confirm there.",
@@ -140,8 +140,8 @@ export function CheckoutSummary({
 function SummaryRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <dt className="text-neutral-500">{label}</dt>
-      <dd className="text-neutral-900 tabular-nums">{children}</dd>
+      <dt className="text-fg-subtle">{label}</dt>
+      <dd className="text-fg tabular-nums">{children}</dd>
     </div>
   );
 }

@@ -223,10 +223,10 @@ export function FitmentWizard({
           aria-hidden="true"
           className={`mt-6 flex size-7 shrink-0 items-center justify-center rounded-full text-[12.5px] font-semibold ${
             done
-              ? "bg-accent text-white"
+              ? "bg-accent-solid text-white"
               : step.disabled
-                ? "bg-neutral-100 text-neutral-400"
-                : "border border-neutral-300 bg-white text-neutral-600"
+                ? "bg-surface-muted text-fg-faint"
+                : "border border-line-strong bg-surface text-fg-muted"
           }`}
         >
           {formatDigits(index + 1, locale)}
@@ -243,7 +243,7 @@ export function FitmentWizard({
   const cardTone =
     tone === "dark"
       ? "border-white/12 bg-white/6 backdrop-blur-md"
-      : "border-neutral-200 bg-white";
+      : "border-line bg-surface";
 
   const cardClass = `rounded-2xl border ${cardTone} ${
     mode === "compact" ? "p-4 sm:p-5" : "p-5 sm:p-6"
@@ -278,10 +278,10 @@ function renderNote({
   onRetry: () => void;
   tone: FitmentWizardTone;
 }): ReactNode {
-  const mutedClass = tone === "dark" ? "text-white/60" : "text-neutral-500";
+  const mutedClass = tone === "dark" ? "text-white/60" : "text-fg-subtle";
   // red-600 is a dark red; on the banner it sits at roughly the ground's own
   // lightness and the message disappears. red-300 is the same warning, legible.
-  const alertClass = tone === "dark" ? "text-red-300" : "text-red-600";
+  const alertClass = tone === "dark" ? "text-red-300" : "text-danger";
 
   if (flags.failed) {
     return (

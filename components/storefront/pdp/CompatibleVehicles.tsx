@@ -58,10 +58,10 @@ export function CompatibleVehicles({
 
   return (
     <section data-testid="compatible-vehicles" className={className}>
-      <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-neutral-900">
+      <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-fg">
         {pickLocale(locale, "Compatible vehicles", "خودروهای سازگار")}
       </h2>
-      <p className="mt-2 max-w-[65ch] text-[13.5px] text-neutral-500">
+      <p className="mt-2 max-w-[65ch] text-[13.5px] text-fg-subtle">
         {pickLocale(
           locale,
           "Cars we've matched this part to. Fitment data is advisory — always confirm against your owner's manual.",
@@ -69,7 +69,7 @@ export function CompatibleVehicles({
         )}
       </p>
 
-      <ul className="mt-4 border-t border-neutral-200">{visible.map(renderGroup)}</ul>
+      <ul className="mt-4 border-t border-line">{visible.map(renderGroup)}</ul>
 
       {hidden.length > 0 && (
         <details className="group">
@@ -85,7 +85,7 @@ export function CompatibleVehicles({
               {pickLocale(locale, "Show fewer", "نمایش کمتر")}
             </span>
           </summary>
-          <ul className="border-t border-neutral-200">{hidden.map(renderGroup)}</ul>
+          <ul className="border-t border-line">{hidden.map(renderGroup)}</ul>
         </details>
       )}
     </section>
@@ -107,22 +107,22 @@ function VehicleRow({
   return (
     <li
       data-testid="compatible-vehicle"
-      className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-neutral-200 py-3"
+      className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-line py-3"
     >
-      <p dir="auto" className="text-[14.5px] font-medium text-neutral-900">
+      <p dir="auto" className="text-[14.5px] font-medium text-fg">
         {brand} {model}
       </p>
-      <span className="font-mono text-[12px] tracking-[0.02em] text-neutral-500">
+      <span className="font-mono text-[12px] tracking-[0.02em] text-fg-subtle">
         {formatYearSpan(locale, group)}
       </span>
 
       {isYourCar && (
-        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11.5px] font-medium text-emerald-700">
+        <span className="rounded-full bg-success-soft px-2 py-0.5 text-[11.5px] font-medium text-success">
           {pickLocale(locale, "Your car", "خودروی شما")}
         </span>
       )}
 
-      <p dir="auto" className="w-full text-[13px] text-neutral-500">
+      <p dir="auto" className="w-full text-[13px] text-fg-subtle">
         {formatGroupEngineLabels(locale, group).join(pickLocale(locale, ", ", "، "))}
       </p>
     </li>

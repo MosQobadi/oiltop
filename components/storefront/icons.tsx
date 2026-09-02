@@ -182,6 +182,39 @@ export function TruckIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+// Removing a cart line. The only destructive control on the storefront, so it
+// is the one glyph here that ever turns red.
+export function TrashIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M4 6.5h16M9.5 6.5V4.8a1.3 1.3 0 0 1 1.3-1.3h2.4a1.3 1.3 0 0 1 1.3 1.3v1.7" />
+      <path d="M6.5 6.5 7.4 19a1.5 1.5 0 0 0 1.5 1.4h6.2a1.5 1.5 0 0 0 1.5-1.4l.9-12.5" />
+      <path d="M10.5 10v6.5M13.5 10v6.5" />
+    </Svg>
+  );
+}
+
+// The theme toggle shows the theme it will switch *to*, not the one in force —
+// so the sun appears while the page is dark. Both are drawn on the same 24-grid
+// at the same optical weight, because they swap in place and any difference in
+// mass reads as the button twitching.
+export function SunIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="4.2" />
+      <path d="M12 2.6v2.2M12 19.2v2.2M21.4 12h-2.2M4.8 12H2.6M18.6 5.4l-1.6 1.6M7 17l-1.6 1.6M18.6 18.6 17 17M7 7 5.4 5.4" />
+    </Svg>
+  );
+}
+
+export function MoonIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Svg {...props}>
+      <path d="M20.5 14.3A8.5 8.5 0 0 1 9.7 3.5a8.5 8.5 0 1 0 10.8 10.8Z" />
+    </Svg>
+  );
+}
+
 export type StorefrontIcon = typeof OilBottleIcon;
 
 // A glyph per category, keyed on slug like every other piece of

@@ -44,7 +44,7 @@ export function Breadcrumbs({
       {/* Built from the same `items` the trail below renders, so the two can
           never describe different paths. */}
       {structuredData && <JsonLd data={breadcrumbListSchema(items)} />}
-      <ol className="flex flex-wrap items-center gap-2 text-[13px] text-neutral-500">
+      <ol className="flex flex-wrap items-center gap-2 text-[13px] text-fg-subtle">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
           return (
@@ -59,7 +59,7 @@ export function Breadcrumbs({
               ) : (
                 <span
                   aria-current={isLast ? "page" : undefined}
-                  className={isLast ? "text-neutral-700" : undefined}
+                  className={isLast ? "text-fg-muted" : undefined}
                 >
                   {item.label}
                 </span>

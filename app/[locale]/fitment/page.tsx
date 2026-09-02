@@ -67,10 +67,10 @@ export default async function FitmentPage({
       <div className="mx-auto w-full max-w-[1180px] px-4 py-10 sm:px-6">
         <Breadcrumbs locale={locale} items={[homeCrumb, { label: fitmentLabel }]} />
 
-        <h1 className="mt-5 text-[27px] font-semibold tracking-[-0.025em] text-neutral-900">
+        <h1 className="mt-5 text-[27px] font-semibold tracking-[-0.025em] text-fg">
           {pickLocale(locale, "Find parts for your car", "قطعات خودروی خود را پیدا کنید")}
         </h1>
-        <p className="mt-2 max-w-[60ch] text-[14.5px] text-neutral-500">
+        <p className="mt-2 max-w-[60ch] text-[14.5px] text-fg-subtle">
           {pickLocale(
             locale,
             "Four taps. No part numbers to look up.",
@@ -81,7 +81,7 @@ export default async function FitmentPage({
         {staleFit && (
           <p
             role="status"
-            className="mt-5 max-w-xl rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-[13.5px] text-neutral-600"
+            className="mt-5 max-w-xl rounded-xl border border-line bg-surface-sunken px-4 py-3 text-[13.5px] text-fg-muted"
           >
             {pickLocale(
               locale,
@@ -167,7 +167,7 @@ export default async function FitmentPage({
         className="mt-8"
       />
 
-      <p className="mt-10 max-w-[70ch] text-[12.5px] leading-relaxed text-neutral-500">
+      <p className="mt-10 max-w-[70ch] text-[12.5px] leading-relaxed text-fg-subtle">
         {pickLocale(
           locale,
           "Fitment data is advisory — always confirm against your owner's manual.",

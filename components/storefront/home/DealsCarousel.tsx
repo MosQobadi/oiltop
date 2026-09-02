@@ -47,10 +47,10 @@ export function DealsCarousel({
           <span className="text-accent bg-accent/10 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold tracking-[0.04em] uppercase">
             {pickLocale(locale, "On offer", "پیشنهاد ویژه")}
           </span>
-          <h2 className="mt-2.5 text-[22px] font-semibold tracking-[-0.02em] text-neutral-900">
+          <h2 className="mt-2.5 text-[22px] font-semibold tracking-[-0.02em] text-fg">
             {railLabel}
           </h2>
-          <p className="mt-1 max-w-[52ch] text-[13.5px] text-neutral-500">
+          <p className="mt-1 max-w-[52ch] text-[13.5px] text-fg-subtle">
             {pickLocale(
               locale,
               "The deepest discounts on the shelf right now, alongside what everyone else is buying.",
@@ -62,7 +62,7 @@ export function DealsCarousel({
         <div className="flex items-center gap-2">
           <Link
             href={navHref(locale, PRODUCTS_PATH)}
-            className="focus-visible:ring-accent hover:text-accent me-1 inline-flex min-h-11 items-center gap-1.5 rounded text-[13.5px] text-neutral-500 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="focus-visible:ring-accent hover:text-accent me-1 inline-flex min-h-11 items-center gap-1.5 rounded text-[13.5px] text-fg-subtle transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             {pickLocale(locale, "See all products", "مشاهده‌ی همه‌ی محصولات")}
             <ChevronIcon className="h-3.5 w-3.5 rtl:-scale-x-100" />
@@ -122,7 +122,7 @@ function RailButton({
       onClick={onClick}
       disabled={disabled}
       tabIndex={-1}
-      className="focus-visible:ring-accent hover:border-accent/50 hover:text-accent flex size-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-600 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-35"
+      className="focus-visible:ring-accent hover:border-accent/50 hover:text-accent flex size-9 items-center justify-center rounded-full border border-line bg-surface text-fg-muted transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-35"
     >
       <ChevronIcon className={`h-4 w-4 ${className}`} />
     </button>

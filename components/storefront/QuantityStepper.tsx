@@ -30,7 +30,7 @@ export interface QuantityStepperProps {
 }
 
 const BUTTON_CLASS =
-  "focus-visible:ring-accent inline-flex size-11 shrink-0 items-center justify-center rounded-[9px] text-[17px] leading-none text-neutral-600 transition-colors hover:bg-neutral-100 focus-visible:ring-2 focus-visible:outline-none disabled:text-neutral-300 disabled:hover:bg-transparent";
+  "focus-visible:ring-accent inline-flex size-11 shrink-0 items-center justify-center rounded-[9px] text-[17px] leading-none text-fg-muted transition-colors hover:bg-surface-muted focus-visible:ring-2 focus-visible:outline-none disabled:text-fg-faint disabled:hover:bg-transparent";
 
 export function QuantityStepper({
   locale,
@@ -58,7 +58,7 @@ export function QuantityStepper({
 
   return (
     <div
-      className={`flex items-center gap-1 rounded-[11px] border border-neutral-200 bg-white p-1 ${className}`}
+      className={`flex items-center gap-1 rounded-[11px] border border-line bg-surface p-1 ${className}`}
     >
       <button
         type="button"
@@ -85,7 +85,7 @@ export function QuantityStepper({
         value={value}
         disabled={disabled}
         onChange={(event) => change(Number.parseInt(event.target.value, 10))}
-        className="focus-visible:ring-accent w-12 [appearance:textfield] rounded-[7px] border-0 bg-transparent py-2 text-center text-[14px] font-medium text-neutral-900 focus-visible:ring-2 focus-visible:outline-none disabled:text-neutral-400 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        className="focus-visible:ring-accent w-12 [appearance:textfield] rounded-[7px] border-0 bg-transparent py-2 text-center text-[14px] font-medium text-fg focus-visible:ring-2 focus-visible:outline-none disabled:text-fg-faint [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
 
       <button

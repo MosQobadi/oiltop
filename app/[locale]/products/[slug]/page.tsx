@@ -131,7 +131,7 @@ export default async function ProductDetailPage({
       />
 
       <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-12">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-neutral-100 lg:aspect-square">
+        <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-surface-muted lg:aspect-square">
           {product.image ? (
             <Image
               src={product.image}
@@ -149,7 +149,7 @@ export default async function ProductDetailPage({
                 backgroundImage:
                   "repeating-linear-gradient(135deg, var(--color-neutral-200) 0 1px, transparent 1px 12px)",
               }}
-              className="flex h-full w-full items-center justify-center font-mono text-[11px] tracking-[0.04em] text-neutral-500"
+              className="flex h-full w-full items-center justify-center font-mono text-[11px] tracking-[0.04em] text-fg-subtle"
             >
               {pickLocale(locale, "no image", "بدون تصویر")}
             </span>
@@ -163,23 +163,23 @@ export default async function ProductDetailPage({
                 brand: product.brand.slug,
                 fit: car?.carEngine.id,
               })}
-              className="focus-visible:ring-accent hover:border-accent hover:text-accent rounded-full border border-neutral-200 px-3 py-1 font-mono text-[11.5px] tracking-[0.04em] text-neutral-600 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="focus-visible:ring-accent hover:border-accent hover:text-accent rounded-full border border-line px-3 py-1 font-mono text-[11.5px] tracking-[0.04em] text-fg-muted transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               {brandName}
             </Link>
             <Link
               href={carryFit(categoryHref(locale, product.category.slug))}
-              className="focus-visible:ring-accent hover:border-accent hover:text-accent rounded-full border border-neutral-200 px-3 py-1 text-[12px] text-neutral-600 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="focus-visible:ring-accent hover:border-accent hover:text-accent rounded-full border border-line px-3 py-1 text-[12px] text-fg-muted transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               {categoryName}
             </Link>
           </div>
 
-          <h1 className="mt-3 text-[26px] leading-tight font-semibold tracking-[-0.025em] text-neutral-900">
+          <h1 className="mt-3 text-[26px] leading-tight font-semibold tracking-[-0.025em] text-fg">
             {name}
           </h1>
           {showSecondaryName && (
-            <p dir="auto" className="mt-1 text-[14.5px] text-neutral-500">
+            <p dir="auto" className="mt-1 text-[14.5px] text-fg-subtle">
               {secondaryName}
             </p>
           )}
@@ -222,13 +222,13 @@ export default async function ProductDetailPage({
         <div>
           {longDescription.trim() !== "" && (
             <section>
-              <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-neutral-900">
+              <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-fg">
                 {pickLocale(locale, "Description", "توضیحات")}
               </h2>
               {/* Plain text, not markup: descriptions are edited in a textarea
                   and stripped of HTML on the way in (lib/sanitize), so the only
                   formatting to honour is the line breaks the admin typed. */}
-              <p className="mt-3 max-w-[70ch] text-[14.5px] leading-relaxed whitespace-pre-line text-neutral-600">
+              <p className="mt-3 max-w-[70ch] text-[14.5px] leading-relaxed whitespace-pre-line text-fg-muted">
                 {longDescription}
               </p>
             </section>
@@ -251,20 +251,20 @@ export default async function ProductDetailPage({
           <div className="flex flex-col gap-10">
             {specRows.length > 0 && (
               <section>
-                <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-neutral-900">
+                <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-fg">
                   {pickLocale(locale, "Specifications", "مشخصات")}
                 </h2>
-                <dl className="mt-3 border-t border-neutral-200">
+                <dl className="mt-3 border-t border-line">
                   {specRows.map((row) => (
                     <div
                       key={row.label}
-                      className="flex items-baseline justify-between gap-4 border-b border-neutral-200 py-2.5"
+                      className="flex items-baseline justify-between gap-4 border-b border-line py-2.5"
                     >
-                      <dt className="text-[13.5px] text-neutral-500">{row.label}</dt>
+                      <dt className="text-[13.5px] text-fg-subtle">{row.label}</dt>
                       {/* `auto` because the value is a Latin code in either
                           locale ("5W-30") but a translated unit in Persian
                           ("۴ لیتر"). */}
-                      <dd dir="auto" className="text-[14px] font-medium text-neutral-800">
+                      <dd dir="auto" className="text-[14px] font-medium text-fg">
                         {row.value}
                       </dd>
                     </div>
@@ -275,10 +275,10 @@ export default async function ProductDetailPage({
 
             {product.oemPartNumbers.length > 0 && (
               <section>
-                <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-neutral-900">
+                <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-fg">
                   {pickLocale(locale, "OEM part numbers", "شماره‌های فنی اصلی")}
                 </h2>
-                <p className="mt-2 text-[13.5px] text-neutral-500">
+                <p className="mt-2 text-[13.5px] text-fg-subtle">
                   {pickLocale(
                     locale,
                     "Manufacturer codes this part replaces — search any of them to land back here.",
@@ -290,7 +290,7 @@ export default async function ProductDetailPage({
                     <li
                       key={partNumber}
                       dir="ltr"
-                      className="rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1 font-mono text-[12.5px] tracking-[0.02em] text-neutral-700"
+                      className="rounded-lg border border-line bg-surface-sunken px-2.5 py-1 font-mono text-[12.5px] tracking-[0.02em] text-fg-muted"
                     >
                       {partNumber}
                     </li>

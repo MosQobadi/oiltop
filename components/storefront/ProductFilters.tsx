@@ -49,9 +49,9 @@ export interface ProductFiltersProps {
 // Kept in step with SelectMenu's trigger so the search box and the dropdowns
 // below it read as one set of controls.
 const INPUT_CLASS =
-  "focus-visible:border-accent focus-visible:ring-accent min-h-11 w-full rounded-[10px] border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 transition-colors focus-visible:ring-1 focus-visible:outline-none";
+  "focus-visible:border-accent focus-visible:ring-accent min-h-11 w-full rounded-[10px] border border-line-strong bg-surface px-3 py-2 text-sm text-fg transition-colors focus-visible:ring-1 focus-visible:outline-none";
 
-const LABEL_CLASS = "text-[12.5px] font-medium text-neutral-600";
+const LABEL_CLASS = "text-[12.5px] font-medium text-fg-muted";
 
 export function ProductFilters({
   locale,
@@ -90,13 +90,13 @@ export function ProductFilters({
         onClick={() => setOpen((isOpen) => !isOpen)}
         aria-expanded={open}
         aria-controls={`${baseId}-panel`}
-        className="focus-visible:ring-accent min-h-11 w-full rounded-[10px] border border-neutral-200 bg-white px-4 text-[13.5px] font-medium text-neutral-700 transition-colors hover:border-neutral-400 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none lg:hidden"
+        className="focus-visible:ring-accent min-h-11 w-full rounded-[10px] border border-line bg-surface px-4 text-[13.5px] font-medium text-fg-muted transition-colors hover:border-line-strong focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none lg:hidden"
       >
         {open
           ? pickLocale(locale, "Hide filters", "بستن فیلترها")
           : pickLocale(locale, "Filters", "فیلترها")}
         {activeCount > 0 && (
-          <span className="bg-accent ms-2 inline-flex size-5 items-center justify-center rounded-full text-[11px] font-semibold text-white">
+          <span className="bg-accent-solid ms-2 inline-flex size-5 items-center justify-center rounded-full text-[11px] font-semibold text-white">
             {formatDigits(activeCount, locale)}
           </span>
         )}
@@ -104,7 +104,7 @@ export function ProductFilters({
 
       <div
         id={`${baseId}-panel`}
-        className={`${open ? "mt-3 block" : "hidden"} rounded-2xl border border-neutral-200 bg-white p-4 lg:mt-0 lg:block`}
+        className={`${open ? "mt-3 block" : "hidden"} rounded-2xl border border-line bg-surface p-4 lg:mt-0 lg:block`}
       >
         <form onSubmit={handleSearch} className="flex flex-col gap-1.5">
           <label htmlFor={`${baseId}-search`} className={LABEL_CLASS}>
@@ -125,7 +125,7 @@ export function ProductFilters({
             />
             <button
               type="submit"
-              className="focus-visible:ring-accent bg-accent min-h-11 shrink-0 rounded-[9px] px-3 text-[13px] font-medium text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="focus-visible:ring-accent bg-accent-solid min-h-11 shrink-0 rounded-[9px] px-3 text-[13px] font-medium text-white transition-colors hover:bg-accent-solid-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               {pickLocale(locale, "Go", "برو")}
             </button>
@@ -159,7 +159,7 @@ export function ProductFilters({
         {activeCount > 0 && (
           <Link
             href={buildProductListHref(basePath, clearProductFilters(params))}
-            className="focus-visible:ring-accent hover:text-accent mt-4 inline-flex min-h-11 items-center rounded text-[13px] font-medium text-neutral-500 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="focus-visible:ring-accent hover:text-accent mt-4 inline-flex min-h-11 items-center rounded text-[13px] font-medium text-fg-subtle transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             {pickLocale(locale, "Clear all filters", "پاک کردن همه‌ی فیلترها")}
           </Link>

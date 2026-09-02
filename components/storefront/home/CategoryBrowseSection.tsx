@@ -76,10 +76,10 @@ export function CategoryBrowseSection({
     <section className="mx-auto w-full max-w-[1180px] px-4 py-14 sm:px-6 lg:py-16">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
-          <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-neutral-900">
+          <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-fg">
             {pickLocale(locale, "Shop by category", "خرید بر اساس دسته‌بندی")}
           </h2>
-          <p className="mt-1 text-[13.5px] text-neutral-500">
+          <p className="mt-1 text-[13.5px] text-fg-subtle">
             {pickLocale(
               locale,
               "Know what you need? Skip the car finder and browse the catalogue.",
@@ -90,7 +90,7 @@ export function CategoryBrowseSection({
 
         <Link
           href={browseHref}
-          className="focus-visible:ring-accent hover:text-accent inline-flex min-h-11 items-center gap-1.5 rounded text-[13.5px] text-neutral-500 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="focus-visible:ring-accent hover:text-accent inline-flex min-h-11 items-center gap-1.5 rounded text-[13.5px] text-fg-subtle transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           {pickLocale(locale, "See all products", "مشاهده‌ی همه‌ی محصولات")}
           <ChevronIcon className="h-3.5 w-3.5 rtl:-scale-x-100" />
@@ -98,7 +98,7 @@ export function CategoryBrowseSection({
       </div>
 
       {categories.length === 0 ? (
-        <p className="mt-6 rounded-2xl border border-neutral-200 bg-white px-5 py-6 text-[14px] text-neutral-600">
+        <p className="mt-6 rounded-2xl border border-line bg-surface px-5 py-6 text-[14px] text-fg-muted">
           {pickLocale(
             locale,
             "Categories are still being set up — the full product list is already there.",
@@ -134,7 +134,7 @@ function MoreCategories({
 }) {
   return (
     <details data-testid="home-more-categories" className="group mt-6">
-      <summary className="focus-visible:ring-accent mx-auto flex w-fit cursor-pointer list-none items-center gap-2 rounded-full border border-neutral-200 bg-white px-5 py-2.5 text-[13.5px] font-medium text-neutral-700 transition-colors hover:border-neutral-400 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+      <summary className="focus-visible:ring-accent mx-auto flex w-fit cursor-pointer list-none items-center gap-2 rounded-full border border-line bg-surface px-5 py-2.5 text-[13.5px] font-medium text-fg-muted transition-colors hover:border-line-strong focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
         {/* Both labels are rendered and one is hidden by the open state, so the
             button says "Show less" once it has been opened rather than lying. */}
         <span className="group-open:hidden">{pickLocale(locale, "Show more", "نمایش بیشتر")}</span>
@@ -143,12 +143,12 @@ function MoreCategories({
         </span>
         {/* The space is literal, not just the margin: a screen reader reads the
             text nodes, and "Show more12" is what it would otherwise say. */}{" "}
-        <span className="text-neutral-400 group-open:hidden">
+        <span className="text-fg-faint group-open:hidden">
           {formatDigits(categories.length, locale)}
         </span>
         <ChevronIcon
           aria-hidden
-          className="h-3.5 w-3.5 rotate-90 text-neutral-400 transition-transform group-open:-rotate-90"
+          className="h-3.5 w-3.5 rotate-90 text-fg-faint transition-transform group-open:-rotate-90"
         />
       </summary>
 

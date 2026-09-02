@@ -23,7 +23,7 @@ export function MobileNavDrawer({ locale, pathname }: { locale: Locale; pathname
       <Drawer.Trigger
         aria-label={menuLabel}
         data-testid="mobile-nav-trigger"
-        className="focus-visible:ring-accent hover:border-accent hover:text-accent inline-flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none md:hidden"
+        className="focus-visible:ring-accent hover:border-accent hover:text-accent inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-fg-muted transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none md:hidden"
       >
         <MenuIcon className="h-5 w-5" />
       </Drawer.Trigger>
@@ -52,8 +52,8 @@ export function MobileNavDrawer({ locale, pathname }: { locale: Locale; pathname
                           aria-current={active ? "page" : undefined}
                           className={`block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                             active
-                              ? "bg-accent-soft text-accent-soft-foreground"
-                              : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                              ? "bg-accent-solid-soft text-accent-soft-foreground"
+                              : "text-fg-muted hover:bg-surface-muted hover:text-fg"
                           }`}
                         >
                           {pickLocale(locale, item.labelEn, item.labelFa)}

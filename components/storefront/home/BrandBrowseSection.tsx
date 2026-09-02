@@ -49,14 +49,14 @@ export function BrandBrowseSection({
   const basePath = navHref(locale, PRODUCTS_PATH);
 
   return (
-    <section className="border-y border-neutral-200 bg-neutral-50">
+    <section className="border-y border-line bg-surface-sunken">
       <div className="mx-auto w-full max-w-[1180px] px-4 py-14 sm:px-6 lg:py-16">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
-            <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-neutral-900">
+            <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-fg">
               {pickLocale(locale, "Shop by brand", "خرید بر اساس برند")}
             </h2>
-            <p className="mt-1 text-[13.5px] text-neutral-500">
+            <p className="mt-1 text-[13.5px] text-fg-subtle">
               {pickLocale(
                 locale,
                 "The names we stock. Pick one to see everything we carry from it.",
@@ -67,7 +67,7 @@ export function BrandBrowseSection({
 
           <Link
             href={basePath}
-            className="focus-visible:ring-accent hover:text-accent inline-flex min-h-11 items-center gap-1.5 rounded text-[13.5px] text-neutral-500 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="focus-visible:ring-accent hover:text-accent inline-flex min-h-11 items-center gap-1.5 rounded text-[13.5px] text-fg-subtle transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             {pickLocale(locale, "See all products", "مشاهده‌ی همه‌ی محصولات")}
             <ChevronIcon className="h-3.5 w-3.5 rtl:-scale-x-100" />
@@ -110,7 +110,7 @@ function BrandCard({
   return (
     <Link
       href={href}
-      className="group focus-visible:ring-accent hover:ring-accent flex h-full flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-neutral-200 transition-shadow ring-inset hover:ring-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      className="group focus-visible:ring-accent hover:ring-accent flex h-full flex-col overflow-hidden rounded-2xl bg-surface ring-1 ring-line transition-shadow ring-inset hover:ring-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
     >
       {/* The stage. Its own aspect ratio rather than the whole card's, so the
           logo keeps its room whether the plate below runs to one line or two.
@@ -141,7 +141,7 @@ function BrandCard({
             aria-hidden="true"
             // A tile, not a disc: it stands in for a logo, so it should read as
             // one sitting on the stage rather than as an avatar.
-            className="text-accent ring-accent/15 relative flex size-14 items-center justify-center rounded-2xl bg-white text-[18px] font-semibold tracking-[-0.02em] ring-1 ring-inset"
+            className="text-accent ring-accent/15 relative flex size-14 items-center justify-center rounded-2xl bg-surface text-[18px] font-semibold tracking-[-0.02em] ring-1 ring-inset"
           >
             {brandMonogram(brand.nameEn || brand.nameFa)}
           </span>
@@ -155,20 +155,20 @@ function BrandCard({
           with the rest of the card rather than taking a grey: the section's own
           ground is that grey, and a grey plate on it ends the card at the
           hairline instead of at its edge. */}
-      <span className="mt-auto flex items-end justify-between gap-2 border-t border-neutral-200 px-3.5 py-3">
+      <span className="mt-auto flex items-end justify-between gap-2 border-t border-line px-3.5 py-3">
         <span className="block min-w-0">
-          <span className="block truncate text-[14.5px] font-semibold tracking-[-0.015em] text-neutral-900">
+          <span className="block truncate text-[14.5px] font-semibold tracking-[-0.015em] text-fg">
             {primaryName}
           </span>
           {showSecondaryName && (
-            <span dir="auto" className="mt-0.5 block truncate text-[12.5px] text-neutral-500">
+            <span dir="auto" className="mt-0.5 block truncate text-[12.5px] text-fg-subtle">
               {secondaryName}
             </span>
           )}
         </span>
         <ChevronIcon
           aria-hidden
-          className="group-hover:text-accent h-4 w-4 shrink-0 text-neutral-400 transition-colors rtl:-scale-x-100"
+          className="group-hover:text-accent h-4 w-4 shrink-0 text-fg-faint transition-colors rtl:-scale-x-100"
         />
       </span>
     </Link>

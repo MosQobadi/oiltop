@@ -220,7 +220,29 @@ Do not create unnecessary layers. If a task doesn't need a new top-level folder,
 - Tailwind CSS + HeroUI components.
 - Mobile-first, consistent spacing scale.
 - Keep layouts clean and minimal — favor whitespace over dense data-packed screens.
-- Accent color: `#c2410c` (rust/amber), not Technotopia's indigo.
+- Accent color: `#d62027` (red), not Technotopia's indigo. Sampled from the hero
+  still-life's label; 5.13:1 both as text on white and as a fill under white.
+- **Paint from the semantic tokens in `app/globals.css`, never from a fixed
+  Tailwind step.** `bg-surface`, `text-fg` / `-muted` / `-subtle` / `-faint`,
+  `border-line` / `-strong`, `text-accent`, `bg-accent-solid`, and the
+  `success` / `warning` / `danger` / `info` pairs are roles, not shades — they
+  are what lets one class on `<html>` repaint the storefront. A raw
+  `text-neutral-500` or `bg-white` will simply not flip, and is the one thing
+  that breaks the dark theme. Read the block comment at the top of `globals.css`
+  before adding a token; every value there is contrast-checked in both themes.
+- **The storefront has a light/dark theme; the admin does not.** The mechanism is
+  a single `dark` class on `<html>` — the same class `@heroui/styles` keys on, so
+  HeroUI's components flip with ours. `lib/storefront/theme.ts` owns it, an inline
+  script in `app/[locale]/layout.tsx` applies it before first paint, and
+  `ThemeToggle` in the header is the only thing that writes it. The admin tree
+  never sets the class and stays light: its wireframes are drawn light-only, so a
+  dark admin would be invented rather than specified.
+- Two accent tokens, and the difference matters: `bg-accent-solid` is the fill
+  and does not flip (white on it is 5.13:1 in both themes), while `text-accent` /
+  `border-accent` / `ring-accent` resolve to a lighter red in dark mode because
+  the brand red is only 3.4:1 on a dark card. A third, `accent-on-dark`, is for
+  surfaces that are dark *whatever the theme is* — the hero banner, a scrim over
+  a photograph — and never flips.
 - **Product images are shot on a white background** — one standard, no exceptions.
   It is what lets a grid of cards read as one shelf instead of a patchwork, and
   the storefront is built on it: `ProductCard` gives an image a white panel and

@@ -29,12 +29,12 @@ export function FitsYourCarNotice({ locale, car, fits, className = "" }: FitsYou
       <div
         data-testid="fits-your-car"
         data-fits="true"
-        className={`rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 ${className}`}
+        className={`rounded-xl border border-success/30 bg-success-soft px-4 py-3 ${className}`}
       >
-        <p className="text-[14px] font-medium text-emerald-800">
+        <p className="text-[14px] font-medium text-success">
           {pickLocale(locale, `Fits your ${carName}`, `مناسب ${carName} شما`)}
         </p>
-        <p dir="auto" className="mt-0.5 text-[13px] text-emerald-700">
+        <p dir="auto" className="mt-0.5 text-[13px] text-success">
           {formatEngineOptionLabel(locale, car.carEngine)}
         </p>
       </div>
@@ -45,12 +45,12 @@ export function FitsYourCarNotice({ locale, car, fits, className = "" }: FitsYou
     <div
       data-testid="fits-your-car"
       data-fits="false"
-      className={`rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 ${className}`}
+      className={`rounded-xl border border-line bg-surface-sunken px-4 py-3 ${className}`}
     >
-      <p className="text-[14px] font-medium text-neutral-900">
+      <p className="text-[14px] font-medium text-fg">
         {pickLocale(locale, `Not matched to your ${carName}`, `برای ${carName} شما ثبت نشده است`)}
       </p>
-      <p className="mt-0.5 text-[13px] text-neutral-600">
+      <p className="mt-0.5 text-[13px] text-fg-muted">
         {pickLocale(
           locale,
           "We haven't listed this part for your car — that doesn't rule it out, but we can't confirm it either.",

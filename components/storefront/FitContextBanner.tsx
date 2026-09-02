@@ -22,7 +22,7 @@ export interface FitContextBannerProps {
 }
 
 const LINK_CLASS =
-  "focus-visible:ring-accent hover:text-accent inline-flex min-h-11 items-center rounded text-[13px] font-medium text-neutral-600 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none";
+  "focus-visible:ring-accent hover:text-accent inline-flex min-h-11 items-center rounded text-[13px] font-medium text-fg-muted transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none";
 
 export function FitContextBanner({
   locale,
@@ -33,13 +33,13 @@ export function FitContextBanner({
   return (
     <aside
       data-testid="fit-context-banner"
-      className={`flex flex-wrap items-center justify-between gap-x-5 gap-y-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3.5 sm:px-5 ${className}`}
+      className={`flex flex-wrap items-center justify-between gap-x-5 gap-y-3 rounded-2xl border border-line bg-surface px-4 py-3.5 sm:px-5 ${className}`}
     >
       <div className="min-w-0">
-        <p className="font-mono text-[10.5px] tracking-[0.09em] text-neutral-500 uppercase">
+        <p className="font-mono text-[10.5px] tracking-[0.09em] text-fg-subtle uppercase">
           {pickLocale(locale, "Shopping for", "در حال خرید برای")}
         </p>
-        <p dir="auto" className="mt-1 text-[14.5px] font-medium text-neutral-900">
+        <p dir="auto" className="mt-1 text-[14.5px] font-medium text-fg">
           {formatCarLabel(locale, car)}
         </p>
       </div>
@@ -62,7 +62,7 @@ export function FitContextBanner({
           href={dismissHref}
           replace
           aria-label={pickLocale(locale, "Dismiss", "بستن")}
-          className="focus-visible:ring-accent inline-flex size-11 items-center justify-center rounded text-[17px] leading-none text-neutral-400 transition-colors hover:text-neutral-700 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="focus-visible:ring-accent inline-flex size-11 items-center justify-center rounded text-[17px] leading-none text-fg-faint transition-colors hover:text-fg-muted focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           <span aria-hidden="true">×</span>
         </Link>

@@ -83,9 +83,9 @@ export function OilGuidanceCard({ locale, guidance, className = "" }: OilGuidanc
     <section
       data-testid="oil-guidance"
       aria-labelledby="oil-guidance-heading"
-      className={`rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6 ${className}`}
+      className={`rounded-2xl border border-line bg-surface p-5 sm:p-6 ${className}`}
     >
-      <h2 id="oil-guidance-heading" className="text-[15px] font-semibold text-neutral-900">
+      <h2 id="oil-guidance-heading" className="text-[15px] font-semibold text-fg">
         {pickLocale(locale, "Recommended engine oil", "مشخصات پیشنهادی روغن موتور")}
       </h2>
 
@@ -95,15 +95,15 @@ export function OilGuidanceCard({ locale, guidance, className = "" }: OilGuidanc
             <div
               key={row.key}
               data-testid={`oil-viscosity-${row.key}`}
-              className="rounded-xl bg-neutral-50 px-4 py-3"
+              className="rounded-xl bg-surface-sunken px-4 py-3"
             >
               {/* The grade leads: it is the string a customer compares against
                   the bottle in their hand. */}
               <dd className="text-accent font-mono text-lg font-semibold tracking-tight">
                 {row.grade}
               </dd>
-              <dt className="mt-0.5 text-[13px] font-medium text-neutral-700">{row.label}</dt>
-              {row.hint && <p className="text-[12px] text-neutral-500">{row.hint}</p>}
+              <dt className="mt-0.5 text-[13px] font-medium text-fg-muted">{row.label}</dt>
+              {row.hint && <p className="text-[12px] text-fg-subtle">{row.hint}</p>}
             </div>
           ))}
         </dl>
@@ -111,14 +111,14 @@ export function OilGuidanceCard({ locale, guidance, className = "" }: OilGuidanc
 
       {hasGrades && (
         <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-2">
-          <span className="text-[13px] font-medium text-neutral-700">
+          <span className="text-[13px] font-medium text-fg-muted">
             {pickLocale(locale, "API standard", "استاندارد پیشنهادی")}
           </span>
           <ul className="flex flex-wrap gap-2">
             {guidance.apiGrades.map((grade) => (
               <li
                 key={grade}
-                className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-0.5 font-mono text-[12.5px] font-medium text-neutral-800"
+                className="rounded-full border border-line bg-surface-sunken px-2.5 py-0.5 font-mono text-[12.5px] font-medium text-fg"
               >
                 {grade}
               </li>
@@ -128,20 +128,20 @@ export function OilGuidanceCard({ locale, guidance, className = "" }: OilGuidanc
       )}
 
       {volumes.length > 0 && (
-        <div className="mt-4 border-t border-neutral-100 pt-4">
-          <p className="text-[13px] font-medium text-neutral-700">
+        <div className="mt-4 border-t border-line pt-4">
+          <p className="text-[13px] font-medium text-fg-muted">
             {pickLocale(locale, "How much it takes", "حجم روغن موتور")}
           </p>
           <dl className="mt-2 flex flex-wrap gap-x-8 gap-y-2">
             {volumes.map((row) => (
               <div key={row.key} data-testid={`oil-capacity-${row.key}`} className="flex flex-col">
-                <dd className="font-mono text-[15px] font-semibold text-neutral-900">
+                <dd className="font-mono text-[15px] font-semibold text-fg">
                   {litres(row.ml, locale)}{" "}
-                  <span className="font-sans text-[12.5px] font-normal text-neutral-500">
+                  <span className="font-sans text-[12.5px] font-normal text-fg-subtle">
                     {pickLocale(locale, "L", "لیتر")}
                   </span>
                 </dd>
-                <dt className="text-[12.5px] text-neutral-500">{row.label}</dt>
+                <dt className="text-[12.5px] text-fg-subtle">{row.label}</dt>
               </div>
             ))}
           </dl>
@@ -149,7 +149,7 @@ export function OilGuidanceCard({ locale, guidance, className = "" }: OilGuidanc
       )}
 
       {note && (
-        <p className="mt-4 border-t border-neutral-100 pt-4 text-[13.5px] leading-relaxed text-neutral-600">
+        <p className="mt-4 border-t border-line pt-4 text-[13.5px] leading-relaxed text-fg-muted">
           {note}
         </p>
       )}

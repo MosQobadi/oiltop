@@ -7,19 +7,20 @@ import { MiniCart } from "./cart/MiniCart";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 import { MobileNavDrawer } from "./MobileNavDrawer";
 import { isNavItemActive, navHref, storefrontNavItems } from "./nav-items";
+import { ThemeToggle } from "./ThemeToggle";
 import { pickLocale, type Locale } from "@/lib/i18n";
 
 export function StorefrontHeader({ locale, storeName }: { locale: Locale; storeName: string }) {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-20 border-b border-neutral-200 bg-white/85 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-line bg-surface/85 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-[1180px] items-center gap-4 px-4 sm:px-6">
         <MobileNavDrawer locale={locale} pathname={pathname} />
 
         <Link
           href={navHref(locale, "")}
-          className="focus-visible:ring-accent shrink-0 rounded text-lg font-semibold tracking-tight text-neutral-900 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="focus-visible:ring-accent shrink-0 rounded text-lg font-semibold tracking-tight text-fg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           {storeName}
         </Link>
@@ -37,7 +38,7 @@ export function StorefrontHeader({ locale, storeName }: { locale: Locale; storeN
                     href={navHref(locale, item.path)}
                     aria-current={active ? "page" : undefined}
                     className={`focus-visible:ring-accent hover:text-accent rounded text-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none ${
-                      active ? "text-accent font-medium" : "text-neutral-600"
+                      active ? "text-accent font-medium" : "text-fg-muted"
                     }`}
                   >
                     {pickLocale(locale, item.labelEn, item.labelFa)}
@@ -55,6 +56,7 @@ export function StorefrontHeader({ locale, storeName }: { locale: Locale; storeN
               link to /cart, and the mobile drawer lists it too, so the full
               page is one predictable step away at every width. */}
           <MiniCart locale={locale} />
+          <ThemeToggle locale={locale} />
           <LocaleSwitcher />
         </div>
       </div>

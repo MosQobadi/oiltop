@@ -55,17 +55,17 @@ export default async function CarBrandPage({
 
       <header className="mt-5 flex flex-wrap items-center gap-5">
         {carBrand.logo && (
-          <div className="relative size-[72px] shrink-0 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+          <div className="relative size-[72px] shrink-0 overflow-hidden rounded-2xl border border-line bg-surface">
             {/* Decorative: the heading beside it already names the brand. */}
             <Image src={carBrand.logo} alt="" fill sizes="72px" className="object-contain p-2.5" />
           </div>
         )}
 
         <div className="min-w-0">
-          <h1 className="text-[27px] font-semibold tracking-[-0.025em] text-neutral-900">
+          <h1 className="text-[27px] font-semibold tracking-[-0.025em] text-fg">
             {pickLocale(locale, `${brandName} oil and filters`, `روغن و فیلتر ${brandName}`)}
           </h1>
-          <p className="mt-2 max-w-[62ch] text-[14.5px] text-pretty text-neutral-500">
+          <p className="mt-2 max-w-[62ch] text-[14.5px] text-pretty text-fg-subtle">
             {pickLocale(
               locale,
               `Pick your ${brandName} model to see the engine oil and filters it was built for.`,
@@ -76,8 +76,8 @@ export default async function CarBrandPage({
       </header>
 
       {models.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-neutral-200 bg-white px-5 py-10 text-center">
-          <p className="text-[15px] font-medium text-neutral-900">
+        <div className="mt-8 rounded-2xl border border-line bg-surface px-5 py-10 text-center">
+          <p className="text-[15px] font-medium text-fg">
             {pickLocale(
               locale,
               "No models are listed for this brand yet.",
@@ -93,7 +93,7 @@ export default async function CarBrandPage({
         </div>
       ) : (
         <>
-          <h2 className="mt-9 text-[15px] font-semibold tracking-[-0.01em] text-neutral-900">
+          <h2 className="mt-9 text-[15px] font-semibold tracking-[-0.01em] text-fg">
             {pickLocale(locale, "Models", "مدل‌ها")}
           </h2>
 
@@ -136,21 +136,21 @@ function CarModelLink({
   return (
     <Link
       href={navHref(locale, `${CARS_PATH}/${brandSlug}/${model.slug}`)}
-      className="focus-visible:ring-accent flex h-full items-center gap-3.5 rounded-2xl border border-neutral-200 bg-white p-3.5 transition-colors hover:border-neutral-400 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      className="focus-visible:ring-accent flex h-full items-center gap-3.5 rounded-2xl border border-line bg-surface p-3.5 transition-colors hover:border-line-strong focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
     >
       {model.image && (
-        <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
+        <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-surface-muted">
           <Image src={model.image} alt="" fill sizes="56px" className="object-cover" />
         </div>
       )}
 
       <div className="min-w-0">
-        <p className="text-[14.5px] font-medium text-neutral-900">
+        <p className="text-[14.5px] font-medium text-fg">
           {brandName} {modelName}
         </p>
         {/* A model with no types listed yet has no span to state — its page
             still exists, it just can't say what years it covers. */}
-        <p className="mt-0.5 text-[12.5px] text-neutral-500">
+        <p className="mt-0.5 text-[12.5px] text-fg-subtle">
           {model.span
             ? `${formatYearSpan(locale, model.span)} · ${formatTypeCount(locale, model.engineCount)}`
             : pickLocale(locale, "Types coming soon", "تیپ‌ها به‌زودی")}

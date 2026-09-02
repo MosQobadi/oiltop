@@ -79,10 +79,10 @@ export default async function AccountOrderDetailPage({
         ]}
       />
 
-      <h1 className="mt-5 font-mono text-[27px] font-semibold tracking-[-0.02em] text-neutral-900">
+      <h1 className="mt-5 font-mono text-[27px] font-semibold tracking-[-0.02em] text-fg">
         {orderNumber}
       </h1>
-      <p className="mt-2 text-[14px] text-neutral-500">
+      <p className="mt-2 text-[14px] text-fg-subtle">
         {pickLocale(locale, "Placed on", "ثبت‌شده در")} {formatOrderDate(order.createdAt, locale)}
       </p>
 
@@ -93,14 +93,14 @@ export default async function AccountOrderDetailPage({
               would lose the half the customer is actually asking about. */}
           <section
             data-testid="order-statuses"
-            className="flex flex-wrap gap-x-8 gap-y-4 rounded-2xl border border-neutral-200 bg-white p-5"
+            className="flex flex-wrap gap-x-8 gap-y-4 rounded-2xl border border-line bg-surface p-5"
           >
             <OrderFulfilmentBadge locale={locale} status={order.status} showLabel />
             <OrderPaymentBadge locale={locale} status={order.paymentStatus} showLabel />
           </section>
 
-          <section className="rounded-2xl border border-neutral-200 bg-white p-5">
-            <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-neutral-900">
+          <section className="rounded-2xl border border-line bg-surface p-5">
+            <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-fg">
               {pickLocale(locale, "What you ordered", "اقلام سفارش")}
             </h2>
             <ul className="mt-4 flex flex-col">
@@ -108,18 +108,18 @@ export default async function AccountOrderDetailPage({
                 <li
                   key={item.id}
                   data-testid="order-line"
-                  className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 border-b border-neutral-200 py-3.5 first:pt-0 last:border-0 last:pb-0"
+                  className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 border-b border-line py-3.5 first:pt-0 last:border-0 last:pb-0"
                 >
                   <div className="min-w-0">
                     {/* The snapshot name, in the language the order stored it in
                         — inventing a translation now would be showing live data
                         with extra steps. */}
-                    <p className="text-[14px] font-medium text-neutral-900">{item.productName}</p>
-                    <p className="mt-0.5 text-[12.5px] text-neutral-500 tabular-nums">
+                    <p className="text-[14px] font-medium text-fg">{item.productName}</p>
+                    <p className="mt-0.5 text-[12.5px] text-fg-subtle tabular-nums">
                       {formatDigits(item.quantity, locale)} × {formatToman(item.price, locale)}
                     </p>
                   </div>
-                  <p className="shrink-0 text-[14px] font-semibold text-neutral-900 tabular-nums">
+                  <p className="shrink-0 text-[14px] font-semibold text-fg tabular-nums">
                     {formatToman(item.lineTotal, locale)}
                   </p>
                 </li>
@@ -127,22 +127,22 @@ export default async function AccountOrderDetailPage({
             </ul>
           </section>
 
-          <section className="rounded-2xl border border-neutral-200 bg-white p-5">
-            <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-neutral-900">
+          <section className="rounded-2xl border border-line bg-surface p-5">
+            <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-fg">
               {pickLocale(locale, "Shipping to", "ارسال به")}
             </h2>
-            <p className="mt-2 text-[13.5px] leading-relaxed text-neutral-700">
+            <p className="mt-2 text-[13.5px] leading-relaxed text-fg-muted">
               {order.shippingAddress}
             </p>
-            <p className="mt-1 text-[13px] text-neutral-500 tabular-nums">
+            <p className="mt-1 text-[13px] text-fg-subtle tabular-nums">
               {pickLocale(locale, "Postal code", "کد پستی")}{" "}
               {formatPostalCode(order.postalCode, locale)}
             </p>
           </section>
         </div>
 
-        <aside className="rounded-2xl border border-neutral-200 bg-white p-5 lg:sticky lg:top-24 lg:self-start">
-          <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-neutral-900">
+        <aside className="rounded-2xl border border-line bg-surface p-5 lg:sticky lg:top-24 lg:self-start">
+          <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-fg">
             {pickLocale(locale, "Order total", "مبلغ سفارش")}
           </h2>
 
@@ -165,13 +165,13 @@ export default async function AccountOrderDetailPage({
             >
               {formatToman(includedVat(order.total), locale)}
             </TotalRow>
-            <div className="flex items-center justify-between gap-4 border-t border-neutral-200 pt-3">
-              <dt className="text-[14px] font-medium text-neutral-900">
+            <div className="flex items-center justify-between gap-4 border-t border-line pt-3">
+              <dt className="text-[14px] font-medium text-fg">
                 {pickLocale(locale, "Total", "مبلغ نهایی")}
               </dt>
               <dd
                 data-testid="order-total"
-                className="text-[16px] font-semibold text-neutral-900 tabular-nums"
+                className="text-[16px] font-semibold text-fg tabular-nums"
               >
                 {formatToman(order.total, locale)}
               </dd>
@@ -180,7 +180,7 @@ export default async function AccountOrderDetailPage({
 
           <Link
             href={ordersHref}
-            className="focus-visible:ring-accent mt-5 flex min-h-11 w-full items-center justify-center rounded-[9px] border border-neutral-300 px-5 text-[14px] font-medium text-neutral-700 transition-colors hover:border-neutral-400 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="focus-visible:ring-accent mt-5 flex min-h-11 w-full items-center justify-center rounded-[9px] border border-line-strong px-5 text-[14px] font-medium text-fg-muted transition-colors hover:border-fg-faint focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             {pickLocale(locale, "Back to your orders", "بازگشت به سفارش‌ها")}
           </Link>
@@ -193,8 +193,8 @@ export default async function AccountOrderDetailPage({
 function TotalRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <dt className="text-neutral-500">{label}</dt>
-      <dd className="text-neutral-900 tabular-nums">{children}</dd>
+      <dt className="text-fg-subtle">{label}</dt>
+      <dd className="text-fg tabular-nums">{children}</dd>
     </div>
   );
 }

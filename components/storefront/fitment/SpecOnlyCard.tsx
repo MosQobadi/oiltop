@@ -74,10 +74,10 @@ export function SpecOnlyCard({
   return (
     <article
       data-testid="fitment-spec-only-card"
-      className={`flex flex-col gap-3 rounded-2xl border border-dashed border-neutral-300 bg-neutral-50/60 p-4 ${className}`}
+      className={`flex flex-col gap-3 rounded-2xl border border-dashed border-line-strong bg-surface-sunken/60 p-4 ${className}`}
     >
       {categoryName && (
-        <span className="inline-flex w-fit items-center rounded-full bg-[oklch(0.96_0.02_240)] px-3 py-1 text-[12.5px] font-medium text-[oklch(0.42_0.1_250)]">
+        <span className="inline-flex w-fit items-center rounded-full bg-info-soft px-3 py-1 text-[12.5px] font-medium text-info">
           {pickLocale(
             locale,
             "Spec known — no exact match yet",
@@ -87,18 +87,18 @@ export function SpecOnlyCard({
       )}
 
       <div>
-        <h4 className="text-[15px] font-semibold text-neutral-900">{title}</h4>
-        <p className="mt-1.5 text-[13.5px] leading-relaxed text-neutral-600">{body}</p>
+        <h4 className="text-[15px] font-semibold text-fg">{title}</h4>
+        <p className="mt-1.5 text-[13.5px] leading-relaxed text-fg-muted">{body}</p>
       </div>
 
       {rows.length > 0 && (
-        <dl className="grid gap-px overflow-hidden rounded-xl border border-neutral-200 bg-neutral-200">
+        <dl className="grid gap-px overflow-hidden rounded-xl border border-line bg-line">
           {rows.map((row) => (
-            <div key={row.label} className="flex justify-between gap-4 bg-white px-3.5 py-2.5">
-              <dt className="text-[13px] text-neutral-500">{row.label}</dt>
+            <div key={row.label} className="flex justify-between gap-4 bg-surface px-3.5 py-2.5">
+              <dt className="text-[13px] text-fg-subtle">{row.label}</dt>
               <dd
                 dir="auto"
-                className="text-end font-mono text-[13px] font-medium text-neutral-900"
+                className="text-end font-mono text-[13px] font-medium text-fg"
               >
                 {row.value}
               </dd>
@@ -114,7 +114,7 @@ export function SpecOnlyCard({
             onClick={() => setRequestOpen((open) => !open)}
             aria-expanded={requestOpen}
             aria-controls={panelId}
-            className="focus-visible:ring-accent border-accent/40 text-accent min-h-11 w-full rounded-[9px] border bg-white px-3 text-[13px] font-medium transition-colors hover:bg-[oklch(0.978_0.011_45)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="focus-visible:ring-accent border-accent/40 text-accent min-h-11 w-full rounded-[9px] border bg-surface px-3 text-[13px] font-medium transition-colors hover:bg-accent-soft focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             {categoryName
               ? pickLocale(
@@ -129,14 +129,14 @@ export function SpecOnlyCard({
         {(requestOpen || requested) && (
           <div
             id={panelId}
-            className={`rounded-[14px] border border-[oklch(0.9_0.03_45)] bg-[oklch(0.978_0.011_45)] p-4 ${requested ? "" : "mt-2.5"}`}
+            className={`rounded-[14px] border border-accent/25 bg-accent-soft p-4 ${requested ? "" : "mt-2.5"}`}
           >
             {!requested && (
               <>
-                <p className="text-[15px] font-semibold text-neutral-900">
+                <p className="text-[15px] font-semibold text-fg">
                   {pickLocale(locale, "Request this part", "درخواست این قطعه")}
                 </p>
-                <p className="mt-1 mb-3 text-[13px] leading-relaxed text-[oklch(0.42_0.03_45)]">
+                <p className="mt-1 mb-3 text-[13px] leading-relaxed text-fg-muted">
                   {pickLocale(
                     locale,
                     "Leave a number. A parts advisor confirms price and availability before anything is charged.",

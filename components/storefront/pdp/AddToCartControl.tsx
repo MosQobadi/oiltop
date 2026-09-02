@@ -39,7 +39,7 @@ export function AddToCartControl({
   if (outOfStock) {
     return (
       <div className={className}>
-        <p className="text-[13.5px] text-neutral-600">
+        <p className="text-[13.5px] text-fg-muted">
           {pickLocale(
             locale,
             "Out of stock right now. Leave a contact and we'll tell you the moment it's back.",
@@ -80,14 +80,14 @@ export function AddToCartControl({
           type="button"
           onClick={handleAddToCart}
           data-testid="pdp-add-to-cart"
-          className="focus-visible:ring-accent bg-accent min-h-11 flex-1 rounded-[9px] px-5 text-[14px] font-medium text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="focus-visible:ring-accent bg-accent-solid min-h-11 flex-1 rounded-[9px] px-5 text-[14px] font-medium text-white transition-colors hover:bg-accent-solid-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           {pickLocale(locale, "Add to cart", "افزودن به سبد")}
         </button>
       </div>
 
       {added && (
-        <p role="status" className="mt-3 text-[13px] text-neutral-600">
+        <p role="status" className="mt-3 text-[13px] text-fg-muted">
           {pickLocale(locale, "Added to your cart.", "به سبد خرید اضافه شد.")}{" "}
           <Link
             href={navHref(locale, CART_PATH)}

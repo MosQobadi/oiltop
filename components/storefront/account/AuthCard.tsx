@@ -23,11 +23,11 @@ export function AuthCard({ locale, active, title, subtitle, from, children }: Au
   const query = from ? `?from=${encodeURIComponent(from)}` : "";
 
   return (
-    <div className="mx-auto w-full max-w-[460px] rounded-2xl border border-neutral-200 bg-white p-6">
+    <div className="mx-auto w-full max-w-[460px] rounded-2xl border border-line bg-surface p-6">
       <div
         role="tablist"
         aria-label={pickLocale(locale, "Account", "حساب من")}
-        className="flex gap-1 rounded-[11px] bg-neutral-100 p-1"
+        className="flex gap-1 rounded-[11px] bg-surface-muted p-1"
       >
         <Tab
           locale={locale}
@@ -43,8 +43,8 @@ export function AuthCard({ locale, active, title, subtitle, from, children }: Au
         />
       </div>
 
-      <h1 className="mt-5 text-[21px] font-semibold tracking-tight text-neutral-900">{title}</h1>
-      <p className="mt-1.5 text-[13.5px] text-pretty text-neutral-600">{subtitle}</p>
+      <h1 className="mt-5 text-[21px] font-semibold tracking-tight text-fg">{title}</h1>
+      <p className="mt-1.5 text-[13.5px] text-pretty text-fg-muted">{subtitle}</p>
 
       <div className="mt-[18px]">{children}</div>
     </div>
@@ -67,7 +67,7 @@ function Tab({
       role="tab"
       aria-selected={active}
       className={`focus-visible:ring-accent min-h-10 flex-1 rounded-lg px-3 py-2.5 text-center text-[13.5px] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none ${
-        active ? "text-accent bg-white" : "hover:text-accent text-neutral-600"
+        active ? "text-accent bg-surface" : "hover:text-accent text-fg-muted"
       }`}
     >
       {label}

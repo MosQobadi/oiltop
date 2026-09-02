@@ -108,16 +108,16 @@ export function RequestItForm({
     return (
       <div
         role="status"
-        className={`rounded-[10px] border border-[oklch(0.9_0.03_45)] bg-white p-4 ${className}`}
+        className={`rounded-[10px] border border-accent/25 bg-surface p-4 ${className}`}
       >
-        <p className="text-[14.5px] font-semibold text-neutral-900">
+        <p className="text-[14.5px] font-semibold text-fg">
           {pickLocale(
             locale,
             "We got it — our team will reach out.",
             "ثبت شد — با شما تماس می‌گیریم.",
           )}
         </p>
-        <p className="mt-1.5 text-[13px] leading-relaxed text-neutral-600">
+        <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">
           {pickLocale(
             locale,
             "A parts advisor will call you about this request, usually within one working day. Nothing is ordered and nothing is charged until you confirm with them.",
@@ -196,7 +196,7 @@ export function RequestItForm({
       </Field>
 
       {formError && (
-        <p role="alert" className="text-[12.5px] text-red-600">
+        <p role="alert" className="text-[12.5px] text-danger">
           {formError}
         </p>
       )}
@@ -204,7 +204,7 @@ export function RequestItForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="focus-visible:ring-accent bg-accent min-h-11 w-full rounded-[9px] px-4 text-[13px] font-medium text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-60"
+        className="focus-visible:ring-accent bg-accent-solid min-h-11 w-full rounded-[9px] px-4 text-[13px] font-medium text-white transition-colors hover:bg-accent-solid-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-60"
       >
         {isSubmitting
           ? pickLocale(locale, "Sending…", "در حال ارسال…")

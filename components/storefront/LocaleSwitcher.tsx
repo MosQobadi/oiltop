@@ -18,7 +18,7 @@ function LocaleLinks({ query }: { query: string }) {
     <nav
       aria-label="Language"
       data-testid="locale-switcher"
-      className="inline-flex items-center gap-0.5 rounded-full border border-neutral-200 p-0.5"
+      className="inline-flex items-center gap-0.5 rounded-full border border-line p-0.5"
     >
       {LOCALES.map((locale) => {
         const isActive = locale === current;
@@ -31,8 +31,8 @@ function LocaleLinks({ query }: { query: string }) {
             data-testid={`locale-switcher-${locale}`}
             className={`focus-visible:ring-accent rounded-full px-2.5 py-1 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none ${
               isActive
-                ? "bg-accent text-white"
-                : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                ? "bg-accent-solid text-white"
+                : "text-fg-muted hover:bg-surface-muted hover:text-fg"
             }`}
           >
             {LABELS[locale]}

@@ -32,7 +32,7 @@ export function SizeSelector({ locale, options, className = "" }: SizeSelectorPr
       className={className}
       aria-labelledby="size-selector-label"
     >
-      <p id="size-selector-label" className="text-[13px] font-medium text-neutral-500">
+      <p id="size-selector-label" className="text-[13px] font-medium text-fg-subtle">
         {pickLocale(locale, "Size", "حجم")}
       </p>
       <ul className="mt-2 flex flex-wrap gap-2">
@@ -52,7 +52,7 @@ export function SizeSelector({ locale, options, className = "" }: SizeSelectorPr
                 data-testid="size-option"
                 href={option.href}
                 dir="auto"
-                className="focus-visible:ring-accent hover:border-accent hover:text-accent inline-flex min-h-11 items-center rounded-xl border border-neutral-200 px-3.5 text-[14px] text-neutral-700 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="focus-visible:ring-accent hover:border-accent hover:text-accent inline-flex min-h-11 items-center rounded-xl border border-line px-3.5 text-[14px] text-fg-muted transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               >
                 {option.label}
               </Link>

@@ -21,8 +21,8 @@ export default async function StorefrontDevPreviewPage({
   return (
     <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-10 px-4 py-10 sm:px-6">
       <div>
-        <h1 className="text-lg font-semibold text-neutral-900">Storefront Dev Preview</h1>
-        <p className="text-sm text-neutral-500">
+        <h1 className="text-lg font-semibold text-fg">Storefront Dev Preview</h1>
+        <p className="text-sm text-fg-subtle">
           Internal component playground — not a real storefront screen.
         </p>
       </div>

@@ -5,7 +5,7 @@
 // per form.
 
 export const CONTROL_CLASS =
-  "focus-visible:border-accent focus-visible:ring-accent min-h-11 w-full rounded-[10px] border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus-visible:ring-1 focus-visible:outline-none";
+  "focus-visible:border-accent focus-visible:ring-accent min-h-11 w-full rounded-[10px] border border-line-strong bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus-visible:ring-1 focus-visible:outline-none";
 
 export interface FieldProps {
   id: string;
@@ -39,7 +39,7 @@ export function Field({ id, label, error, hint, className, children }: FieldProp
 
   return (
     <div className={`flex flex-col gap-1.5${className ? ` ${className}` : ""}`}>
-      <label htmlFor={id} className="text-[12.5px] text-neutral-600">
+      <label htmlFor={id} className="text-[12.5px] text-fg-muted">
         {label}
       </label>
       {children({
@@ -49,12 +49,12 @@ export function Field({ id, label, error, hint, className, children }: FieldProp
         className: CONTROL_CLASS,
       })}
       {hint && (
-        <p id={`${id}-hint`} className="text-[11.5px] text-neutral-500">
+        <p id={`${id}-hint`} className="text-[11.5px] text-fg-subtle">
           {hint}
         </p>
       )}
       {error && (
-        <p id={`${id}-error`} role="alert" className="text-[12.5px] text-red-600">
+        <p id={`${id}-error`} role="alert" className="text-[12.5px] text-danger">
           {error}
         </p>
       )}

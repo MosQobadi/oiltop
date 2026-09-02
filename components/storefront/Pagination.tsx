@@ -16,18 +16,18 @@ export interface PaginationProps {
 }
 
 const STEP_CLASS =
-  "focus-visible:ring-accent inline-flex min-h-11 items-center gap-1.5 rounded-[9px] border border-neutral-200 bg-white px-3 text-[13px] font-medium text-neutral-600 transition-colors hover:border-neutral-400 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none";
+  "focus-visible:ring-accent inline-flex min-h-11 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3 text-[13px] font-medium text-fg-muted transition-colors hover:border-line-strong focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none";
 
 // Disabled ends are rendered as spans, not disabled links — there is no page 0
 // to point at, so there should be nothing to focus either.
 const STEP_DISABLED_CLASS =
-  "inline-flex min-h-11 cursor-not-allowed items-center gap-1.5 rounded-[9px] border border-neutral-200 bg-neutral-50 px-3 text-[13px] font-medium text-neutral-300";
+  "inline-flex min-h-11 cursor-not-allowed items-center gap-1.5 rounded-[9px] border border-line bg-surface-sunken px-3 text-[13px] font-medium text-fg-faint";
 
 const PAGE_CLASS =
-  "focus-visible:ring-accent inline-flex min-h-11 min-w-11 items-center justify-center rounded-[9px] border border-neutral-200 bg-white px-2 text-[13px] font-medium text-neutral-600 transition-colors hover:border-neutral-400 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none";
+  "focus-visible:ring-accent inline-flex min-h-11 min-w-11 items-center justify-center rounded-[9px] border border-line bg-surface px-2 text-[13px] font-medium text-fg-muted transition-colors hover:border-line-strong focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none";
 
 const PAGE_CURRENT_CLASS =
-  "bg-accent inline-flex min-h-11 min-w-11 items-center justify-center rounded-[9px] px-2 text-[13px] font-semibold text-white";
+  "bg-accent-solid inline-flex min-h-11 min-w-11 items-center justify-center rounded-[9px] px-2 text-[13px] font-semibold text-white";
 
 export function Pagination({
   locale,
@@ -72,7 +72,7 @@ export function Pagination({
             <li
               key={`gap-${index}`}
               aria-hidden="true"
-              className="px-1 text-[13px] text-neutral-400"
+              className="px-1 text-[13px] text-fg-faint"
             >
               …
             </li>

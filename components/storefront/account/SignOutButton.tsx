@@ -19,7 +19,7 @@ export function SignOutButton({ locale, className = "" }: { locale: Locale; clas
       type="button"
       data-testid="sign-out"
       onClick={() => void logout(navHref(locale, ""))}
-      className={`focus-visible:ring-accent inline-flex min-h-9 items-center rounded-full border border-neutral-200 bg-white px-3.5 py-1.5 text-[12.5px] font-medium text-neutral-700 transition-colors hover:border-neutral-400 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none ${className}`}
+      className={`focus-visible:ring-accent inline-flex min-h-9 items-center rounded-full border border-line bg-surface px-3.5 py-1.5 text-[12.5px] font-medium text-fg-muted transition-colors hover:border-line-strong focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none ${className}`}
     >
       {pickLocale(locale, "Sign out", "خروج از حساب")}
     </button>

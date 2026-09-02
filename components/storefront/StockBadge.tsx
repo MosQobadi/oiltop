@@ -21,19 +21,19 @@ const IN_STOCK = "IN_STOCK" as const;
 
 const STOCK_STYLE: Record<typeof IN_STOCK | StorefrontStockStatus, StockStyle> = {
   IN_STOCK: {
-    text: "text-emerald-700",
-    dot: "bg-emerald-600",
-    pill: "border-emerald-200 bg-emerald-50",
+    text: "text-success",
+    dot: "bg-success",
+    pill: "border-success/30 bg-success-soft",
   },
   LOW_STOCK: {
-    text: "text-amber-700",
-    dot: "bg-amber-500",
-    pill: "border-amber-200 bg-amber-50",
+    text: "text-warning",
+    dot: "bg-warning",
+    pill: "border-warning/30 bg-warning-soft",
   },
   OUT_OF_STOCK: {
-    text: "text-neutral-600",
-    dot: "bg-neutral-400",
-    pill: "border-neutral-200 bg-neutral-50",
+    text: "text-fg-muted",
+    dot: "bg-fg-faint",
+    pill: "border-line bg-surface-sunken",
   },
 };
 

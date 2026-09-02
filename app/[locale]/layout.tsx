@@ -5,6 +5,7 @@ import { JsonLd } from "@/components/storefront/JsonLd";
 import { StorefrontShell } from "@/components/storefront/StorefrontShell";
 import { isLocale, localeDir } from "@/lib/i18n";
 import { siteOrigin } from "@/lib/storefront/sitemap";
+import { THEME_INIT_SCRIPT } from "@/lib/storefront/theme";
 import { organizationSchema } from "@/lib/storefront/structured-data";
 import { getPublicSettings } from "@/server/setting";
 import "../globals.css";
@@ -71,7 +72,22 @@ export default async function LocaleLayout({
   const organization = organizationSchema(settings);
 
   return (
-    <html lang={locale} dir={localeDir(locale)} className={`${font.variable} h-full antialiased`}>
+    // `suppressHydrationWarning` covers exactly one attribute: the `dark` class
+    // the script below adds to this element before React ever sees it. Without
+    // it React reports the mismatch it caused itself.
+    <html
+      lang={locale}
+      dir={localeDir(locale)}
+      className={`${font.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
+      <head>
+        {/* Before first paint, deliberately: see THEME_INIT_SCRIPT. Rendering
+            it here rather than in a Client Component is the whole point — a
+            component can only run after hydration, by which time the wrong
+            theme has already been on screen. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className={`${font.className} flex min-h-full flex-col`}>
         {organization && <JsonLd data={organization} />}
         <StorefrontShell locale={locale} settings={settings}>

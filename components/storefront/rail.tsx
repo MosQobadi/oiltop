@@ -130,8 +130,8 @@ export function RailDots({
           <span
             className={
               dot === active
-                ? "bg-accent h-1.5 w-5 rounded-full transition-all"
-                : "h-1.5 w-1.5 rounded-full bg-neutral-300 transition-all group-hover:bg-neutral-400"
+                ? "bg-accent-solid h-1.5 w-5 rounded-full transition-all"
+                : "h-1.5 w-1.5 rounded-full bg-fg-faint transition-all group-hover:bg-fg-faint"
             }
           />
         </button>

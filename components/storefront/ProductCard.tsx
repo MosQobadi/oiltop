@@ -74,7 +74,7 @@ const DEFAULT_IMAGE_SIZES = "(min-width: 1024px) 240px, (min-width: 640px) 33vw,
 // without an edge a card is only as visible as the artwork inside it. The lift
 // on hover is what says "clickable" — the whole tile is the link.
 const CARD_CLASS =
-  "group relative flex h-full flex-col rounded-2xl border border-neutral-200/80 bg-white p-2.5 transition-shadow sm:p-3 duration-200 hover:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)] focus-within:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)]";
+  "group relative flex h-full flex-col rounded-2xl border border-line/80 bg-surface p-2.5 transition-shadow sm:p-3 duration-200 hover:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)] focus-within:shadow-[0_12px_32px_-20px_rgb(15_23_42/0.55)]";
 
 // A ratio and a ceiling, and the ceiling is the part that matters. The same card
 // is used at 176px wide in the deals rail and at ~370px in the fitment results;
@@ -176,7 +176,7 @@ export function ProductCard({
         ) : (
           <span
             style={PLACEHOLDER_STYLE}
-            className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-neutral-400"
+            className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-fg-faint"
           >
             <OilBottleIcon className="h-7 w-7" />
             <span className="font-mono text-[9.5px] tracking-[0.04em]">
@@ -186,7 +186,7 @@ export function ProductCard({
         )}
 
         {discountPercent > 0 && (
-          <span className="bg-accent pointer-events-none absolute start-2 top-2 rounded-full px-2 py-[3px] text-[11px] font-semibold text-white shadow-sm">
+          <span className="bg-accent-solid pointer-events-none absolute start-2 top-2 rounded-full px-2 py-[3px] text-[11px] font-semibold text-white shadow-sm">
             {formatDiscountLabel(discountPercent, locale)}
           </span>
         )}
@@ -207,7 +207,7 @@ export function ProductCard({
         <Link
           href={productHref}
           title={primaryName}
-          className="focus-visible:ring-accent hover:text-accent line-clamp-2 rounded text-[13.5px] leading-[19px] font-semibold tracking-[-0.015em] text-neutral-900 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:text-[14.5px] sm:leading-[21px]"
+          className="focus-visible:ring-accent hover:text-accent line-clamp-2 rounded text-[13.5px] leading-[19px] font-semibold tracking-[-0.015em] text-fg transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:text-[14.5px] sm:leading-[21px]"
         >
           {/* Stretches the title's hit area over the whole card, so the picture
               is the link too — one link, rather than the image-plus-title pair
@@ -229,7 +229,7 @@ export function ProductCard({
               type="button"
               onClick={() => setNotifyOpen((open) => !open)}
               aria-expanded={notifyOpen}
-              className="focus-visible:ring-accent relative z-10 mt-2 min-h-10 w-full rounded-full border border-neutral-200 bg-white px-3 text-[13px] font-semibold text-neutral-600 transition-colors hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:mt-2.5 sm:min-h-11 sm:text-[13.5px]"
+              className="focus-visible:ring-accent relative z-10 mt-2 min-h-10 w-full rounded-full border border-line bg-surface px-3 text-[13px] font-semibold text-fg-muted transition-colors hover:bg-surface-sunken focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:mt-2.5 sm:min-h-11 sm:text-[13.5px]"
             >
               {pickLocale(locale, "Notify me", "خبرم کن")}
             </button>
@@ -253,7 +253,7 @@ export function ProductCard({
           <button
             type="button"
             onClick={handleAddToCart}
-            className="focus-visible:ring-accent bg-accent relative z-10 mt-2 min-h-10 w-full rounded-full px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:mt-2.5 sm:min-h-11 sm:text-[13.5px]"
+            className="focus-visible:ring-accent bg-accent-solid relative z-10 mt-2 min-h-10 w-full rounded-full px-3 text-[13px] font-semibold text-white transition-colors hover:bg-accent-solid-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:mt-2.5 sm:min-h-11 sm:text-[13.5px]"
           >
             {pickLocale(locale, "Add to cart", "افزودن به سبد")}
           </button>
@@ -287,7 +287,7 @@ function CartQuantityControl({
   const removes = quantity <= 1;
 
   return (
-    <div className="relative z-10 mt-2 flex h-10 w-full items-center justify-between rounded-full border border-neutral-200 bg-white sm:mt-2.5 sm:h-11">
+    <div className="relative z-10 mt-2 flex h-10 w-full items-center justify-between rounded-full border border-line bg-surface sm:mt-2.5 sm:h-11">
       <button
         type="button"
         onClick={() => onChange(quantity - 1)}
@@ -301,7 +301,7 @@ function CartQuantityControl({
         <span aria-hidden="true">−</span>
       </button>
 
-      <span role="status" className="text-[13.5px] font-semibold text-neutral-900 tabular-nums">
+      <span role="status" className="text-[13.5px] font-semibold text-fg tabular-nums">
         <span className="sr-only">{pickLocale(locale, "In cart:", "در سبد:")} </span>
         {formatDigits(quantity, locale)}
       </span>
@@ -320,7 +320,7 @@ function CartQuantityControl({
 }
 
 const STEP_BUTTON_CLASS =
-  "focus-visible:ring-accent text-accent flex size-10 shrink-0 sm:size-11 items-center justify-center rounded-full text-[18px] leading-none transition-colors hover:bg-neutral-50 focus-visible:ring-2 focus-visible:outline-none disabled:text-neutral-300 disabled:hover:bg-transparent";
+  "focus-visible:ring-accent text-accent flex size-10 shrink-0 sm:size-11 items-center justify-center rounded-full text-[18px] leading-none transition-colors hover:bg-surface-sunken focus-visible:ring-2 focus-visible:outline-none disabled:text-fg-faint disabled:hover:bg-transparent";
 
 // Same card, same proportions, neutral blocks, and deliberately no pulse — the
 // prototype's handoff notes call for a still skeleton so a grid of them doesn't
@@ -328,18 +328,18 @@ const STEP_BUTTON_CLASS =
 export function ProductCardSkeleton() {
   return (
     <div data-testid="product-card-skeleton" aria-hidden="true" className={CARD_CLASS}>
-      <span className={`${IMAGE_BOX_CLASS} block bg-neutral-100`} />
+      <span className={`${IMAGE_BOX_CLASS} block bg-surface-muted`} />
       <div className="mt-2 flex items-center justify-between gap-2 sm:mt-2.5">
-        <span className="block h-3 w-16 rounded bg-neutral-200" />
-        <span className="block h-3 w-14 rounded bg-neutral-200" />
+        <span className="block h-3 w-16 rounded bg-line" />
+        <span className="block h-3 w-14 rounded bg-line" />
       </div>
       <div className={`mt-1 flex flex-col gap-1.5 ${NAME_BLOCK_CLASS}`}>
-        <span className="block h-3.5 w-full rounded bg-neutral-200" />
-        <span className="block h-3.5 w-2/3 rounded bg-neutral-200" />
+        <span className="block h-3.5 w-full rounded bg-line" />
+        <span className="block h-3.5 w-2/3 rounded bg-line" />
       </div>
       <div className="mt-auto pt-1.5">
-        <span className="block h-5 w-24 rounded bg-neutral-200" />
-        <span className="mt-2 block h-10 w-full rounded-full bg-neutral-200 sm:mt-2.5 sm:h-11" />
+        <span className="block h-5 w-24 rounded bg-line" />
+        <span className="mt-2 block h-10 w-full rounded-full bg-line sm:mt-2.5 sm:h-11" />
       </div>
     </div>
   );

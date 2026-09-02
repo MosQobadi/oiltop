@@ -1,32 +1,155 @@
 @import "@heroui/styles";
 
+/* Tailwind's `dark:` variant follows the same `.dark` class HeroUI's own theme
+   keys on (see @heroui/styles' variables.css), so one class on <html> flips the
+   app's tokens and HeroUI's components together. Only the storefront ever sets
+   it — the admin tree has no toggle and stays light. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-farsi: var(--font-vazirmatn);
 
-  /* Exposes --accent-on-dark below as `text-accent-on-dark` and friends. */
+  /* ── Semantic colour tokens ───────────────────────────────────────────────
+     Every storefront surface is painted from these rather than from a fixed
+     Tailwind step, which is what lets one class on <html> repaint the site.
+     They are *roles*, not shades: `surface` is whatever a card sits on today,
+     white in light and near-black in dark. Reach for a raw `neutral-500` again
+     and it will simply not flip.
+
+     Ranked, so picking one is a question of how loud the thing should be:
+       surface > surface-sunken > surface-muted   grounds, page ground, fills
+       fg > fg-muted > fg-subtle > fg-faint       body copy down to icons
+       line > line-strong                         hairlines, then hover borders
+
+     Values and every contrast ratio quoted below are generated, not guessed —
+     the pairs that matter all clear WCAG AA in both themes. */
+  --color-surface: var(--app-surface);
+  --color-surface-sunken: var(--app-surface-sunken);
+  --color-surface-muted: var(--app-surface-muted);
+
+  --color-fg: var(--app-fg);
+  --color-fg-muted: var(--app-fg-muted);
+  --color-fg-subtle: var(--app-fg-subtle);
+  --color-fg-faint: var(--app-fg-faint);
+
+  --color-line: var(--app-line);
+  --color-line-strong: var(--app-line-strong);
+
+  /* `accent` is the brand red *adjusted to stay readable on the current
+     theme's ground* — *-accent utilities flip with the theme.
+
+     `accent-solid` is the fill and does not flip: white on #d62027 is 5.13:1,
+     while white on the lighter red the dark theme reads text in would be
+     3.1:1. A button keeps the fill; text, borders and focus rings take the
+     readable one. HeroUI's own accent-filled components read --accent, which
+     is why that variable stays the fill colour too. */
+  --color-accent-solid: var(--accent);
+  --color-accent-solid-hover: var(--accent-hover);
+  --color-accent: var(--app-accent);
+  --color-accent-soft: var(--app-accent-soft);
   --color-accent-on-dark: var(--accent-on-dark);
+
+  --color-success: var(--app-success);
+  --color-success-soft: var(--app-success-soft);
+  --color-warning: var(--app-warning);
+  --color-warning-soft: var(--app-warning-soft);
+  --color-danger: var(--app-danger);
+  --color-danger-soft: var(--app-danger-soft);
+  --color-info: var(--app-info);
+  --color-info-soft: var(--app-info-soft);
 }
 
 :root {
-  /* Top Oil brand accent (rust/amber) — overrides HeroUI's default blue */
-  --accent: #c2410c;
+  /* Top Oil brand accent — the red sampled from the hero still-life's label,
+     oklch(0.5628 0.213 26.2). Overrides HeroUI's default blue. Carries white
+     at 5.13:1 and sits on white at 5.13:1, so it clears AA as a fill and as
+     text without needing a second value for either. */
+  --accent: #d62027;
   --accent-foreground: var(--snow);
 
-  /* The same rust, raised in lightness for use *on* a dark ground. #c2410c is
-     a dark colour: on the near-black homepage banner it measures 3.36:1, which
-     large text only barely clears and an icon doesn't clear at all once the
-     banner's glow lifts the ground behind it. This is the accent hue at
-     L=0.68 — 5.67:1 on that ground, 4.12:1 against the brightest part of the
-     glow. Use it for accent-coloured text and icons on dark surfaces; solid
-     accent fills (buttons) keep --accent, which carries white at 5.18:1. */
-  --accent-on-dark: oklch(0.68 0.17 50);
+  /* The pressed/hovered fill. Darker rather than lighter, in both themes, so a
+     button's hover reads the same way whichever ground it is on. 6.67:1 with
+     white. */
+  --accent-hover: oklch(0.5 0.205 26.2);
+
+  /* The same red raised in lightness, for accent text and icons on a surface
+     that is dark *whatever the theme is* — the homepage banner, the category
+     cards' scrims, a caption over a photograph. 5.48:1 on the banner's ground.
+     Distinct from --app-accent below, which is the theme-dependent one: this
+     value has to hold even while the rest of the site is in light mode. */
+  --accent-on-dark: oklch(0.66 0.196 26.2);
+
+  /* ── Light theme ── */
+  --app-surface: oklch(1 0 30);
+  --app-surface-sunken: oklch(0.976 0.002 30);
+  --app-surface-muted: oklch(0.951 0.003 30);
+
+  /* 17.2 / 6.87 / 4.92 / 2.98 against --app-surface. fg-faint is deliberately
+     below the text threshold — it is for chevrons and separators, never copy. */
+  --app-fg: oklch(0.225 0.008 30);
+  --app-fg-muted: oklch(0.468 0.008 30);
+  --app-fg-subtle: oklch(0.546 0.009 30);
+  --app-fg-faint: oklch(0.672 0.009 30);
+
+  --app-line: oklch(0.905 0.004 30);
+  --app-line-strong: oklch(0.838 0.006 30);
+
+  --app-accent: var(--accent);
+  --app-accent-soft: oklch(0.966 0.017 26.2);
+
+  /* Status. `danger` is a crimson rather than the brand red: with a red accent
+     the two would otherwise be the same colour, and a form error has to read
+     as a problem, not as a brand flourish. */
+  --app-success: oklch(0.505 0.125 152);
+  --app-success-soft: oklch(0.958 0.032 152);
+  --app-warning: oklch(0.505 0.115 68);
+  --app-warning-soft: oklch(0.962 0.04 68);
+  --app-danger: oklch(0.505 0.19 14);
+  --app-danger-soft: oklch(0.958 0.028 14);
+  /* Neutral information — the "we don't stock this yet, tell us" notices. Blue
+     because it is the one status here that must not be mistaken for the brand. */
+  --app-info: oklch(0.48 0.14 250);
+  --app-info-soft: oklch(0.962 0.025 250);
+}
+
+/* ── Dark theme ──
+   Sunken is *darker* than surface, not lighter: on a dark ground a card lifts
+   by being paler than the page, which is the reverse of the light theme's
+   relationship and the reason these are two tokens rather than one plus a
+   shadow. Ratios against --app-surface: 16.68 / 7.79 / 5.37 / 3.38. */
+.dark {
+  --app-surface: oklch(0.192 0.006 30);
+  --app-surface-sunken: oklch(0.148 0.005 30);
+  --app-surface-muted: oklch(0.245 0.007 30);
+
+  --app-fg: oklch(0.965 0.002 30);
+  --app-fg-muted: oklch(0.735 0.008 30);
+  --app-fg-subtle: oklch(0.635 0.009 30);
+  --app-fg-faint: oklch(0.525 0.009 30);
+
+  --app-line: oklch(0.285 0.008 30);
+  --app-line-strong: oklch(0.372 0.01 30);
+
+  /* The brand red is too dark to read as text here — 3.4:1 on the card ground.
+     This is the same value --accent-on-dark carries, at 5.43:1. */
+  --app-accent: var(--accent-on-dark);
+  --app-accent-soft: oklch(0.255 0.05 26.2);
+
+  --app-success: oklch(0.74 0.14 152);
+  --app-success-soft: oklch(0.26 0.04 152);
+  --app-warning: oklch(0.78 0.13 68);
+  --app-warning-soft: oklch(0.27 0.045 68);
+  --app-danger: oklch(0.68 0.18 14);
+  --app-danger-soft: oklch(0.26 0.05 14);
+  --app-info: oklch(0.755 0.12 250);
+  --app-info-soft: oklch(0.25 0.05 250);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--app-surface-sunken);
+  color: var(--app-fg);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
@@ -38,6 +161,19 @@ body {
    truth. */
 button:not(:disabled):not([aria-disabled="true"]) {
   cursor: pointer;
+}
+
+/* Every focus ring in the app is `ring-2 ring-offset-2` with no colour named
+   for the offset, so it falls back to Tailwind's default — white. That reads as
+   a gap in light mode and as a bright halo punched through the page in dark.
+   The offset is meant to be the surface *behind* the control, so say so once
+   here. It has to be a universal selector rather than :root: Tailwind registers
+   --tw-ring-offset-color with `inherits: false`, so a value set on the root
+   never reaches the element that draws the ring. */
+*,
+::before,
+::after {
+  --tw-ring-offset-color: var(--app-surface);
 }
 
 /* HeroUI's drawer positions its panel with `justify-content: flex-start/end`,

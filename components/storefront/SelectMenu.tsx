@@ -99,28 +99,28 @@ const TRIGGER_BASE =
 
 const TRIGGER_TONE: Record<SelectMenuTone, string> = {
   light:
-    "focus-visible:border-accent focus-visible:ring-accent border-neutral-300 bg-white text-neutral-900 hover:border-neutral-400 disabled:border-neutral-200 disabled:bg-neutral-50 disabled:text-neutral-400 disabled:hover:border-neutral-200",
+    "focus-visible:border-accent focus-visible:ring-accent border-line-strong bg-surface text-fg hover:border-fg-faint disabled:border-line disabled:bg-surface-sunken disabled:text-fg-faint disabled:hover:border-line",
   // --accent, the solid brand rust, is too dark to read as a focus ring here;
   // --accent-on-dark is the same hue raised for exactly this ground.
   dark: "focus-visible:border-accent-on-dark focus-visible:ring-accent-on-dark border-white/15 bg-white/6 text-white hover:border-white/30 disabled:border-white/8 disabled:bg-white/3 disabled:text-white/35 disabled:hover:border-white/8",
 };
 
 const LABEL_TONE: Record<SelectMenuTone, string> = {
-  light: "text-[12.5px] font-medium text-neutral-600",
+  light: "text-[12.5px] font-medium text-fg-muted",
   dark: "text-[12.5px] font-medium text-white/65",
 };
 
 const INDICATOR_TONE: Record<SelectMenuTone, string> = {
-  light: "size-4 shrink-0 text-neutral-400",
+  light: "size-4 shrink-0 text-fg-faint",
   dark: "size-4 shrink-0 text-white/45",
 };
 
-const POPOVER_CLASS = "rounded-[12px] border border-neutral-200 bg-white p-1 shadow-lg";
+const POPOVER_CLASS = "rounded-[12px] border border-line bg-surface p-1 shadow-lg";
 
 const LIST_CLASS = "max-h-64 overflow-auto outline-none";
 
 const ITEM_CLASS =
-  "data-[focused]:bg-accent/8 data-[selected]:text-accent cursor-pointer rounded-[8px] px-3 py-2 text-sm text-neutral-700 outline-none data-[selected]:font-medium";
+  "data-[focused]:bg-accent/8 data-[selected]:text-accent cursor-pointer rounded-[8px] px-3 py-2 text-sm text-fg-muted outline-none data-[selected]:font-medium";
 
 // `direction` in CSS rather than a `dir` prop: react-aria stamps its own `dir`
 // on the popover after props are spread, so the attribute is not ours to set —
@@ -153,7 +153,7 @@ function OptionList({
       className={LIST_CLASS}
       renderEmptyState={
         emptyText
-          ? () => <p className="px-3 py-4 text-center text-[13px] text-neutral-500">{emptyText}</p>
+          ? () => <p className="px-3 py-4 text-center text-[13px] text-fg-subtle">{emptyText}</p>
           : undefined
       }
     >
@@ -313,12 +313,12 @@ function SearchableSelectMenu({
             aria-label={pickLocale(locale, `Search ${label}`, `جست‌وجوی ${label}`)}
             className="mb-1 w-full"
           >
-            <SearchField.Group className="focus-within:border-accent flex min-h-10 items-center gap-2 rounded-[10px] border border-neutral-300 bg-white px-2.5 transition-colors">
-              <SearchField.SearchIcon className="size-4 shrink-0 text-neutral-400" />
+            <SearchField.Group className="focus-within:border-accent flex min-h-10 items-center gap-2 rounded-[10px] border border-line-strong bg-surface px-2.5 transition-colors">
+              <SearchField.SearchIcon className="size-4 shrink-0 text-fg-faint" />
               <SearchField.Input
                 autoComplete="off"
                 placeholder={pickLocale(locale, "Search…", "جست‌وجو…")}
-                className="min-w-0 flex-1 bg-transparent py-2 text-sm text-neutral-900 outline-none placeholder:text-neutral-400"
+                className="min-w-0 flex-1 bg-transparent py-2 text-sm text-fg outline-none placeholder:text-fg-faint"
               />
             </SearchField.Group>
           </SearchField>

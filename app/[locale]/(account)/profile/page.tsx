@@ -78,10 +78,10 @@ export default async function AccountProfilePage({
 
       <div className="mt-5 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <div>
-          <h1 className="text-[27px] font-semibold tracking-[-0.025em] text-neutral-900">
+          <h1 className="text-[27px] font-semibold tracking-[-0.025em] text-fg">
             {title}
           </h1>
-          <p className="mt-2 max-w-[60ch] text-[14.5px] text-neutral-500">
+          <p className="mt-2 max-w-[60ch] text-[14.5px] text-fg-subtle">
             {pickLocale(
               locale,
               "How we reach you about an order, and how you sign in.",
@@ -92,7 +92,7 @@ export default async function AccountProfilePage({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={navHref(locale, ACCOUNT_ORDERS_PATH)}
-            className="focus-visible:ring-accent inline-flex min-h-9 items-center rounded-full border border-neutral-200 bg-white px-3.5 py-1.5 text-[12.5px] font-medium text-neutral-700 transition-colors hover:border-neutral-400 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+            className="focus-visible:ring-accent inline-flex min-h-9 items-center rounded-full border border-line bg-surface px-3.5 py-1.5 text-[12.5px] font-medium text-fg-muted transition-colors hover:border-line-strong focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
           >
             {pickLocale(locale, "Your orders", "سفارش‌های شما")}
           </Link>
@@ -100,7 +100,7 @@ export default async function AccountProfilePage({
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6">
+      <div className="mt-6 rounded-2xl border border-line bg-surface p-5 sm:p-6">
         <AccountProfileForm locale={locale} profile={profile} />
       </div>
     </div>

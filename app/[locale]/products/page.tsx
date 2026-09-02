@@ -98,10 +98,10 @@ export default async function ProductsPage({
         ]}
       />
 
-      <h1 className="mt-5 text-[27px] font-semibold tracking-[-0.025em] text-neutral-900">
+      <h1 className="mt-5 text-[27px] font-semibold tracking-[-0.025em] text-fg">
         {productsLabel}
       </h1>
-      <p className="mt-2 max-w-[60ch] text-[14.5px] text-neutral-500">
+      <p className="mt-2 max-w-[60ch] text-[14.5px] text-fg-subtle">
         {pickLocale(
           locale,
           "Every oil and filter we carry. Filter by what you're after, or let the car finder match your car.",
@@ -136,15 +136,15 @@ export default async function ProductsPage({
 
         <div>
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-            <p aria-live="polite" className="text-[13px] text-neutral-500">
+            <p aria-live="polite" className="text-[13px] text-fg-subtle">
               {productCountLabel(locale, total)}
             </p>
             <ProductSortSelect locale={locale} basePath={basePath} params={currentParams} />
           </div>
 
           {products.length === 0 ? (
-            <div className="mt-5 rounded-2xl border border-neutral-200 bg-white px-5 py-10 text-center">
-              <p className="text-[15px] font-medium text-neutral-900">
+            <div className="mt-5 rounded-2xl border border-line bg-surface px-5 py-10 text-center">
+              <p className="text-[15px] font-medium text-fg">
                 {filtersApplied
                   ? pickLocale(
                       locale,

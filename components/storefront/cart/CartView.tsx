@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useIsHydrated } from "@heroui/react";
 import { CartLineRow } from "./CartLineRow";
 import { useCartLines } from "./useCartLines";
+import { ArrowIcon, CartIcon } from "../icons";
 import { CHECKOUT_PATH, navHref, PRODUCTS_PATH } from "../nav-items";
 import { formatDigits, pickLocale, type Locale } from "@/lib/i18n";
 import { cartBlockingReason, type CartBlockingReason } from "@/lib/storefront/cart";
@@ -39,7 +40,7 @@ export function CartView({ locale }: { locale: Locale }) {
     return (
       <>
         <CartHeading>{title}</CartHeading>
-        <p role="status" className="mt-6 text-[14px] text-neutral-500">
+        <p role="status" className="mt-6 text-[14px] text-fg-subtle">
           {pickLocale(locale, "Loading your cart…", "در حال بارگذاری سبد خرید…")}
         </p>
       </>
@@ -50,11 +51,14 @@ export function CartView({ locale }: { locale: Locale }) {
     return (
       <>
         <CartHeading>{title}</CartHeading>
-        <div className="mt-6 rounded-2xl border border-neutral-200 bg-white px-5 py-12 text-center">
-          <p className="text-[15px] font-medium text-neutral-900">
+        <div className="mt-6 rounded-2xl border border-line bg-surface px-5 py-14 text-center">
+          <span className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-surface-muted text-fg-faint">
+            <CartIcon className="size-6" />
+          </span>
+          <p className="text-[15px] font-medium text-fg">
             {pickLocale(locale, "Your cart is empty.", "سبد خرید شما خالی است.")}
           </p>
-          <p className="mx-auto mt-2 max-w-[46ch] text-[13.5px] text-neutral-500">
+          <p className="mx-auto mt-2 max-w-[46ch] text-[13.5px] text-fg-subtle">
             {pickLocale(
               locale,
               "Find the oil and filters for your car, or browse everything we carry.",
@@ -63,7 +67,7 @@ export function CartView({ locale }: { locale: Locale }) {
           </p>
           <Link
             href={navHref(locale, PRODUCTS_PATH)}
-            className="focus-visible:ring-accent bg-accent mt-5 inline-flex min-h-11 items-center rounded-[9px] px-5 text-[14px] font-medium text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="focus-visible:ring-accent bg-accent-solid mt-5 inline-flex min-h-11 items-center rounded-[9px] px-5 text-[14px] font-medium text-white transition-colors hover:bg-accent-solid-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             {pickLocale(locale, "Browse products", "مشاهده‌ی محصولات")}
           </Link>
@@ -83,36 +87,64 @@ export function CartView({ locale }: { locale: Locale }) {
     <>
       <CartHeading>{title}</CartHeading>
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_326px] lg:gap-10">
-        <ul data-testid="cart-lines" className="flex flex-col">
-          {lines.map((line) => (
-            <CartLineRow
-              key={line.item.productId}
-              locale={locale}
-              line={line}
-              onQuantityChange={(quantity) => setQuantity(line.item.productId, quantity)}
-              onRemove={() => removeItem(line.item.productId)}
-            />
-          ))}
-        </ul>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_326px] lg:gap-8">
+        {/* The lines get the same panel the summary has always had. On a grey
+            page a bare list of hairline-separated rows reads as an unfinished
+            draft next to a card, and the last row's border dangles with nothing
+            under it — one white surface with dividers inside fixes both. */}
+        <section className="overflow-hidden rounded-2xl border border-line bg-surface">
+          <header className="border-b border-line px-4 py-3.5 sm:px-5">
+            <h2 className="text-[15px] font-semibold text-fg">
+              {pickLocale(locale, "Products", "کالاها")}
+              <span className="ms-1.5 text-[13px] font-normal text-fg-subtle tabular-nums">
+                ({formatDigits(lines.length, locale)})
+              </span>
+            </h2>
+          </header>
 
-        <aside className="rounded-2xl border border-neutral-200 bg-white p-5 lg:sticky lg:top-24 lg:self-start">
-          <h2 className="text-[15px] font-semibold text-neutral-900">
+          <ul data-testid="cart-lines" className="divide-y divide-line/70">
+            {lines.map((line) => (
+              <CartLineRow
+                key={line.item.productId}
+                locale={locale}
+                line={line}
+                onQuantityChange={(quantity) => setQuantity(line.item.productId, quantity)}
+                onRemove={() => removeItem(line.item.productId)}
+              />
+            ))}
+          </ul>
+
+          {/* Back to the catalogue from inside the same panel — the alternative
+              is the browser's back button, and a cart is exactly where someone
+              remembers the filter they also needed. */}
+          <div className="border-t border-line px-4 py-3.5 sm:px-5">
+            <Link
+              href={navHref(locale, PRODUCTS_PATH)}
+              className="focus-visible:ring-accent hover:text-accent inline-flex min-h-9 items-center gap-1.5 rounded text-[13.5px] font-medium text-fg-muted transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
+              <ArrowIcon className="size-4 -scale-x-100 rtl:scale-x-100" aria-hidden="true" />
+              {pickLocale(locale, "Continue shopping", "ادامه‌ی خرید")}
+            </Link>
+          </div>
+        </section>
+
+        <aside className="rounded-2xl border border-line bg-surface p-5 lg:sticky lg:top-24 lg:self-start">
+          <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-fg">
             {pickLocale(locale, "Order summary", "خلاصه‌ی سفارش")}
           </h2>
 
-          <dl className="mt-4 flex flex-col gap-2 text-[13.5px]">
+          <dl className="mt-4 flex flex-col gap-2.5 text-[13.5px]">
             <div className="flex items-center justify-between gap-4">
-              <dt className="text-neutral-500">{pickLocale(locale, "Items", "اقلام")}</dt>
-              <dd className="text-neutral-900 tabular-nums">{formatDigits(itemCount, locale)}</dd>
+              <dt className="text-fg-subtle">{pickLocale(locale, "Items", "اقلام")}</dt>
+              <dd className="text-fg tabular-nums">{formatDigits(itemCount, locale)}</dd>
             </div>
-            <div className="flex items-center justify-between gap-4 border-t border-neutral-200 pt-3">
-              <dt className="font-medium text-neutral-900">
+            <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-line pt-3.5">
+              <dt className="text-[14px] font-medium text-fg">
                 {pickLocale(locale, "Subtotal", "جمع کل")}
               </dt>
               <dd
                 data-testid="cart-subtotal"
-                className="text-[16px] font-semibold text-neutral-900 tabular-nums"
+                className="text-[18px] font-semibold tracking-[-0.015em] text-fg tabular-nums"
               >
                 {formatToman(subtotal, locale)}
               </dd>
@@ -122,7 +154,7 @@ export function CartView({ locale }: { locale: Locale }) {
           {/* Said plainly rather than in a footnote: the number above is the
               prices the customer was shown, and shipping and the 9% VAT line
               are settled at checkout against the server's own recompute. */}
-          <p className="mt-3 text-[12.5px] leading-relaxed text-neutral-500">
+          <p className="mt-3 text-[12.5px] leading-relaxed text-fg-subtle">
             {pickLocale(
               locale,
               "An estimate from the prices shown when you added each item. Delivery and the final total are confirmed at checkout.",
@@ -134,7 +166,7 @@ export function CartView({ locale }: { locale: Locale }) {
             <Link
               href={navHref(locale, CHECKOUT_PATH)}
               data-testid="cart-checkout"
-              className="focus-visible:ring-accent bg-accent mt-5 flex min-h-11 w-full items-center justify-center rounded-[9px] px-5 text-[14px] font-medium text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="focus-visible:ring-accent bg-accent-solid mt-5 flex min-h-12 w-full items-center justify-center rounded-[11px] px-5 text-[15px] font-medium text-white transition-colors hover:bg-accent-solid-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               {pickLocale(locale, "Proceed to checkout", "ادامه‌ی خرید")}
             </Link>
@@ -146,7 +178,7 @@ export function CartView({ locale }: { locale: Locale }) {
               type="button"
               disabled
               data-testid="cart-checkout"
-              className="mt-5 flex min-h-11 w-full cursor-not-allowed items-center justify-center rounded-[9px] bg-neutral-200 px-5 text-[14px] font-medium text-neutral-500"
+              className="mt-5 flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-[11px] bg-line px-5 text-[15px] font-medium text-fg-subtle"
             >
               {pickLocale(locale, "Proceed to checkout", "ادامه‌ی خرید")}
             </button>
@@ -157,7 +189,7 @@ export function CartView({ locale }: { locale: Locale }) {
               role="status"
               data-testid="cart-checkout-note"
               className={`mt-3 text-[12.5px] leading-relaxed ${
-                failed ? "text-red-600" : "text-neutral-600"
+                failed ? "text-danger" : "text-fg-muted"
               }`}
             >
               {blockedMessage}{" "}
@@ -180,7 +212,7 @@ export function CartView({ locale }: { locale: Locale }) {
 
 function CartHeading({ children }: { children: ReactNode }) {
   return (
-    <h1 className="text-[27px] font-semibold tracking-[-0.025em] text-neutral-900">{children}</h1>
+    <h1 className="text-[27px] font-semibold tracking-[-0.025em] text-fg">{children}</h1>
   );
 }
 

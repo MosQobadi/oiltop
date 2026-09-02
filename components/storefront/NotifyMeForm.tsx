@@ -71,7 +71,7 @@ export function NotifyMeForm({
 
   if (submitted) {
     return (
-      <p role="status" className={`text-[12.5px] text-neutral-600 ${className}`}>
+      <p role="status" className={`text-[12.5px] text-fg-muted ${className}`}>
         {submitted === "already-in-stock"
           ? pickLocale(
               locale,
@@ -93,7 +93,7 @@ export function NotifyMeForm({
       onSubmit={handleSubmit(onSubmit)}
       className={`flex flex-col gap-2 ${className}`}
     >
-      <label htmlFor={inputId} className="text-[12.5px] text-neutral-600">
+      <label htmlFor={inputId} className="text-[12.5px] text-fg-muted">
         {pickLocale(locale, "Email or phone", "ایمیل یا شماره تماس")}
       </label>
       <input
@@ -103,14 +103,14 @@ export function NotifyMeForm({
         aria-invalid={errors.contact ? true : undefined}
         aria-describedby={errors.contact || formError ? `${inputId}-error` : undefined}
         placeholder={pickLocale(locale, "you@example.com", "example@mail.com")}
-        className="focus-visible:border-accent focus-visible:ring-accent min-h-11 w-full rounded-[10px] border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus-visible:ring-1 focus-visible:outline-none"
+        className="focus-visible:border-accent focus-visible:ring-accent min-h-11 w-full rounded-[10px] border border-line-strong bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus-visible:ring-1 focus-visible:outline-none"
         {...register("contact")}
       />
 
       {/* The schema's message is English-only (it also serves the API), so the
           form states the rule in the reader's language instead of echoing it. */}
       {(errors.contact || formError) && (
-        <p id={`${inputId}-error`} role="alert" className="text-[12.5px] text-red-600">
+        <p id={`${inputId}-error`} role="alert" className="text-[12.5px] text-danger">
           {formError ??
             pickLocale(
               locale,
@@ -123,7 +123,7 @@ export function NotifyMeForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="focus-visible:ring-accent bg-accent min-h-11 w-full rounded-[9px] px-4 text-[13px] font-medium text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-60"
+        className="focus-visible:ring-accent bg-accent-solid min-h-11 w-full rounded-[9px] px-4 text-[13px] font-medium text-white transition-colors hover:bg-accent-solid-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-60"
       >
         {isSubmitting
           ? pickLocale(locale, "Sending…", "در حال ارسال…")

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { TrashIcon } from "../icons";
 import { navHref, PRODUCTS_PATH } from "../nav-items";
 import { PriceDisplay } from "../PriceDisplay";
 import { QuantityStepper } from "../QuantityStepper";
@@ -12,6 +13,13 @@ import { formatToman } from "@/lib/storefront/pricing";
 // One line of the cart. Everything it knows arrives as a prop — the store
 // writes live in CartView, so this stays a presentational component that a
 // warning state can be reasoned about without a browser.
+//
+// The row reads in two columns and four corners: the picture, then the name
+// with its remove control opposite, and underneath, the stepper with the line
+// total opposite it. Quantity and the money that quantity produces sit on the
+// same baseline, which is the one relationship a cart has to make obvious —
+// the earlier layout put the total up beside the name, three rows away from
+// the control that changes it.
 //
 // The two prices a line can hold are deliberately not blended: the amount that
 // adds up to the subtotal is the one captured on add (what the customer was
@@ -26,9 +34,16 @@ export interface CartLineRowProps {
   onRemove: () => void;
 }
 
+// Product photography is shot on white (see CLAUDE.md), so the thumbnail gets a
+// white panel with a hairline edge rather than the tinted well it used to sit
+// in — on grey, a contained white-background shot reads as a pasted-in
+// rectangle instead of a product. Same reasoning as ProductCard's panel.
+const IMAGE_CLASS =
+  "relative size-[84px] shrink-0 overflow-hidden rounded-xl border border-line/80 bg-surface sm:size-[104px]";
+
 const PLACEHOLDER_STYLE = {
   backgroundImage:
-    "repeating-linear-gradient(135deg, var(--color-neutral-200) 0 1px, transparent 1px 9px)",
+    "repeating-linear-gradient(135deg, var(--color-neutral-200) 0 1px, transparent 1px 9px), linear-gradient(160deg, #fff 0%, var(--color-neutral-50) 100%)",
 };
 
 export function CartLineRow({ locale, line, onQuantityChange, onRemove }: CartLineRowProps) {
@@ -40,45 +55,65 @@ export function CartLineRow({ locale, line, onQuantityChange, onRemove }: CartLi
   // removing it is the only move left, so that's the only control offered.
   const quantityLocked = unavailable || outOfStock;
   const showLivePrice = live !== null && !priceChanged;
+  const lineTotal = item.price * item.quantity;
 
   return (
+    // A line that stops checkout gets a wash the others don't. The note under
+    // it says what is wrong, but the summary only says "one of these" — the
+    // tint is what turns that into a row the eye lands on in a long cart.
     <li
       data-testid="cart-line"
       data-product-id={item.productId}
-      className="flex gap-4 border-b border-neutral-200 py-5 first:pt-0"
+      className={`flex gap-4 p-4 transition-colors sm:gap-5 sm:p-5 ${
+        quantityLocked ? "bg-danger-soft/50" : ""
+      }`}
     >
       <Link
         href={productHref}
         aria-hidden="true"
         tabIndex={-1}
-        className="relative size-[88px] shrink-0 overflow-hidden rounded-xl bg-neutral-100"
+        className={`${IMAGE_CLASS} ${unavailable || outOfStock ? "opacity-55" : ""}`}
       >
         {item.image ? (
-          <Image src={item.image} alt="" fill sizes="88px" className="object-contain p-1.5" />
+          <Image
+            src={item.image}
+            alt=""
+            fill
+            sizes="(min-width: 640px) 104px, 84px"
+            className="object-contain p-2"
+          />
         ) : (
           <span
             style={PLACEHOLDER_STYLE}
-            className="flex h-full w-full items-center justify-center font-mono text-[9.5px] tracking-[0.04em] text-neutral-500"
+            className="flex h-full w-full items-center justify-center font-mono text-[9.5px] tracking-[0.04em] text-fg-faint"
           >
             {pickLocale(locale, "no image", "بدون تصویر")}
           </span>
         )}
       </Link>
 
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex items-start justify-between gap-3">
           <Link
             href={productHref}
-            className="focus-visible:ring-accent hover:text-accent rounded text-[14.5px] font-medium text-neutral-900 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="focus-visible:ring-accent hover:text-accent line-clamp-2 rounded text-[14.5px] leading-snug font-medium text-fg transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             {name}
           </Link>
 
-          {/* What this line adds to the subtotal, so the summary's number is
-              never one the customer has to reconstruct. */}
-          <span className="shrink-0 text-[14.5px] font-semibold text-neutral-900 tabular-nums">
-            {formatToman(item.price * item.quantity, locale)}
-          </span>
+          {/* An icon in the row's corner rather than an underlined word down in
+              the controls: removing is the one destructive thing here, and it
+              was competing with the stepper for the same line of attention. */}
+          <button
+            type="button"
+            onClick={onRemove}
+            data-testid="cart-line-remove"
+            title={pickLocale(locale, "Remove", "حذف")}
+            aria-label={`${pickLocale(locale, "Remove", "حذف")} — ${name}`}
+            className="focus-visible:ring-accent -me-1.5 -mt-1.5 inline-flex size-9 shrink-0 items-center justify-center rounded-[9px] text-fg-faint transition-colors hover:bg-surface-muted hover:text-danger focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <TrashIcon className="size-[17px]" />
+          </button>
         </div>
 
         {/* The unit price shown is always the one the line total and the
@@ -92,30 +127,8 @@ export function CartLineRow({ locale, line, onQuantityChange, onRemove }: CartLi
           locale={locale}
           price={showLivePrice ? live.price : item.price}
           finalPrice={showLivePrice ? live.finalPrice : item.price}
-          className="mt-1"
+          className="mt-1.5"
         />
-
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-          {!quantityLocked && (
-            <QuantityStepper
-              locale={locale}
-              value={item.quantity}
-              onChange={onQuantityChange}
-              max={maxQuantity}
-              itemLabel={name}
-            />
-          )}
-
-          <button
-            type="button"
-            onClick={onRemove}
-            data-testid="cart-line-remove"
-            aria-label={`${pickLocale(locale, "Remove", "حذف")} — ${name}`}
-            className="focus-visible:ring-accent min-h-11 rounded text-[13px] text-neutral-500 underline underline-offset-2 transition-colors hover:text-neutral-900 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-          >
-            {pickLocale(locale, "Remove", "حذف")}
-          </button>
-        </div>
 
         {/* Every note here appears only once the lookup has answered, so the
             region is polite rather than assertive — nothing has gone wrong at
@@ -161,15 +174,45 @@ export function CartLineRow({ locale, line, onQuantityChange, onRemove }: CartLi
             </LineNote>
           )}
         </div>
+
+        {/* Pushed to the bottom of the row so the stepper and the total line up
+            with the picture's lower edge however long the name runs. */}
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-2 pt-1">
+          {!quantityLocked && (
+            <QuantityStepper
+              locale={locale}
+              value={item.quantity}
+              onChange={onQuantityChange}
+              max={maxQuantity}
+              itemLabel={name}
+            />
+          )}
+
+          {/* What this line adds to the subtotal, so the summary's number is
+              never one the customer has to reconstruct — every row carries one,
+              down a single column, or the total stops being checkable by eye.
+              The multiplication above it appears from two upwards; at one the
+              figure is the unit price and there is nothing to spell out. */}
+          <div className="ms-auto text-end">
+            {item.quantity > 1 && (
+              <span className="block text-[12px] text-fg-subtle tabular-nums">
+                {formatDigits(item.quantity, locale)} × {formatToman(item.price, locale)}
+              </span>
+            )}
+            <span className="block text-[15px] font-semibold text-fg tabular-nums">
+              {formatToman(lineTotal, locale)}
+            </span>
+          </div>
+        </div>
       </div>
     </li>
   );
 }
 
 const NOTE_TONE_CLASS = {
-  blocking: "text-red-600",
-  warning: "text-amber-700",
-  info: "text-neutral-500",
+  blocking: "text-danger",
+  warning: "text-warning",
+  info: "text-fg-subtle",
 } as const;
 
 function LineNote({

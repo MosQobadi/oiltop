@@ -166,7 +166,7 @@ export function FitmentResults({
             />
           </div>
         ) : (
-          <p className="text-[14px] text-neutral-500">
+          <p className="text-[14px] text-fg-subtle">
             {pickLocale(
               locale,
               "We have nothing in that category for this car.",
@@ -221,7 +221,7 @@ function SecondaryZone({
 }) {
   return (
     <details data-testid="fitment-secondary" className="group mt-12">
-      <summary className="focus-visible:ring-accent/40 flex w-full cursor-pointer list-none items-center justify-between gap-4 rounded-xl border border-neutral-200 px-4 py-3.5 text-[14px] font-medium text-neutral-700 transition-colors hover:border-neutral-300 hover:bg-neutral-50 focus-visible:ring-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+      <summary className="focus-visible:ring-accent/40 flex w-full cursor-pointer list-none items-center justify-between gap-4 rounded-xl border border-line px-4 py-3.5 text-[14px] font-medium text-fg-muted transition-colors hover:border-line-strong hover:bg-surface-sunken focus-visible:ring-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
         <span>
           {pickLocale(
             locale,
@@ -230,11 +230,11 @@ function SecondaryZone({
           )}
           {/* The space is literal, not just the margin: a screen reader reads
               the text nodes, and "for this car6" is what it would otherwise say. */}{" "}
-          <span className="ms-1 text-neutral-400">{formatDigits(groups.length, locale)}</span>
+          <span className="ms-1 text-fg-faint">{formatDigits(groups.length, locale)}</span>
         </span>
         <span
           aria-hidden="true"
-          className="text-neutral-400 transition-transform group-open:rotate-180"
+          className="text-fg-faint transition-transform group-open:rotate-180"
         >
           ▾
         </span>
@@ -337,8 +337,8 @@ function CategorySection({
       // letting the rail scroll, and takes the whole page's layout with it.
       className={`min-w-0 ${SECTION_SPAN[span]}`}
     >
-      <div className="border-t border-neutral-200 pt-4">
-        <h2 className="flex items-center gap-2.5 text-[17px] font-semibold tracking-[-0.02em] text-neutral-900">
+      <div className="border-t border-line pt-4">
+        <h2 className="flex items-center gap-2.5 text-[17px] font-semibold tracking-[-0.02em] text-fg">
           <Icon aria-hidden="true" className="text-accent h-[18px] w-[18px] shrink-0" />
           {categoryName}
         </h2>
@@ -349,7 +349,7 @@ function CategorySection({
             and we are not entitled to make it on their behalf when all we did
             was read the grades off the oils. */}
         {hasClimatePair && (
-          <p className="mt-2 max-w-[60ch] text-[13.5px] leading-relaxed text-neutral-500">
+          <p className="mt-2 max-w-[60ch] text-[13.5px] leading-relaxed text-fg-subtle">
             {derived
               ? pickLocale(
                   locale,
@@ -423,8 +423,8 @@ function CategorySection({
 }
 
 const CLIMATE_PILL: Record<"HOT" | "COLD", string> = {
-  HOT: "bg-[oklch(0.96_0.03_45)] text-accent",
-  COLD: "bg-[oklch(0.96_0.03_240)] text-[oklch(0.42_0.11_250)]",
+  HOT: "bg-accent-soft text-accent",
+  COLD: "bg-info-soft text-info",
 };
 
 // A climate is a column, not a badge on a card: both columns are on screen at

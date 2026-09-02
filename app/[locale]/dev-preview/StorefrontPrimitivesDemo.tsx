@@ -58,7 +58,7 @@ const CARDS: { caption: string; product: ProductCardProduct; ribbon?: boolean }[
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="font-mono text-[11px] tracking-[0.09em] text-neutral-500 uppercase">
+      <h2 className="font-mono text-[11px] tracking-[0.09em] text-fg-subtle uppercase">
         {title}
       </h2>
       {children}
@@ -113,7 +113,7 @@ export function StorefrontPrimitivesDemo({ locale }: { locale: Locale }) {
                   ) : undefined
                 }
               />
-              <p className="text-[11px] text-neutral-400">{caption}</p>
+              <p className="text-[11px] text-fg-faint">{caption}</p>
             </div>
           ))}
         </div>

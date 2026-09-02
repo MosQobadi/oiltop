@@ -55,9 +55,9 @@ export function CarModelFitmentSummary({
   return (
     <section
       data-testid="car-model-fitment-summary"
-      className={`rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6 ${className}`}
+      className={`rounded-2xl border border-line bg-surface p-5 sm:p-6 ${className}`}
     >
-      <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-neutral-900">
+      <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-fg">
         {pickLocale(
           locale,
           `Recommended ${what} for the ${span} ${modelName}`,
@@ -67,12 +67,12 @@ export function CarModelFitmentSummary({
 
       {/* The span above is a claim about which cars this covers, so the engines
           behind it are named rather than left to be taken on trust. */}
-      <p dir="auto" className="mt-1.5 text-[13px] text-neutral-500">
+      <p dir="auto" className="mt-1.5 text-[13px] text-fg-subtle">
         {pickLocale(locale, "Applies to", "برای")}:{" "}
         {profile.engines.map((engine) => formatEngineOptionLabel(locale, engine)).join(" · ")}
       </p>
 
-      <dl className="mt-5 border-t border-neutral-200">
+      <dl className="mt-5 border-t border-line">
         {groups.map((group) => (
           <CategoryRow key={group.category.id} locale={locale} group={group} />
         ))}
@@ -100,14 +100,14 @@ function CategoryRow({ locale, group }: { locale: Locale; group: FitmentCategory
   if (lines.length === 0) return null;
 
   return (
-    <div className="grid gap-1 border-b border-neutral-200 py-3.5 sm:grid-cols-[190px_minmax(0,1fr)] sm:gap-4">
-      <dt className="text-[13.5px] font-medium text-neutral-900">
+    <div className="grid gap-1 border-b border-line py-3.5 sm:grid-cols-[190px_minmax(0,1fr)] sm:gap-4">
+      <dt className="text-[13.5px] font-medium text-fg">
         {pickLocale(locale, group.category.nameEn, group.category.nameFa)}
       </dt>
-      <dd className="flex flex-col gap-1 text-[14px] text-neutral-600">
+      <dd className="flex flex-col gap-1 text-[14px] text-fg-muted">
         {lines.map((line) => (
           <p key={line.key} dir="auto">
-            {line.label && <span className="text-neutral-500">{line.label}: </span>}
+            {line.label && <span className="text-fg-subtle">{line.label}: </span>}
             {line.entries.slice(0, FITMENT_CARDS_PER_SECTION).map((entry, index) => (
               <Fragment key={entry.id}>
                 {index > 0 && <span aria-hidden="true"> · </span>}
@@ -117,7 +117,7 @@ function CategoryRow({ locale, group }: { locale: Locale; group: FitmentCategory
             {/* oil-city's own page for a 206 names 44 acceptable oils. Four is
                 the answer; the count is what says the rest exist. */}
             {line.entries.length > FITMENT_CARDS_PER_SECTION && (
-              <span className="text-neutral-500">
+              <span className="text-fg-subtle">
                 {" "}
                 {pickLocale(
                   locale,
@@ -150,7 +150,7 @@ function renderableEntries(
         node: (
           <Link
             href={navHref(locale, `${PRODUCTS_PATH}/${product.slug}`)}
-            className="focus-visible:ring-accent hover:text-accent rounded font-medium text-neutral-900 underline-offset-2 transition-colors hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            className="focus-visible:ring-accent hover:text-accent rounded font-medium text-fg underline-offset-2 transition-colors hover:underline focus-visible:ring-2 focus-visible:outline-none"
           >
             {pickLocale(locale, product.nameEn, product.nameFa)}
           </Link>
@@ -169,7 +169,7 @@ function renderableEntries(
         node: (
           <span>
             {spec}{" "}
-            <span className="text-neutral-400">
+            <span className="text-fg-faint">
               ({pickLocale(locale, "not stocked yet", "هنوز موجود نیست")})
             </span>
           </span>

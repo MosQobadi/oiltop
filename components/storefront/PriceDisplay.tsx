@@ -44,13 +44,13 @@ export function PriceDisplay({
 
   return (
     <p className={`flex flex-wrap items-baseline gap-2 ${className}`}>
-      <span className={`text-neutral-900 ${FINAL_PRICE_CLASS[size]}`}>
+      <span className={`text-fg ${FINAL_PRICE_CLASS[size]}`}>
         {formatToman(finalPrice, locale)}
       </span>
       {discounted && (
         // `<s>` isn't announced by most screen readers, so the label carries the
         // meaning that the strikethrough carries visually.
-        <s className={`text-neutral-500 ${ORIGINAL_PRICE_CLASS[size]}`}>
+        <s className={`text-fg-subtle ${ORIGINAL_PRICE_CLASS[size]}`}>
           <span className="sr-only">{pickLocale(locale, "Was", "قیمت پیشین")} </span>
           {formatToman(price, locale)}
         </s>

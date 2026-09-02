@@ -66,7 +66,7 @@ const HERO_PHOTO_SIZES = "(min-width: 1024px) 560px, 1px";
 // hue (50), so the banner reads as a single light source rather than a set of
 // separate gradients.
 const HERO_STYLE = {
-  backgroundColor: "oklch(0.16 0.007 55)",
+  backgroundColor: "oklch(0.155 0.008 26)",
 };
 
 // Three lighting layers, drawn in one element behind everything else.
@@ -81,9 +81,9 @@ const HERO_STYLE = {
 const BACKDROP_STYLE = {
   backgroundImage: [
     // Key light, behind the parts.
-    "radial-gradient(58% 70% at 74% 46%, oklch(0.42 0.09 45 / 0.5) 0%, transparent 68%)",
+    "radial-gradient(58% 70% at 74% 46%, oklch(0.40 0.10 26 / 0.5) 0%, transparent 68%)",
     // A cooler lift low on the copy side, so the column isn't sitting on pure black.
-    "radial-gradient(46% 55% at 6% 96%, oklch(0.26 0.02 55 / 0.55) 0%, transparent 72%)",
+    "radial-gradient(46% 55% at 6% 96%, oklch(0.25 0.018 26 / 0.55) 0%, transparent 72%)",
   ].join(","),
 };
 
@@ -97,7 +97,7 @@ const STREAK_MASK = "radial-gradient(54% 68% at 100% 0%, #000 0%, transparent 72
 
 const STREAK_STYLE = {
   backgroundImage:
-    "repeating-linear-gradient(64deg, transparent 0 34px, oklch(0.62 0.18 45 / 0.5) 34px 36px)",
+    "repeating-linear-gradient(64deg, transparent 0 34px, oklch(0.60 0.20 26 / 0.5) 34px 36px)",
   maskImage: STREAK_MASK,
   WebkitMaskImage: STREAK_MASK,
 };
@@ -109,11 +109,11 @@ const STREAK_STYLE = {
 // hairline is what does the work — the glow only has to say where it came from.
 const FLOOR_STYLE = {
   backgroundImage: [
-    "linear-gradient(to top, oklch(0.55 0.16 45 / 0.1) 0%, transparent 100%)",
+    "linear-gradient(to top, oklch(0.53 0.19 26 / 0.1) 0%, transparent 100%)",
     // Symmetric about the centre on purpose. Everything else on this banner is
     // keyed to a side and mirrors on /fa; a hairline that brightens toward the
     // middle reads the same in both trees and needs no flip.
-    "linear-gradient(to right, transparent 0%, oklch(0.7 0.19 45 / 0.5) 28%, oklch(0.76 0.2 45 / 0.8) 52%, oklch(0.7 0.19 45 / 0.5) 74%, transparent 100%)",
+    "linear-gradient(to right, transparent 0%, oklch(0.68 0.20 26 / 0.5) 28%, oklch(0.74 0.21 26 / 0.8) 52%, oklch(0.68 0.20 26 / 0.5) 74%, transparent 100%)",
   ].join(","),
   backgroundSize: "100% 100%, 100% 1px",
   backgroundPosition: "bottom, bottom",

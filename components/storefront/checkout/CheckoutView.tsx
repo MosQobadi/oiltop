@@ -109,7 +109,7 @@ export function CheckoutView({ locale }: { locale: Locale }) {
     return (
       <>
         <CheckoutHeading locale={locale} />
-        <p role="status" className="mt-6 text-[14px] text-neutral-500">
+        <p role="status" className="mt-6 text-[14px] text-fg-subtle">
           {pickLocale(locale, "Loading your cart…", "در حال بارگذاری سبد خرید…")}
         </p>
       </>
@@ -120,7 +120,7 @@ export function CheckoutView({ locale }: { locale: Locale }) {
     return (
       <>
         <CheckoutHeading locale={locale} />
-        <p role="status" className="mt-6 text-[14px] text-neutral-500">
+        <p role="status" className="mt-6 text-[14px] text-fg-subtle">
           {pickLocale(
             locale,
             "Order placed — taking you to your confirmation…",
@@ -135,11 +135,11 @@ export function CheckoutView({ locale }: { locale: Locale }) {
     return (
       <>
         <CheckoutHeading locale={locale} />
-        <div className="mt-6 rounded-2xl border border-neutral-200 bg-white px-5 py-12 text-center">
-          <p className="text-[15px] font-medium text-neutral-900">
+        <div className="mt-6 rounded-2xl border border-line bg-surface px-5 py-12 text-center">
+          <p className="text-[15px] font-medium text-fg">
             {pickLocale(locale, "There's nothing to check out.", "چیزی برای تسویه وجود ندارد.")}
           </p>
-          <p className="mx-auto mt-2 max-w-[46ch] text-[13.5px] text-neutral-500">
+          <p className="mx-auto mt-2 max-w-[46ch] text-[13.5px] text-fg-subtle">
             {pickLocale(
               locale,
               "Your cart is empty — add an oil or a filter and come back.",
@@ -148,7 +148,7 @@ export function CheckoutView({ locale }: { locale: Locale }) {
           </p>
           <Link
             href={navHref(locale, PRODUCTS_PATH)}
-            className="focus-visible:ring-accent bg-accent mt-5 inline-flex min-h-11 items-center rounded-[9px] px-5 text-[14px] font-medium text-white transition-colors hover:bg-[oklch(0.48_0.16_44)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="focus-visible:ring-accent bg-accent-solid mt-5 inline-flex min-h-11 items-center rounded-[9px] px-5 text-[14px] font-medium text-white transition-colors hover:bg-accent-solid-hover focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             {pickLocale(locale, "Browse products", "مشاهده‌ی محصولات")}
           </Link>
@@ -179,11 +179,11 @@ export function CheckoutView({ locale }: { locale: Locale }) {
         className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8"
       >
         <div className="flex flex-col gap-4">
-          <section className="rounded-2xl border border-neutral-200 bg-white p-5">
-            <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-neutral-900">
+          <section className="rounded-2xl border border-line bg-surface p-5">
+            <h2 className="text-[16px] font-semibold tracking-[-0.015em] text-fg">
               {pickLocale(locale, "Shipping address", "آدرس تحویل")}
             </h2>
-            <p className="mt-1 text-[13px] text-neutral-500">
+            <p className="mt-1 text-[13px] text-fg-subtle">
               {pickLocale(
                 locale,
                 "Collected fresh for each order — nothing is stored between orders.",
@@ -195,20 +195,20 @@ export function CheckoutView({ locale }: { locale: Locale }) {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-neutral-200 bg-white p-5">
+          <section className="rounded-2xl border border-line bg-surface p-5">
             <DeliveryMethodField locale={locale} field={register("deliveryMethod")} />
           </section>
 
           {/* The gateway is a later phase. Saying so plainly beats a disabled
               "Pay now" control that implies a step this build doesn't have. */}
-          <section className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-5">
-            <p className="font-mono text-[10.5px] tracking-[0.06em] text-neutral-500 uppercase">
+          <section className="rounded-2xl border border-dashed border-line-strong bg-surface-sunken p-5">
+            <p className="font-mono text-[10.5px] tracking-[0.06em] text-fg-subtle uppercase">
               {pickLocale(locale, "Payment", "پرداخت")}
             </p>
-            <h2 className="mt-2 text-[15.5px] font-semibold tracking-[-0.015em] text-neutral-900">
+            <h2 className="mt-2 text-[15.5px] font-semibold tracking-[-0.015em] text-fg">
               {pickLocale(locale, "Payment gateway (placeholder)", "درگاه پرداخت (جای‌نما)")}
             </h2>
-            <p className="mt-1.5 max-w-[56ch] text-[13.5px] leading-relaxed text-neutral-600">
+            <p className="mt-1.5 max-w-[56ch] text-[13.5px] leading-relaxed text-fg-muted">
               {pickLocale(
                 locale,
                 "Placing the order hands off to the bank gateway. The order is created as Pending / Unpaid, and the payment callback flips payment status to Paid — fulfilment status is not affected by the callback.",
@@ -234,7 +234,7 @@ export function CheckoutView({ locale }: { locale: Locale }) {
 
 function CheckoutHeading({ locale }: { locale: Locale }) {
   return (
-    <h1 className="text-[27px] font-semibold tracking-[-0.025em] text-neutral-900">
+    <h1 className="text-[27px] font-semibold tracking-[-0.025em] text-fg">
       {pickLocale(locale, "Checkout", "تسویه حساب")}
     </h1>
   );
@@ -261,20 +261,20 @@ function CheckoutSteps({ locale }: { locale: Locale }) {
           aria-current={step.current ? "step" : undefined}
           className={`flex items-center gap-2.5 rounded-full border py-1.5 ps-2 pe-3.5 ${
             step.current
-              ? "border-[oklch(0.88_0.03_45)] bg-[oklch(0.975_0.012_45)]"
-              : "border-neutral-200 bg-white"
+              ? "border-accent/25 bg-accent-soft"
+              : "border-line bg-surface"
           }`}
         >
           <span
             className={`flex size-5 items-center justify-center rounded-full font-mono text-[10.5px] ${
-              step.current ? "bg-accent text-white" : "bg-neutral-200 text-neutral-500"
+              step.current ? "bg-accent-solid text-white" : "bg-line text-fg-subtle"
             }`}
           >
             {formatDigits(index + 1, locale)}
           </span>
           <span
             className={`text-[13px] font-medium ${
-              step.current ? "text-[oklch(0.28_0.02_45)]" : "text-neutral-500"
+              step.current ? "text-fg" : "text-fg-subtle"
             }`}
           >
             {step.label}
