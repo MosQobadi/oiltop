@@ -3,6 +3,7 @@ import { Geist, Vazirmatn } from "next/font/google";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/storefront/JsonLd";
 import { StorefrontShell } from "@/components/storefront/StorefrontShell";
+import { ThemeGuard } from "@/components/storefront/ThemeGuard";
 import { isLocale, localeDir } from "@/lib/i18n";
 import { siteOrigin } from "@/lib/storefront/sitemap";
 import { THEME_INIT_SCRIPT } from "@/lib/storefront/theme";
@@ -72,23 +73,39 @@ export default async function LocaleLayout({
   const organization = organizationSchema(settings);
 
   return (
-    // `suppressHydrationWarning` covers exactly one attribute: the `dark` class
-    // the script below adds to this element before React ever sees it. Without
+    // `suppressHydrationWarning` covers exactly one attribute: the `data-theme`
+    // the script below sets on this element before React ever sees it. Without
     // it React reports the mismatch it caused itself.
+    //
+    // Note what is deliberately *not* here: the theme is not part of
+    // `className`. React rewrites that attribute whenever it changes — and it
+    // changes on every locale switch, because the font variable below is part
+    // of it — which silently reset the theme on the way from /en to /fa.
     <html
       lang={locale}
       dir={localeDir(locale)}
       className={`${font.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        {/* Before first paint, deliberately: see THEME_INIT_SCRIPT. Rendering
-            it here rather than in a Client Component is the whole point — a
-            component can only run after hydration, by which time the wrong
-            theme has already been on screen. */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-      </head>
       <body className={`${font.className} flex min-h-full flex-col`}>
+        {/* Before first paint, deliberately: see THEME_INIT_SCRIPT. A Client
+            Component cannot do this job — it only runs after hydration, by
+            which time the wrong theme has already been on screen. First child
+            of <body> so it blocks on the way past, ahead of any markup that
+            could be painted in the wrong theme.
+
+            React 19 logs "Encountered a script tag while rendering React
+            component" for this in development, and it is not wrong: this runs
+            on the initial document and never again, which is precisely why
+            ThemeGuard above has to exist. The warning is dev-only and there is
+            no placement that avoids it — rendering it only on the server warns
+            from the server render instead, and next/script wraps the same
+            element. Do not "fix" it by deleting the script; that trades a
+            console note for a flash of the wrong theme on every cold load. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {/* Renders nothing; restores the theme attribute React strips off
+            <html> when a locale switch remounts this layout. */}
+        <ThemeGuard />
         {organization && <JsonLd data={organization} />}
         <StorefrontShell locale={locale} settings={settings}>
           {children}

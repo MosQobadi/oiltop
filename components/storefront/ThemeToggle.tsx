@@ -3,7 +3,12 @@
 import { useSyncExternalStore } from "react";
 import { MoonIcon, SunIcon } from "./icons";
 import { pickLocale, type Locale } from "@/lib/i18n";
-import { applyTheme, readAppliedTheme, type ThemeChoice } from "@/lib/storefront/theme";
+import {
+  applyTheme,
+  readAppliedTheme,
+  THEME_ATTRIBUTE,
+  type ThemeChoice,
+} from "@/lib/storefront/theme";
 
 // One button, two states. A three-way light/dark/system control is more honest
 // about where the initial value comes from, but it needs a menu to express, and
@@ -15,19 +20,22 @@ import { applyTheme, readAppliedTheme, type ThemeChoice } from "@/lib/storefront
 // choice, which is the behaviour someone reaching for this control is asking
 // for anyway.
 
-// The class on <html> is the source of truth, and it is written by a script
-// outside React — so it is an external store, and reading it as one is what
-// keeps the server render (which cannot know the answer) and the client render
-// (which can) from disagreeing. React uses `getServerSnapshot` for the markup
-// and for hydration, then re-renders with the real value; no effect, no
-// mismatch, and no flash of the wrong glyph.
+// The `data-theme` attribute on <html> is the source of truth, and it is
+// written by a script outside React — so it is an external store, and reading
+// it as one is what keeps the server render (which cannot know the answer) and
+// the client render (which can) from disagreeing. React uses `getServerSnapshot`
+// for the markup and for hydration, then re-renders with the real value; no
+// effect, no mismatch, and no flash of the wrong glyph.
 //
 // The MutationObserver is not decoration: it is what re-renders this button
-// after `applyTheme` mutates the class, and it would also catch the class being
-// changed by anything else on the page.
-const subscribeToThemeClass = (onChange: () => void) => {
+// after `applyTheme` sets the attribute, and it would also catch the attribute
+// being changed by anything else on the page.
+const subscribeToThemeAttribute = (onChange: () => void) => {
   const observer = new MutationObserver(onChange);
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: [THEME_ATTRIBUTE],
+  });
   return () => observer.disconnect();
 };
 
@@ -35,7 +43,7 @@ const noThemeOnServer = () => null;
 
 export function ThemeToggle({ locale }: { locale: Locale }) {
   const theme = useSyncExternalStore<ThemeChoice | null>(
-    subscribeToThemeClass,
+    subscribeToThemeAttribute,
     readAppliedTheme,
     noThemeOnServer,
   );

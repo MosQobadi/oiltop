@@ -1,10 +1,16 @@
 @import "@heroui/styles";
 
-/* Tailwind's `dark:` variant follows the same `.dark` class HeroUI's own theme
-   keys on (see @heroui/styles' variables.css), so one class on <html> flips the
-   app's tokens and HeroUI's components together. Only the storefront ever sets
-   it — the admin tree has no toggle and stays light. */
-@custom-variant dark (&:where(.dark, .dark *));
+/* Tailwind's `dark:` variant follows the same `[data-theme="dark"]` selector
+   HeroUI's own theme keys on (see @heroui/styles' variables.css), so one
+   attribute on <html> flips the app's tokens and HeroUI's components together.
+   Only the storefront ever sets it — the admin tree has no toggle and stays
+   light.
+
+   An attribute rather than HeroUI's `.dark` class because React owns
+   `<html className>` and rewrites it on any client-side navigation that changes
+   it — switching locale changes the font variable there, which was silently
+   wiping the theme on the way from /en to /fa. See lib/storefront/theme.ts. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme inline {
   --font-sans: var(--font-geist-sans);
@@ -13,7 +19,7 @@
 
   /* ── Semantic colour tokens ───────────────────────────────────────────────
      Every storefront surface is painted from these rather than from a fixed
-     Tailwind step, which is what lets one class on <html> repaint the site.
+     Tailwind step, which is what lets one attribute on <html> repaint the site.
      They are *roles*, not shades: `surface` is whatever a card sits on today,
      white in light and near-black in dark. Reach for a raw `neutral-500` again
      and it will simply not flip.
@@ -119,7 +125,7 @@
      shot on black for one and on white for the other, and no amount of CSS
      turns one into the other.
 
-     It lives here rather than in HomeHero because a `.dark` class cannot reach
+     It lives here rather than in HomeHero because the theme selector cannot reach
      into an inline style object, and because declaring the photo as a CSS
      variable means the browser fetches only the one in force. The obvious
      alternative — two <Image>s, one hidden — downloads both: a `display:none`
@@ -143,7 +149,7 @@
    by being paler than the page, which is the reverse of the light theme's
    relationship and the reason these are two tokens rather than one plus a
    shadow. Ratios against --app-surface: 16.68 / 7.79 / 5.37 / 3.38. */
-.dark {
+[data-theme="dark"] {
   --app-surface: oklch(0.192 0.006 30);
   --app-surface-sunken: oklch(0.148 0.005 30);
   --app-surface-muted: oklch(0.245 0.007 30);
