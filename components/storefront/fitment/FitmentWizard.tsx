@@ -25,11 +25,14 @@ import { formatEngineOptionLabel, withFitContext } from "@/lib/storefront/fitmen
 export type FitmentWizardMode = "compact" | "full";
 
 /**
- * The ground the card sits on. `dark` is the homepage hero, where the banner is
- * near-black and a white card would be a hole in the middle of it. Only the
- * card, its four controls and their notes change — the layout is identical.
+ * Which surface the wizard is sitting on — not which colour it should be. Both
+ * values follow the theme; the controls inside are identical either way, and so
+ * is the layout. `hero` differs only in how the panel separates itself from its
+ * ground, which is a different problem on each theme: on the light banner it is
+ * a white card that needs a shadow to lift off near-white, and on the dark one a
+ * pane of glass that lets the banner's own light through.
  */
-export type FitmentWizardTone = "light" | "dark";
+export type FitmentWizardTone = "card" | "hero";
 
 export interface FitmentWizardProps {
   locale: Locale;
@@ -38,7 +41,7 @@ export interface FitmentWizardProps {
    * `full` is the fitment page — a numbered stepper with room to breathe.
    */
   mode?: FitmentWizardMode;
-  /** Defaults to `light`. Only the homepage hero passes `dark`. */
+  /** Defaults to `card`. Only the homepage hero passes `hero`. */
   tone?: FitmentWizardTone;
   /**
    * Drops the steps the surrounding page has already answered — a car model
@@ -69,7 +72,7 @@ interface StepView {
 export function FitmentWizard({
   locale,
   mode = "full",
-  tone = "light",
+  tone = "card",
   scope,
   onResolve,
   className = "",
@@ -179,13 +182,12 @@ export function FitmentWizard({
   const renderStep = (step: StepView, index: number) => {
     const stepFlags = flags[step.key];
     const noteId = `${baseId}-${step.key}-note`;
-    const note = renderNote({ locale, step, flags: stepFlags, noteId, onRetry: wizard.retry, tone });
+    const note = renderNote({ locale, step, flags: stepFlags, noteId, onRetry: wizard.retry });
 
     const field = (
       <div className="flex flex-col gap-1.5">
         <SelectMenu
           locale={locale}
-          tone={tone}
           testId={`fitment-select-${step.key}`}
           label={step.label}
           value={step.value}
@@ -236,13 +238,16 @@ export function FitmentWizard({
     );
   };
 
-  // A panel on the hero rather than a card on the page: translucent white over
-  // the banner's own ground, so the light behind it still reads through. It's
-  // still the one thing on the banner you're meant to touch — that now comes
-  // from being the only bordered, blurred surface there, not from being white.
+  // On the hero the panel has to separate itself from a ground that is almost
+  // its own colour, and the two themes need opposite tricks for that. Light: a
+  // white card on near-white, lifted by a shadow tinted with the accent rather
+  // than grey, so it belongs to this banner and not to a generic UI kit. Dark:
+  // no shadow at all — a shadow on near-black is invisible — so it becomes a
+  // pane of translucent white instead, which lets the banner's glow read
+  // through it and makes it the only blurred surface on the page.
   const cardTone =
-    tone === "dark"
-      ? "border-white/12 bg-white/6 backdrop-blur-md"
+    tone === "hero"
+      ? "border-line bg-surface shadow-[0_24px_60px_-32px_oklch(0.5_0.19_26_/_0.28)] dark:border-white/12 dark:bg-white/6 dark:shadow-none dark:backdrop-blur-md"
       : "border-line bg-surface";
 
   const cardClass = `rounded-2xl border ${cardTone} ${
@@ -269,30 +274,21 @@ function renderNote({
   flags,
   noteId,
   onRetry,
-  tone,
 }: {
   locale: Locale;
   step: StepView;
   flags: { loading: boolean; failed: boolean };
   noteId: string;
   onRetry: () => void;
-  tone: FitmentWizardTone;
 }): ReactNode {
-  const mutedClass = tone === "dark" ? "text-white/60" : "text-fg-subtle";
-  // red-600 is a dark red; on the banner it sits at roughly the ground's own
-  // lightness and the message disappears. red-300 is the same warning, legible.
-  const alertClass = tone === "dark" ? "text-red-300" : "text-danger";
-
   if (flags.failed) {
     return (
-      <p id={noteId} role="alert" className={`text-[12.5px] leading-4 ${alertClass}`}>
+      <p id={noteId} role="alert" className="text-danger text-[12.5px] leading-4">
         {pickLocale(locale, "Couldn't load these options.", "بارگذاری گزینه‌ها ممکن نشد.")}{" "}
         <button
           type="button"
           onClick={onRetry}
-          className={`rounded font-medium underline underline-offset-2 focus-visible:ring-2 focus-visible:outline-none ${
-            tone === "dark" ? "focus-visible:ring-accent-on-dark" : "focus-visible:ring-accent"
-          }`}
+          className="focus-visible:ring-accent rounded font-medium underline underline-offset-2 focus-visible:ring-2 focus-visible:outline-none"
         >
           {pickLocale(locale, "Try again", "تلاش دوباره")}
         </button>
@@ -302,7 +298,7 @@ function renderNote({
 
   if (flags.loading) {
     return (
-      <p id={noteId} role="status" className={`text-[12.5px] leading-4 ${mutedClass}`}>
+      <p id={noteId} role="status" className="text-fg-subtle text-[12.5px] leading-4">
         {pickLocale(locale, "Loading…", "در حال بارگذاری…")}
       </p>
     );
@@ -310,7 +306,7 @@ function renderNote({
 
   if (!step.disabled && step.options.length === 0) {
     return (
-      <p id={noteId} className={`text-[12.5px] leading-4 ${mutedClass}`}>
+      <p id={noteId} className="text-fg-subtle text-[12.5px] leading-4">
         {step.emptyMessage}
       </p>
     );

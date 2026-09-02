@@ -21,8 +21,6 @@ import { matchesSearch } from "@/lib/storefront/option-search";
 // trigger, popover and items keep the classes below, so a searchable menu and a
 // plain one are the same control to look at.
 
-export type SelectMenuTone = "light" | "dark";
-
 export interface SelectMenuOption {
   value: string;
   label: string;
@@ -64,14 +62,6 @@ export interface SelectMenuProps {
   /** `inline` puts the label beside the trigger; the default stacks them. */
   orientation?: "stacked" | "inline";
   /**
-   * The ground the *trigger* sits on. `dark` is the homepage hero's finder,
-   * where the control is inside a translucent panel on a near-black banner and
-   * a white box would punch a hole in it. The open menu stays light either way:
-   * it floats over the page rather than sitting in the banner, and the brand
-   * step's 85-entry scrolling list is easier to read on white.
-   */
-  tone?: SelectMenuTone;
-  /**
    * Lands on the trigger, for the e2e suite. A listbox trigger's accessible
    * name is its *value* followed by its label ("All Brand"), so it moves as the
    * customer uses it — `getByLabel` can't address one the way it could a native
@@ -91,29 +81,17 @@ const EMPTY_KEY = "__empty__";
 const toKey = (value: string) => (value === "" ? EMPTY_KEY : value);
 const fromKey = (key: string) => (key === EMPTY_KEY ? "" : key);
 
-// One shape, two grounds. Everything a tone doesn't name — height, radius,
-// padding, the truncating value — is shared, so a dark trigger and a light one
-// are the same control with the colours swapped.
-const TRIGGER_BASE =
-  "flex min-h-11 w-full items-center justify-between gap-2 rounded-[10px] border px-3 py-2 text-start text-sm transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed";
+// One set of classes for every ground the storefront has, including the hero's.
+// There used to be a second, hand-written dark variant here; it existed only
+// because the banner was dark while the rest of the site was not. Now that the
+// tokens themselves flip, the same trigger is correct on a white card, on a
+// dark card, and on the finder panel in either theme.
+const TRIGGER_CLASS =
+  "focus-visible:border-accent focus-visible:ring-accent flex min-h-11 w-full items-center justify-between gap-2 rounded-[10px] border border-line-strong bg-surface px-3 py-2 text-start text-sm text-fg transition-colors hover:border-fg-faint focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:border-line disabled:bg-surface-sunken disabled:text-fg-faint disabled:hover:border-line";
 
-const TRIGGER_TONE: Record<SelectMenuTone, string> = {
-  light:
-    "focus-visible:border-accent focus-visible:ring-accent border-line-strong bg-surface text-fg hover:border-fg-faint disabled:border-line disabled:bg-surface-sunken disabled:text-fg-faint disabled:hover:border-line",
-  // --accent, the solid brand rust, is too dark to read as a focus ring here;
-  // --accent-on-dark is the same hue raised for exactly this ground.
-  dark: "focus-visible:border-accent-on-dark focus-visible:ring-accent-on-dark border-white/15 bg-white/6 text-white hover:border-white/30 disabled:border-white/8 disabled:bg-white/3 disabled:text-white/35 disabled:hover:border-white/8",
-};
+const LABEL_CLASS = "text-[12.5px] font-medium text-fg-muted";
 
-const LABEL_TONE: Record<SelectMenuTone, string> = {
-  light: "text-[12.5px] font-medium text-fg-muted",
-  dark: "text-[12.5px] font-medium text-white/65",
-};
-
-const INDICATOR_TONE: Record<SelectMenuTone, string> = {
-  light: "size-4 shrink-0 text-fg-faint",
-  dark: "size-4 shrink-0 text-white/45",
-};
+const INDICATOR_CLASS = "size-4 shrink-0 text-fg-faint";
 
 const POPOVER_CLASS = "rounded-[12px] border border-line bg-surface p-1 shadow-lg";
 
@@ -176,14 +154,12 @@ export function SelectMenu({
   isSearchable = false,
   describedBy,
   orientation = "stacked",
-  tone = "light",
   testId,
   className = "",
 }: SelectMenuProps) {
   const isInline = orientation === "inline";
   const rootClass = `flex ${isInline ? "flex-row items-center gap-2" : "flex-col gap-1.5"} ${className}`;
-  const labelClass = `${LABEL_TONE[tone]} ${isInline ? "shrink-0" : ""}`;
-  const triggerClass = `${TRIGGER_BASE} ${TRIGGER_TONE[tone]}`;
+  const labelClass = `${LABEL_CLASS} ${isInline ? "shrink-0" : ""}`;
 
   if (isSearchable) {
     return (
@@ -191,8 +167,8 @@ export function SelectMenu({
         locale={locale}
         label={label}
         labelClass={labelClass}
-        triggerClass={triggerClass}
-        indicatorClass={INDICATOR_TONE[tone]}
+        triggerClass={TRIGGER_CLASS}
+        indicatorClass={INDICATOR_CLASS}
         rootClass={rootClass}
         options={options}
         value={value}
@@ -215,9 +191,9 @@ export function SelectMenu({
       className={rootClass}
     >
       <Label className={labelClass}>{label}</Label>
-      <Select.Trigger data-testid={testId} className={triggerClass}>
+      <Select.Trigger data-testid={testId} className={TRIGGER_CLASS}>
         <Select.Value className="min-w-0 truncate" />
-        <Select.Indicator className={INDICATOR_TONE[tone]} />
+        <Select.Indicator className={INDICATOR_CLASS} />
       </Select.Trigger>
       <Select.Popover className={`${POPOVER_CLASS} ${popoverDirClass(locale)}`}>
         <OptionList label={label} options={options} />

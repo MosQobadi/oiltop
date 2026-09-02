@@ -112,6 +112,30 @@
      because it is the one status here that must not be mistaken for the brand. */
   --app-info: oklch(0.48 0.14 250);
   --app-info-soft: oklch(0.962 0.025 250);
+
+  /* ── The homepage banner ──
+     The one surface with its own ground rather than a shared one, and the only
+     place in the app that needs a *photograph* per theme — the still-life is
+     shot on black for one and on white for the other, and no amount of CSS
+     turns one into the other.
+
+     It lives here rather than in HomeHero because a `.dark` class cannot reach
+     into an inline style object, and because declaring the photo as a CSS
+     variable means the browser fetches only the one in force. The obvious
+     alternative — two <Image>s, one hidden — downloads both: a `display:none`
+     <img> is still a fetch, and this is the LCP image on the page.
+
+     Light is near-white rather than the page's own white so the banner reads as
+     a distinct band; the lighting on top of it drops to a whisper, because a
+     glow that reads as studio light on black reads as a smudge on paper. */
+  --app-hero-bg: oklch(0.988 0.001 30);
+  --app-hero-photo: url("/hero-parts-light.webp");
+  --app-hero-glow: oklch(0.62 0.2 26 / 0.06);
+  --app-hero-lift: oklch(0.55 0.01 260 / 0.05);
+  --app-hero-streak: oklch(0.62 0.2 26 / 0.22);
+  --app-hero-haze: oklch(0.6 0.15 26 / 0.035);
+  --app-hero-floor: oklch(0.66 0.2 26 / 0.35);
+  --app-hero-floor-peak: oklch(0.62 0.21 26 / 0.5);
 }
 
 /* ── Dark theme ──
@@ -145,6 +169,18 @@
   --app-danger-soft: oklch(0.26 0.05 14);
   --app-info: oklch(0.755 0.12 250);
   --app-info-soft: oklch(0.25 0.05 250);
+
+  /* Darker than --app-surface on purpose: the finder panel sitting on this
+     ground has to lift off it, and on a dark banner a card lifts by being
+     paler than what it sits on. */
+  --app-hero-bg: oklch(0.155 0.008 26);
+  --app-hero-photo: url("/hero-parts-dark.webp");
+  --app-hero-glow: oklch(0.4 0.1 26 / 0.5);
+  --app-hero-lift: oklch(0.25 0.018 26 / 0.55);
+  --app-hero-streak: oklch(0.6 0.2 26 / 0.5);
+  --app-hero-haze: oklch(0.53 0.19 26 / 0.1);
+  --app-hero-floor: oklch(0.68 0.2 26 / 0.5);
+  --app-hero-floor-peak: oklch(0.74 0.21 26 / 0.8);
 }
 
 body {
