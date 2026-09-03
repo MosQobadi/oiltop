@@ -475,16 +475,131 @@ docker compose --env-file .env.production -f docker-compose.prod.yml logs -f app
 ## 8. Backups
 
 The database lives in the `topoil_postgres_data` volume and uploaded images in
-`topoil_uploads`. Neither is backed up by anything yet — worth a cron job
-before real data goes in.
+`topoil_uploads`. Both are backed up nightly by
+`deploy/backup/topoil-backup.sh`: encrypted on this machine, copied to a second
+machine, and checksum-verified there before anything old is deleted.
+
+What one run produces, in `/var/backups/topoil` and again at the destination:
+
+```
+topoil-<STAMP>-db.sql.gz.gpg        pg_dump | gzip | gpg AES256
+topoil-<STAMP>-uploads.tar.gz.gpg   tar of the uploads volume, same pipeline
+topoil-<STAMP>.sha256               checksums of the two above
+```
+
+`<STAMP>` is UTC, `20260903T032015Z`. Measured on the real catalog (3,488
+products, their fitment, 45 uploaded images): 5MB, 41MB, 13 seconds.
+
+### 8.1 Install it (once)
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.prod.yml exec -T postgres pg_dump -U topoil topoil | gzip > "topoil-$(date +%F).sql.gz"
+sudo install -m 755 /srv/topoil/deploy/backup/topoil-backup.sh /usr/local/sbin/topoil-backup.sh
 ```
 
 ```bash
-docker run --rm -v topoil_uploads:/data -v "$PWD":/backup alpine tar czf "/backup/topoil-uploads-$(date +%F).tar.gz" -C /data .
+sudo mkdir -p /etc/topoil /var/backups/topoil /var/lib/topoil && sudo cp /srv/topoil/deploy/backup/backup.conf.example /etc/topoil/backup.conf && sudo chmod 600 /etc/topoil/backup.conf
 ```
+
+Edit `/etc/topoil/backup.conf`. It is commented variable by variable; the one
+that must be filled in is `BACKUP_REMOTE` — the script refuses to run without a
+destination, because a copy that stays on this VPS is not a backup.
+
+Then the encryption passphrase, in its own file:
+
+```bash
+sudo sh -c 'openssl rand -base64 48 > /etc/topoil/backup-passphrase' && sudo chmod 600 /etc/topoil/backup-passphrase
+```
+
+**Read the next paragraph before going further.** The passphrase now exists in
+exactly one place: this VPS, the machine the backups protect you from losing. If
+it dies with the box, every artifact ever produced becomes an unopenable file
+and the backups were theatre. Copy it now into a password manager, or anywhere
+that is not this machine and not the backup destination. Nobody will remind you
+later — the script cannot tell whether you did this.
+
+Nothing about the database password: `pg_dump` runs inside the container over
+the postgres unix socket, which the image trusts, so no credential is passed, no
+`PGPASSWORD` is set, and nothing to leak reaches a log or `ps`.
+
+Finally the schedule:
+
+```bash
+sudo cp /srv/topoil/deploy/backup/topoil-backup.{service,timer} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now topoil-backup.timer
+```
+
+03:20 local, `Persistent=true` so a night the box was off is caught at boot
+rather than skipped. A systemd timer rather than cron because the run lands in
+the journal with its exit code; if you would rather use cron, the equivalent is
+`20 3 * * * /usr/local/sbin/topoil-backup.sh` in root's crontab and the script
+behaves identically — it depends on nothing from an interactive shell.
+
+Prove it before trusting it — the units have not been parsed by a systemd
+anywhere yet, only written:
+
+```bash
+sudo systemd-analyze verify /etc/systemd/system/topoil-backup.timer
+```
+
+```bash
+sudo systemctl start topoil-backup.service && journalctl -u topoil-backup.service -n 20 --no-pager
+```
+
+```bash
+systemctl list-timers topoil-backup.timer --no-pager
+```
+
+### 8.2 Where the copies go, and what is kept
+
+`BACKUP_REMOTE` in `/etc/topoil/backup.conf` is the single destination
+variable. `REMOTE_MODE` picks the transport: `ssh` (scp/ssh to another machine,
+key-only login — no rsync needed, since these artifacts are written once and
+never modified), `rclone` (object storage), or `dir` (an already-mounted remote
+filesystem). Each artifact is copied, then checksummed **at the destination**
+and compared with the local sum. A transfer that cannot be verified fails the
+run.
+
+Retention is 7 daily, 4 weekly, 3 monthly — a week of day-by-day recovery, a
+month of week-by-week, three months of month-by-month, about twelve sets and
+roughly 0.6GB at current sizes. Pruning happens only after the new backup has
+arrived off-box and matched its checksum, and it applies the same decision to
+both ends.
+
+One consequence worth knowing: while the destination is unreachable, nothing is
+pruned, so local sets accumulate at ~46MB a night. That is the deliberate
+trade — never delete an old backup on the strength of a new one that did not
+arrive — and it is why 8.3 exists.
+
+### 8.3 Check that it is still working
+
+```bash
+sudo /usr/local/sbin/topoil-backup.sh --check-status
+```
+
+Exits 0 if the last run succeeded within 26 hours, and 2 with the reason
+otherwise. `/var/lib/topoil/backup-status` holds the same thing as key=value
+lines. This is the hook OBS-002 monitors; until that lands, run it by hand after
+any deploy and once a week.
+
+A failed run is loud in three places at once: a non-zero exit, `ERROR` lines on
+stderr and in `/var/backups/topoil/backup.log`, and a syslog entry tagged
+`topoil-backup`. Nothing is pruned, no partial artifact is left behind, and the
+previous good backups are untouched.
+
+```bash
+journalctl -u topoil-backup.service --since '2 days ago' --no-pager
+```
+
+### 8.4 Restoring
+
+Deliberately not documented here yet: an untested restore procedure is a
+guess. Rehearsing one against a scratch compose project and writing the runbook
+is DR-002. Until that is done, treat these backups as unproven — they are
+verified to decrypt and decompress on every run, which is not the same as
+verified to bring the site back.
+
+The one thing worth writing down before then: restore into a **fresh project
+name**, never over the running stack. §9 explains why `name: topoil` is what
+keeps this project's volumes reachable only by this project's commands.
 
 ---
 

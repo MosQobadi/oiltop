@@ -1,0 +1,79 @@
+# Copy to /etc/topoil/backup.conf ON THE VPS and fill in. It is sourced by
+# topoil-backup.sh, so it is shell syntax: KEY="value", no export needed.
+#
+#   sudo mkdir -p /etc/topoil
+#   sudo cp deploy/backup/backup.conf.example /etc/topoil/backup.conf
+#   sudo chmod 600 /etc/topoil/backup.conf
+#
+# This file holds NO secrets — not the database password (never needed; see
+# below) and not the encryption passphrase (its own file, referenced here).
+
+# Where the stack lives. COMPOSE_FILE/COMPOSE_ENV_FILE default to the two files
+# inside it, so on a standard deploy this is the only path you need to set.
+TOPOIL_DIR="/srv/topoil"
+
+# Compose service name for Postgres, and the uploads volume name. The volume is
+# prefixed with the project name pinned by `name: topoil` in
+# docker-compose.prod.yml — if that ever changes, this changes with it.
+PG_SERVICE="postgres"
+UPLOADS_VOLUME="topoil_uploads"
+
+# Local staging area. Artifacts are written here, verified, copied off-box, and
+# only then pruned. Needs room for KEEP_DAILY + KEEP_WEEKLY + KEEP_MONTHLY sets.
+BACKUP_DIR="/var/backups/topoil"
+LOG_FILE="/var/backups/topoil/backup.log"
+
+# Machine-readable result of the last run, for OBS-002 to check. See
+# `topoil-backup.sh --check-status`.
+STATUS_FILE="/var/lib/topoil/backup-status"
+
+# The gpg symmetric passphrase, alone in its own root-owned 600 file.
+#
+#   sudo sh -c 'openssl rand -base64 48 > /etc/topoil/backup-passphrase'
+#   sudo chmod 600 /etc/topoil/backup-passphrase
+#
+# COPY IT SOMEWHERE THAT IS NOT THIS MACHINE, TODAY. A passphrase that exists
+# only on the VPS dies with the VPS, and every backup it ever made becomes an
+# unopenable file. A password manager entry is the minimum.
+PASSPHRASE_FILE="/etc/topoil/backup-passphrase"
+
+# --- The off-box destination -------------------------------------------------
+#
+# This is the variable that turns a local copy into a backup. Pick a transport
+# and give the matching address shape:
+#
+#   REMOTE_MODE="ssh"     BACKUP_REMOTE="topoil@backup.example.com:/srv/backups/topoil"
+#                         Needs a key-only login (BatchMode; no passphrase
+#                         prompt in cron) and openssh-client. Nothing but
+#                         scp/ssh — no rsync dependency, since the artifacts are
+#                         written once and never modified.
+#
+#   REMOTE_MODE="rclone"  BACKUP_REMOTE="s3backup:topoil-backups/prod"
+#                         For object storage (ArvanCloud S3, Backblaze, …).
+#                         Configure the remote with `rclone config` first.
+#
+#   REMOTE_MODE="dir"     BACKUP_REMOTE="/mnt/backup-disk/topoil"
+#                         Only for an ALREADY-MOUNTED remote filesystem. A path
+#                         on the same disk as the data is not a backup.
+REMOTE_MODE="ssh"
+BACKUP_REMOTE=""
+SSH_OPTS="-o BatchMode=yes -o ConnectTimeout=20"
+
+# Apply the same retention at the destination. Turn off if the destination is
+# append-only or versioned and prunes itself.
+PRUNE_REMOTE="1"
+
+# Retention: 7 daily, 4 weekly, 3 monthly. Older sets are deleted, and only
+# ever after a new backup has arrived off-box and matched its checksum.
+KEEP_DAILY="7"
+KEEP_WEEKLY="4"
+KEEP_MONTHLY="3"
+
+# Floor sizes. A dump below MIN_DB_BYTES fails the run rather than pushing a
+# near-empty file over a good one.
+MIN_DB_BYTES="65536"
+MIN_UPLOADS_BYTES="1024"
+
+# Leave at 0 in production. 1 permits a local-only run — for a first rehearsal
+# before the destination exists, and nothing else.
+ALLOW_NO_REMOTE="0"

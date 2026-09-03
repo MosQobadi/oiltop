@@ -1,0 +1,25 @@
+[Unit]
+Description=Top Oil database and uploads backup
+Documentation=file:///srv/topoil/DEPLOYMENT.md
+# The stack is not managed by systemd (compose starts it), so there is no
+# After= on it. The script fails loudly if the containers are not running.
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/topoil-backup.sh
+# Runs as root: it reads /etc/topoil/backup-passphrase (0600 root) and talks to
+# the docker socket. Nothing it writes is world-readable.
+User=root
+UMask=0077
+# A backup that hangs on a dead destination must not still be hanging at the
+# next night's run.
+TimeoutStartSec=3600
+# Journal captures stdout/stderr; the script also appends to its own LOG_FILE
+# and reports failures to syslog with `logger`.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

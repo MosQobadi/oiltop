@@ -1,0 +1,19 @@
+[Unit]
+Description=Nightly Top Oil backup
+Documentation=file:///srv/topoil/DEPLOYMENT.md
+
+[Timer]
+# 03:20 local time. Low traffic for an Iranian storefront, and offset off the
+# hour so it does not collide with whatever the neighbouring stacks run at
+# 03:00. pg_dump on a sub-1GB database takes seconds, so there is no locking
+# concern at this size and no reason to pick a stranger hour.
+OnCalendar=*-*-* 03:20:00
+# Spread the start a little; also means two boxes on the same schedule do not
+# hit the backup destination at the same instant.
+RandomizedDelaySec=300
+# If the VPS was off at 03:20, run on the next boot rather than skipping a day.
+Persistent=true
+Unit=topoil-backup.service
+
+[Install]
+WantedBy=timers.target
